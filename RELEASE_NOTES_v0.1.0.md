@@ -25,7 +25,7 @@ Sonic Refinerは、foobar2000上で音色と音場をリアルタイムに調整
 
 ```text
 Sonic Refiner
-→ R128 Loudness Normalizer
+→ R128 Real-time Loudness Normalizer
 → Output
 ```
 
@@ -33,7 +33,7 @@ Sonic Refiner
 
 80～100%は強い演出・動作確認用です。極端な設定では定位、残響、機器負荷が大きく変化するため、再生音量を下げて試してください。
 
-自動ヘッドルーム保護はTrue Peakリミッターではありません。通常使用では後段のR128音量ノーマライザーなどを併用してください。
+自動ヘッドルーム保護はTrue Peakリミッターではありません。通常使用では後段のR128 Real-time Loudness Normalizerなどを併用してください。
 
 ## 配布予定ファイル
 

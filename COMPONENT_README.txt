@@ -1,4 +1,4 @@
-Sonic Refiner 0.1.0
+Sonic Refiner 0.1.1
 Adaptive Audio Enhancement DSP for foobar2000
 
 OVERVIEW
@@ -30,7 +30,7 @@ Depth -> Clarity -> Width -> Ambience -> Level Match
 -> Output Gain -> Automatic Headroom Protection
 
 RECOMMENDED DSP ORDER
-Sonic Refiner -> R128 Loudness Normalizer -> output
+Sonic Refiner -> R128 Real-time Loudness Normalizer -> output
 
 IMPORTANT
 Values from 80% to 100% are intended for strong effects and testing. Very high
@@ -54,3 +54,10 @@ component's License button.
 THIRD-PARTY NOTICE
 This package does not include the foobar2000 SDK. foobar2000 and the official
 SDK remain subject to their respective terms.
+
+
+VERSION 0.1.1
+- Unified the official downstream normalizer name as:
+  R128 Real-time Loudness Normalizer
+- Updated Help, Glossary, Safety Notices and public documentation
+- No DSP processing, preset format or saved-setting behavior was changed

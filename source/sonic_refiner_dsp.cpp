@@ -1625,12 +1625,12 @@ Sonic Refinerは、foobar2000用の適応型音質補正DSPです。
 ■ 推奨するDSP順序
 Sonic Refiner
 ↓
-R128 音量ノーマライザー
+R128 Real-time Loudness Normalizer
 ↓
 出力
 
 Sonic Refinerは音色と音場を整えます。
-R128 音量ノーマライザーは、ラウドネス、True Peak、
+R128 Real-time Loudness Normalizerは、ラウドネス、True Peak、
 リミッターなどの最終的な音量管理を担当します。
 
 ■ 基本操作
@@ -1702,7 +1702,7 @@ Sonic Refinerに固定で収録された設定です。
 ユーザーが名前を付けて保存する設定です。
 補正値、出力ゲイン、保護、レベル一致、本体の有効状態を保存します。
 
-■ R128 音量ノーマライザー
+■ R128 Real-time Loudness Normalizer
 Sonic Refinerとは別の後段DSPです。
 ラウドネス正規化、True Peak保護、リミッターなどを担当します。
 )INFO";
@@ -1737,7 +1737,7 @@ Sonic Refiner 使用上の注意
 ■ 自動ヘッドルーム保護
 軽量なブロックピーク保護です。
 インターサンプルピークを保証するTrue Peakリミッターではありません。
-通常使用では、後段のR128 音量ノーマライザーも有効にしてください。
+通常使用では、後段のR128 Real-time Loudness Normalizerも有効にしてください。
 
 ■ 聴覚と機器の保護
 フルブーストなどの極端な設定を試す際は、再生音量を十分に下げてください。

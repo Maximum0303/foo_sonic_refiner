@@ -10,8 +10,8 @@ $Project = Join-Path $ProjectRoot "foo_sonic_refiner.vcxproj"
 $OutputDll = Join-Path $ProjectRoot "x64\$Configuration\foo_sonic_refiner.dll"
 $DistRoot = Join-Path $ProjectRoot "dist"
 $StageRoot = Join-Path $DistRoot "foo_sonic_refiner"
-$PackagePath = Join-Path $DistRoot "foo_sonic_refiner_v0.1.0.fb2k-component"
-$TempZip = Join-Path $DistRoot "foo_sonic_refiner_v0.1.0.zip"
+$PackagePath = Join-Path $DistRoot "foo_sonic_refiner_v0.1.1.fb2k-component"
+$TempZip = Join-Path $DistRoot "foo_sonic_refiner_v0.1.1.zip"
 
 $SdkRoot = [IO.Path]::GetFullPath((Join-Path $ProjectRoot "..\.."))
 $DevRoot = [IO.Path]::GetFullPath((Join-Path $SdkRoot ".."))

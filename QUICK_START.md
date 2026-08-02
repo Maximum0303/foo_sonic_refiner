@@ -6,7 +6,7 @@ foobar2000のDSP Managerで、次の順に配置します。
 
 ```text
 Sonic Refiner
-→ R128 Loudness Normalizer
+→ R128 Real-time Loudness Normalizer
 → Output
 ```
 

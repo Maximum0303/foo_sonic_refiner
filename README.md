@@ -7,7 +7,7 @@ Sonic Refinerは、音色と音場をリアルタイムで調整するfoobar2000
 
 ## Version
 
-**v0.1.0 — Initial public release**
+**v0.1.1 — 正式名称・文書表記の修正版**
 
 ## 主な機能
 
@@ -56,16 +56,16 @@ Depth
 
 ```text
 Sonic Refiner
-→ R128 Loudness Normalizer
+→ R128 Real-time Loudness Normalizer
 → Output
 ```
 
 Sonic Refinerは音色と音場を調整します。  
-後段のR128系DSPは、ラウドネス正規化、True Peak保護、リミッターなどの最終的な音量管理を担当します。
+後段のR128 Real-time Loudness Normalizerは、ラウドネス正規化、True Peak保護、リミッターなどの最終的な音量管理を担当します。
 
 ## インストール
 
-1. `foo_sonic_refiner_v0.1.0.fb2k-component`をダブルクリックします。
+1. `foo_sonic_refiner_v0.1.1.fb2k-component`をダブルクリックします。
 2. foobar2000のコンポーネント画面で適用します。
 3. foobar2000を再起動します。
 4. DSP Managerから`Sonic Refiner`を追加します。
@@ -124,7 +124,7 @@ Sonic Refinerは音色と音場を調整します。
 `build_and_package.cmd`を実行すると、Release / x64でリビルドし、次を生成します。
 
 ```text
-dist\foo_sonic_refiner_v0.1.0.fb2k-component
+dist\foo_sonic_refiner_v0.1.1.fb2k-component
 dist\SHA256SUMS.txt
 ```
 

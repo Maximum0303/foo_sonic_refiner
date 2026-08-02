@@ -2,6 +2,22 @@
 
 All notable public changes to Sonic Refiner are documented here.
 
+## [0.1.1] - 2026-08-02
+
+### Changed
+
+- Unified the official downstream normalizer name as
+  `R128 Real-time Loudness Normalizer`
+- Updated the integrated Help, Glossary and Safety Notices
+- Updated README, Quick Start, component package documentation and release notes
+- Updated the formal package version and filename to `v0.1.1`
+
+### Compatibility
+
+- No DSP processing behavior was changed
+- No preset values or preset file formats were changed
+- Existing settings and SRP1/SRP2 user presets remain compatible
+
 ## [0.1.0] - 2026-08-02
 
 ### Added
@@ -33,4 +49,4 @@ All notable public changes to Sonic Refiner are documented here.
 - Values from 80% to 100% are intended for strong effects and testing.
 - Automatic Headroom is not a True Peak limiter.
 - Recommended DSP order:
-  `Sonic Refiner -> R128 Loudness Normalizer -> output`
+  `Sonic Refiner -> R128 Real-time Loudness Normalizer -> output`
