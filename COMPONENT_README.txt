@@ -1,4 +1,4 @@
-Sonic Refiner 0.1.1
+Sonic Refiner 0.2.0
 Adaptive Audio Enhancement DSP for foobar2000
 
 OVERVIEW
@@ -12,6 +12,7 @@ MAIN FEATURES
 - Width: frequency-dependent Mid/Side widening with low-frequency protection,
   up to Side 600%
 - Ambience: short early reflections around 11 ms and 19 ms, up to Wet Mix 85%
+- Master Strength: scales Depth, Clarity, Width and Ambience from 0% to 100%
 - Output Gain: -12.0 dB to +6.0 dB in 0.5 dB steps
 - Automatic headroom protection around -0.2 dBFS block peak
 - Level-matched bypass comparison
@@ -61,3 +62,12 @@ VERSION 0.1.1
   R128 Real-time Loudness Normalizer
 - Updated Help, Glossary, Safety Notices and public documentation
 - No DSP processing, preset format or saved-setting behavior was changed
+
+
+VERSION 0.2.0
+- Added Master Strength from 0% to 100% as a stable public feature
+- Scales Depth and Clarity gain, Width above Side 100%, and Ambience wet/dry effect
+- Does not scale Output Gain, Automatic Headroom or Level Match
+- Added SRP3 user-preset storage with Master Strength
+- Reads SRP1 and SRP2 presets with Master Strength set to 100%
+- Reads v0.1.x DSP settings with Master Strength set to 100%

@@ -1,4 +1,4 @@
-﻿Sonic Refiner v0.1.1 — ビルドと梱包
+﻿Sonic Refiner v0.2.0 — ビルドと梱包
 
 ■ 対象環境
 - foobar2000 SDK 2025-03-07
@@ -32,7 +32,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 配布パッケージ:
-dist\foo_sonic_refiner_v0.1.1.fb2k-component
+dist\foo_sonic_refiner_v0.2.0.fb2k-component
 
 チェックサム:
 dist\SHA256SUMS.txt
@@ -43,7 +43,7 @@ dist\SHA256SUMS.txt
 3. 「ビルド」→「ソリューションのリビルド」を実行します。
 
 ■ インストール
-生成されたfoo_sonic_refiner_v0.1.1.fb2k-componentをダブルクリックし、
+生成されたfoo_sonic_refiner_v0.2.0.fb2k-componentをダブルクリックし、
 foobar2000へインストールします。
 
 詳細はREADME.mdとQUICK_START.mdを参照してください。

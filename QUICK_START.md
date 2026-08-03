@@ -16,7 +16,8 @@ Sonic Refiner
 2. 内蔵プリセット「標準」を呼び出す
 3. 自動ヘッドルーム保護をオン
 4. レベルマッチ・バイパスをオン
-5. Output Gainを0.0 dBにする
+5. Master Strengthを100%にする
+6. Output Gainを0.0 dBにする
 
 ## 3. 調整の目安
 
@@ -24,6 +25,7 @@ Sonic Refiner
 - ボーカルや輪郭を明瞭にする：Clarity
 - 左右を広げる：Width
 - 空間・奥行きを加える：Ambience
+- 4項目のバランスを保って全体を弱める：Master Strength
 
 通常は0～60%を中心に調整してください。  
 80%以上は強い効果や動作確認用です。

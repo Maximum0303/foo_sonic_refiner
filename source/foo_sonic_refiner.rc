@@ -7,7 +7,7 @@ LANGUAGE LANG_JAPANESE, SUBLANG_DEFAULT
 
 IDD_SONIC_REFINER DIALOGEX 0, 0, 560, 320
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "Sonic Refiner - 0.1.1"
+CAPTION "Sonic Refiner - 0.2.0"
 FONT 9, "Yu Gothic UI", 400, 0, 0x80
 BEGIN
     CONTROL         "Sonic Refiner を有効にする",IDC_ENABLE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,10,190,12
@@ -52,17 +52,17 @@ BEGIN
     PUSHBUTTON      "読込...",IDC_PRESET_IMPORT,357,122,55,16
     LTEXT           "全件をバックアップし、読み込み時は現在の一覧を置換します。",IDC_STATIC,418,121,124,24
 
-    GROUPBOX        "出力・保護・比較",IDC_STATIC,288,161,264,116
-    LTEXT           "出力ゲイン (Output Gain)",IDC_STATIC,298,174,140,10
-    CONTROL         "",IDC_OUTPUT_GAIN_SLIDER,"msctls_trackbar32",TBS_AUTOTICKS | TBS_HORZ | WS_TABSTOP,298,187,150,22
-    RTEXT           "+0.0 dB",IDC_OUTPUT_GAIN_VALUE,452,193,88,10
-    LTEXT           "-12.0～+6.0 dB／0.5 dB刻み。自動保護の前に適用。",IDC_STATIC,298,211,244,10
+    GROUPBOX        "全体効果・出力・保護",IDC_STATIC,288,161,264,116
+    LTEXT           "全体効果量 (Master Strength)",IDC_STATIC,298,174,160,10
+    CONTROL         "",IDC_MASTER_STRENGTH_SLIDER,"msctls_trackbar32",TBS_AUTOTICKS | TBS_HORZ | WS_TABSTOP,298,186,150,20
+    RTEXT           "100%",IDC_MASTER_STRENGTH_VALUE,452,191,88,10
 
-    CONTROL         "自動ヘッドルーム保護",IDC_AUTO_HEADROOM,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,298,225,150,12
-    LTEXT           "ピーク約-0.2 dBFSで保護し、約1.5秒で復帰します。",IDC_HEADROOM_INFO,298,239,244,10
+    LTEXT           "出力ゲイン (Output Gain)",IDC_STATIC,298,210,140,10
+    CONTROL         "",IDC_OUTPUT_GAIN_SLIDER,"msctls_trackbar32",TBS_AUTOTICKS | TBS_HORZ | WS_TABSTOP,298,222,150,20
+    RTEXT           "+0.0 dB",IDC_OUTPUT_GAIN_VALUE,452,227,88,10
 
-    CONTROL         "レベルマッチ・バイパス",IDC_LEVEL_MATCH,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,298,253,150,12
-    LTEXT           "処理前後の平均音量差を抑え、比較しやすくします。",IDC_LEVEL_MATCH_INFO,298,267,244,10
+    CONTROL         "自動ヘッドルーム保護（約-0.2 dBFS）",IDC_AUTO_HEADROOM,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,298,247,230,12
+    CONTROL         "レベルマッチ・バイパス（平均音量差を補正）",IDC_LEVEL_MATCH,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,298,263,244,12
 
     LTEXT           "80%以上は強い演出用：定位・残響の変化に注意",IDC_STATIC,12,286,300,10
     LTEXT           "処理状態: 有効 / 保護オン / レベル一致オン",IDC_STATUS,12,303,300,10

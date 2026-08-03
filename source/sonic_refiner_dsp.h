@@ -7,6 +7,7 @@ struct settings {
     float clarity = 45.0f;
     float width = 50.0f;
     float ambience = 40.0f;
+    float master_strength = 100.0f;
     float output_gain_db = 0.0f;
     bool auto_headroom = true;
     bool level_matched_bypass = true;
@@ -18,13 +19,18 @@ inline constexpr GUID guid = {
     { 0x9e, 0x8a, 0xf8, 0x27, 0xee, 0xc2, 0x9e, 0x93 }
 };
 
-inline constexpr t_uint32 preset_version = 7;
+inline constexpr t_uint32 preset_version = 8;
 
 inline settings sanitize(settings value) {
     value.depth = std::clamp(value.depth, 0.0f, 100.0f);
     value.clarity = std::clamp(value.clarity, 0.0f, 100.0f);
     value.width = std::clamp(value.width, 0.0f, 100.0f);
     value.ambience = std::clamp(value.ambience, 0.0f, 100.0f);
+    value.master_strength = std::clamp(
+        value.master_strength,
+        0.0f,
+        100.0f
+    );
 
     const double clamped_output_gain = std::clamp(
         static_cast<double>(value.output_gain_db),
@@ -47,6 +53,7 @@ inline void make_preset(const settings& value, dsp_preset& out) {
     builder << safe.clarity;
     builder << safe.width;
     builder << safe.ambience;
+    builder << safe.master_strength;
     builder << safe.output_gain_db;
     builder << static_cast<t_uint32>(safe.auto_headroom ? 1 : 0);
     builder << static_cast<t_uint32>(
@@ -131,11 +138,31 @@ inline settings parse_preset(const dsp_preset& in) {
             return sanitize(value);
         }
 
+        if (version == 7) {
+            // v0.1.x compatibility.
+            // Master Strength defaults to 100%.
+            parser >> value.depth;
+            parser >> value.clarity;
+            parser >> value.width;
+            parser >> value.ambience;
+            parser >> value.output_gain_db;
+            parser >> auto_headroom;
+            parser >> level_matched_bypass;
+            parser >> enabled;
+            value.master_strength = 100.0f;
+            value.auto_headroom = auto_headroom != 0;
+            value.level_matched_bypass =
+                level_matched_bypass != 0;
+            value.enabled = enabled != 0;
+            return sanitize(value);
+        }
+
         if (version == preset_version) {
             parser >> value.depth;
             parser >> value.clarity;
             parser >> value.width;
             parser >> value.ambience;
+            parser >> value.master_strength;
             parser >> value.output_gain_db;
             parser >> auto_headroom;
             parser >> level_matched_bypass;

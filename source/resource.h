@@ -34,3 +34,6 @@
 #define IDC_GLOSSARY_BUTTON           1028
 #define IDC_NOTICE_BUTTON             1029
 #define IDC_LICENSE_BUTTON            1030
+
+#define IDC_MASTER_STRENGTH_SLIDER     1031
+#define IDC_MASTER_STRENGTH_VALUE      1032

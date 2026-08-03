@@ -127,6 +127,52 @@ double ambience_to_dry_reduction(float ambience) noexcept {
     );
 }
 
+double master_strength_factor(float master_strength) noexcept {
+    return normalized_parameter(master_strength);
+}
+
+double effective_depth_gain_db(
+    float depth,
+    float master_strength
+) noexcept {
+    return depth_to_gain_db(depth) *
+        master_strength_factor(master_strength);
+}
+
+double effective_clarity_gain_db(
+    float clarity,
+    float master_strength
+) noexcept {
+    return clarity_to_gain_db(clarity) *
+        master_strength_factor(master_strength);
+}
+
+double effective_width_side_gain(
+    float width,
+    float master_strength
+) noexcept {
+    const double configured_gain = width_to_side_gain(width);
+    return 1.0 +
+        ((configured_gain - 1.0) *
+         master_strength_factor(master_strength));
+}
+
+double effective_ambience_wet_mix(
+    float ambience,
+    float master_strength
+) noexcept {
+    return ambience_to_wet_mix(ambience) *
+        master_strength_factor(master_strength);
+}
+
+double effective_ambience_dry_reduction(
+    float ambience,
+    float master_strength
+) noexcept {
+    return ambience_to_dry_reduction(ambience) *
+        master_strength_factor(master_strength);
+}
+
 double output_gain_to_linear(float output_gain_db) noexcept {
     const double safe_gain_db = std::clamp(
         static_cast<double>(output_gain_db),
@@ -189,10 +235,17 @@ struct channel_filters {
 
 class stereo_width_processor {
 public:
-    void configure(double sample_rate, float width) noexcept {
+    void configure(
+        double sample_rate,
+        float width,
+        float master_strength
+    ) noexcept {
         reset();
 
-        side_gain_ = width_to_side_gain(width);
+        side_gain_ = effective_width_side_gain(
+            width,
+            master_strength
+        );
 
         if (!std::isfinite(sample_rate) || sample_rate <= 0.0) {
             lowpass_coefficient_ = 0.0;
@@ -266,12 +319,19 @@ public:
     void configure(
         double sample_rate,
         unsigned channels,
-        float ambience
+        float ambience,
+        float master_strength
     ) {
         channels_ = channels;
-        wet_mix_ = ambience_to_wet_mix(ambience);
+        wet_mix_ = effective_ambience_wet_mix(
+            ambience,
+            master_strength
+        );
         dry_gain_ = 1.0 -
-            ambience_to_dry_reduction(ambience);
+            effective_ambience_dry_reduction(
+                ambience,
+                master_strength
+            );
 
         if (!std::isfinite(sample_rate) ||
             sample_rate <= 0.0 ||
@@ -708,11 +768,17 @@ public:
     bool on_chunk(audio_chunk* chunk, abort_callback& abort) override {
         abort.check();
 
-        if (chunk == nullptr || chunk->is_empty() || !settings_.enabled ||
-            (settings_.depth <= 0.0f &&
-             settings_.clarity <= 0.0f &&
-             settings_.width <= 0.0f &&
-             settings_.ambience <= 0.0f &&
+        const bool enhancement_active =
+            settings_.master_strength > 0.0f &&
+            (settings_.depth > 0.0f ||
+             settings_.clarity > 0.0f ||
+             settings_.width > 0.0f ||
+             settings_.ambience > 0.0f);
+
+        if (chunk == nullptr ||
+            chunk->is_empty() ||
+            !settings_.enabled ||
+            (!enhancement_active &&
              std::abs(settings_.output_gain_db) <= 0.0001f)) {
             return true;
         }
@@ -753,13 +819,16 @@ public:
                 data[index] = filters_[channel].process(data[index]);
             }
 
-            if (channels >= 2 && settings_.width > 0.0f) {
+            if (channels >= 2 &&
+                settings_.master_strength > 0.0f &&
+                settings_.width > 0.0f) {
                 audio_sample& left = data[frame_offset];
                 audio_sample& right = data[frame_offset + 1];
                 width_processor_.process(left, right);
             }
 
-            if (settings_.ambience > 0.0f) {
+            if (settings_.master_strength > 0.0f &&
+                settings_.ambience > 0.0f) {
                 ambience_processor_.process_frame(
                     data + frame_offset,
                     channels
@@ -819,8 +888,14 @@ private:
 
         filters_.assign(channels, channel_filters{});
 
-        const double depth_gain_db = depth_to_gain_db(settings_.depth);
-        const double clarity_gain_db = clarity_to_gain_db(settings_.clarity);
+        const double depth_gain_db = effective_depth_gain_db(
+            settings_.depth,
+            settings_.master_strength
+        );
+        const double clarity_gain_db = effective_clarity_gain_db(
+            settings_.clarity,
+            settings_.master_strength
+        );
 
         for (auto& filters : filters_) {
             filters.depth.set_low_shelf(
@@ -838,13 +913,15 @@ private:
 
         width_processor_.configure(
             static_cast<double>(sample_rate),
-            settings_.width
+            settings_.width,
+            settings_.master_strength
         );
 
         ambience_processor_.configure(
             static_cast<double>(sample_rate),
             channels,
-            settings_.ambience
+            settings_.ambience,
+            settings_.master_strength
         );
 
         level_match_processor_.configure(
@@ -908,47 +985,47 @@ struct built_in_preset {
 const built_in_preset g_built_in_presets[] = {
     {
         L"標準",
-        { 55.0f, 45.0f, 50.0f, 40.0f, 0.0f, true, true, true }
+        { 55.0f, 45.0f, 50.0f, 40.0f, 100.0f, 0.0f, true, true, true }
     },
     {
         L"低域強化",
-        { 90.0f, 30.0f, 30.0f, 25.0f, 0.0f, true, true, true }
+        { 90.0f, 30.0f, 30.0f, 25.0f, 100.0f, 0.0f, true, true, true }
     },
     {
         L"ボーカル重視",
-        { 35.0f, 90.0f, 25.0f, 25.0f, 0.0f, true, true, true }
+        { 35.0f, 90.0f, 25.0f, 25.0f, 100.0f, 0.0f, true, true, true }
     },
     {
         L"ワイド",
-        { 40.0f, 45.0f, 90.0f, 30.0f, 0.0f, true, true, true }
+        { 40.0f, 45.0f, 90.0f, 30.0f, 100.0f, 0.0f, true, true, true }
     },
     {
         L"ライブ",
-        { 55.0f, 50.0f, 70.0f, 80.0f, 0.0f, true, true, true }
+        { 55.0f, 50.0f, 70.0f, 80.0f, 100.0f, 0.0f, true, true, true }
     },
     {
         L"ヘッドホン",
-        { 45.0f, 50.0f, 65.0f, 40.0f, 0.0f, true, true, true }
+        { 45.0f, 50.0f, 65.0f, 40.0f, 100.0f, 0.0f, true, true, true }
     },
     {
         L"超低域強化",
-        { 100.0f, 35.0f, 30.0f, 20.0f, 0.0f, true, true, true }
+        { 100.0f, 35.0f, 30.0f, 20.0f, 100.0f, 0.0f, true, true, true }
     },
     {
         L"超明瞭",
-        { 30.0f, 100.0f, 25.0f, 20.0f, 0.0f, true, true, true }
+        { 30.0f, 100.0f, 25.0f, 20.0f, 100.0f, 0.0f, true, true, true }
     },
     {
         L"超ワイド",
-        { 30.0f, 40.0f, 100.0f, 25.0f, 0.0f, true, true, true }
+        { 30.0f, 40.0f, 100.0f, 25.0f, 100.0f, 0.0f, true, true, true }
     },
     {
         L"大ホール",
-        { 45.0f, 45.0f, 75.0f, 100.0f, 0.0f, true, true, true }
+        { 45.0f, 45.0f, 75.0f, 100.0f, 100.0f, 0.0f, true, true, true }
     },
     {
         L"フルブースト",
-        { 100.0f, 100.0f, 100.0f, 100.0f, 0.0f, true, true, true }
+        { 100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 0.0f, true, true, true }
     },
 };
 
@@ -1080,7 +1157,7 @@ std::string serialize_user_presets(
     const std::vector<user_preset>& presets
 ) {
     std::ostringstream stream;
-    stream << "SRP2\n";
+    stream << "SRP3\n";
 
     const std::size_t count = (std::min)(
         presets.size(),
@@ -1102,6 +1179,10 @@ std::string serialize_user_presets(
             << static_cast<int>(std::lround(value.width))
             << '\t'
             << static_cast<int>(std::lround(value.ambience))
+            << '\t'
+            << static_cast<int>(
+                std::lround(value.master_strength)
+            )
             << '\t'
             << static_cast<int>(
                 std::lround(value.output_gain_db * 2.0f)
@@ -1136,10 +1217,11 @@ bool parse_user_presets(
         line.pop_back();
     }
 
-    const bool legacy_format = line == "SRP1";
-    const bool current_format = line == "SRP2";
+    const bool srp1_format = line == "SRP1";
+    const bool srp2_format = line == "SRP2";
+    const bool srp3_format = line == "SRP3";
 
-    if (!legacy_format && !current_format) {
+    if (!srp1_format && !srp2_format && !srp3_format) {
         return false;
     }
 
@@ -1159,7 +1241,7 @@ bool parse_user_presets(
         const std::vector<std::string> fields =
             split_tab_fields(line);
         const std::size_t expected_fields =
-            current_format ? 9 : 8;
+            srp3_format ? 10 : (srp2_format ? 9 : 8);
 
         if (fields.size() != expected_fields) {
             if (strict) {
@@ -1181,6 +1263,7 @@ bool parse_user_presets(
         int clarity = 0;
         int width = 0;
         int ambience = 0;
+        int master_strength = 100;
         int output_gain_steps = 0;
         int auto_headroom = 0;
         int level_match = 0;
@@ -1192,7 +1275,14 @@ bool parse_user_presets(
             parse_integer(fields[3], width) &&
             parse_integer(fields[4], ambience);
 
-        if (current_format) {
+        if (srp3_format) {
+            parsed = parsed &&
+                parse_integer(fields[5], master_strength) &&
+                parse_integer(fields[6], output_gain_steps) &&
+                parse_integer(fields[7], auto_headroom) &&
+                parse_integer(fields[8], level_match) &&
+                parse_integer(fields[9], enabled);
+        } else if (srp2_format) {
             parsed = parsed &&
                 parse_integer(fields[5], output_gain_steps) &&
                 parse_integer(fields[6], auto_headroom) &&
@@ -1211,7 +1301,10 @@ bool parse_user_presets(
             clarity >= 0 && clarity <= 100 &&
             width >= 0 && width <= 100 &&
             ambience >= 0 && ambience <= 100 &&
-            (!current_format ||
+            (!srp3_format ||
+                (master_strength >= 0 &&
+                 master_strength <= 100)) &&
+            (srp1_format ||
                 (output_gain_steps >= -24 &&
                  output_gain_steps <= 12)) &&
             is_boolean_integer(auto_headroom) &&
@@ -1229,9 +1322,12 @@ bool parse_user_presets(
         preset.value.clarity = static_cast<float>(clarity);
         preset.value.width = static_cast<float>(width);
         preset.value.ambience = static_cast<float>(ambience);
-        preset.value.output_gain_db = current_format
-            ? static_cast<float>(output_gain_steps) * 0.5f
-            : 0.0f;
+        preset.value.master_strength = srp3_format
+            ? static_cast<float>(master_strength)
+            : 100.0f;
+        preset.value.output_gain_db = srp1_format
+            ? 0.0f
+            : static_cast<float>(output_gain_steps) * 0.5f;
         preset.value.auto_headroom = auto_headroom != 0;
         preset.value.level_matched_bypass = level_match != 0;
         preset.value.enabled = enabled != 0;
@@ -1636,8 +1732,9 @@ R128 Real-time Loudness Normalizerは、ラウドネス、True Peak、
 ■ 基本操作
 1. 内蔵プリセットを呼び出します。
 2. Depth、Clarity、Width、Ambienceを好みに合わせて調整します。
-3. 必要に応じて出力ゲインを調整します。
-4. 調整結果を任意プリセットとして保存します。
+3. Master Strengthで4項目の効果を一括調整します。
+4. 必要に応じて出力ゲインを調整します。
+5. 調整結果を任意プリセットとして保存します。
 
 ■ スライダーの範囲
 0～60%：通常の調整域
@@ -1680,6 +1777,12 @@ Mid/Side方式でステレオのSide成分を広げます。
 最大Wet Mixは85%です。長いリバーブではなく、近い反射音によって
 空間の広さや奥行きを作ります。
 
+■ Master Strength（全体効果量）
+Depth、Clarity、Width、Ambienceのバランスを保ったまま、
+4項目の実効効果を0～100%で一括調整します。
+0%では4項目が無補正、100%では各スライダーの設定どおりになります。
+Output Gain、自動ヘッドルーム保護、レベルマッチは対象外です。
+
 ■ Output Gain（出力ゲイン）
 すべての音質・音場補正とレベルマッチの後で音量を調整します。
 範囲は-12.0～+6.0 dB、0.5 dB刻みです。
@@ -1700,7 +1803,8 @@ Sonic Refinerに固定で収録された設定です。
 
 ■ 任意プリセット
 ユーザーが名前を付けて保存する設定です。
-補正値、出力ゲイン、保護、レベル一致、本体の有効状態を保存します。
+補正値、Master Strength、出力ゲイン、保護、レベル一致、
+本体の有効状態を保存します。
 
 ■ R128 Real-time Loudness Normalizer
 Sonic Refinerとは別の後段DSPです。
@@ -1729,6 +1833,10 @@ Sonic Refiner 使用上の注意
 ■ Ambience
 高い設定では、反射音がエコーのように分離する、ボーカルが遠くなる、
 音が濁る場合があります。
+
+■ Master Strength
+0%にするとDepth、Clarity、Width、Ambienceは無補正になります。
+Output Gainと保護・比較機能の設定値は変更されません。
 
 ■ 出力ゲイン
 正の出力ゲインを使用し、自動ヘッドルーム保護を無効にすると、
@@ -1966,6 +2074,8 @@ private:
         clarity_slider_ = GetDlgItem(IDC_CLARITY_SLIDER);
         width_slider_ = GetDlgItem(IDC_WIDTH_SLIDER);
         ambience_slider_ = GetDlgItem(IDC_AMBIENCE_SLIDER);
+        master_strength_slider_ =
+            GetDlgItem(IDC_MASTER_STRENGTH_SLIDER);
         output_gain_slider_ =
             GetDlgItem(IDC_OUTPUT_GAIN_SLIDER);
         enable_checkbox_ = GetDlgItem(IDC_ENABLE);
@@ -1992,6 +2102,12 @@ private:
         configure_slider(
             ambience_slider_,
             static_cast<int>(std::lround(settings_.ambience))
+        );
+        configure_slider(
+            master_strength_slider_,
+            static_cast<int>(
+                std::lround(settings_.master_strength)
+            )
         );
         configure_output_gain_slider(
             output_gain_slider_,
@@ -2088,6 +2204,11 @@ private:
         );
         ambience_slider_.SetPos(
             static_cast<int>(std::lround(settings_.ambience))
+        );
+        master_strength_slider_.SetPos(
+            static_cast<int>(
+                std::lround(settings_.master_strength)
+            )
         );
         output_gain_slider_.SetPos(
             output_gain_to_slider_position(
@@ -2210,6 +2331,10 @@ private:
             static_cast<float>(width_slider_.GetPos());
         settings_.ambience =
             static_cast<float>(ambience_slider_.GetPos());
+        settings_.master_strength =
+            static_cast<float>(
+                master_strength_slider_.GetPos()
+            );
         settings_.output_gain_db =
             slider_position_to_output_gain(
                 output_gain_slider_.GetPos()
@@ -2572,15 +2697,23 @@ private:
             static_cast<int>(std::lround(settings_.width));
         const int ambience =
             static_cast<int>(std::lround(settings_.ambience));
+        const int master_strength = static_cast<int>(
+            std::lround(settings_.master_strength)
+        );
         const int side_percent = static_cast<int>(
             std::lround(
-                width_to_side_gain(settings_.width) * 100.0
+                effective_width_side_gain(
+                    settings_.width,
+                    settings_.master_strength
+                ) * 100.0
             )
         );
         const int wet_percent = static_cast<int>(
             std::lround(
-                ambience_to_wet_mix(settings_.ambience) *
-                100.0
+                effective_ambience_wet_mix(
+                    settings_.ambience,
+                    settings_.master_strength
+                ) * 100.0
             )
         );
 
@@ -2589,7 +2722,10 @@ private:
             << depth
             << "%  /  約 +"
             << pfc::format_float(
-                depth_to_gain_db(settings_.depth),
+                effective_depth_gain_db(
+                    settings_.depth,
+                    settings_.master_strength
+                ),
                 0,
                 1
             )
@@ -2605,7 +2741,10 @@ private:
             << clarity
             << "%  /  約 +"
             << pfc::format_float(
-                clarity_to_gain_db(settings_.clarity),
+                effective_clarity_gain_db(
+                    settings_.clarity,
+                    settings_.master_strength
+                ),
                 0,
                 1
             )
@@ -2640,6 +2779,16 @@ private:
             ambience_text
         );
 
+        pfc::string_formatter master_strength_text;
+        master_strength_text
+            << master_strength
+            << "%";
+        uSetDlgItemText(
+            m_hWnd,
+            IDC_MASTER_STRENGTH_VALUE,
+            master_strength_text
+        );
+
         pfc::string_formatter output_gain_text;
         if (settings_.output_gain_db >= 0.0f) {
             output_gain_text << "+";
@@ -2668,12 +2817,14 @@ private:
         GetDlgItem(IDC_WIDTH_VALUE).EnableWindow(enabled);
         GetDlgItem(IDC_AMBIENCE_SLIDER).EnableWindow(enabled);
         GetDlgItem(IDC_AMBIENCE_VALUE).EnableWindow(enabled);
+        GetDlgItem(IDC_MASTER_STRENGTH_SLIDER)
+            .EnableWindow(enabled);
+        GetDlgItem(IDC_MASTER_STRENGTH_VALUE)
+            .EnableWindow(enabled);
         GetDlgItem(IDC_OUTPUT_GAIN_SLIDER).EnableWindow(enabled);
         GetDlgItem(IDC_OUTPUT_GAIN_VALUE).EnableWindow(enabled);
         GetDlgItem(IDC_AUTO_HEADROOM).EnableWindow(enabled);
-        GetDlgItem(IDC_HEADROOM_INFO).EnableWindow(enabled);
         GetDlgItem(IDC_LEVEL_MATCH).EnableWindow(enabled);
-        GetDlgItem(IDC_LEVEL_MATCH_INFO).EnableWindow(enabled);
 
         const char* status_text = "処理状態: バイパス";
 
@@ -2713,6 +2864,7 @@ private:
     CTrackBarCtrl clarity_slider_;
     CTrackBarCtrl width_slider_;
     CTrackBarCtrl ambience_slider_;
+    CTrackBarCtrl master_strength_slider_;
     CTrackBarCtrl output_gain_slider_;
     CButton enable_checkbox_;
     CButton auto_headroom_checkbox_;

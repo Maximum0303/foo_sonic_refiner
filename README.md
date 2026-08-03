@@ -7,7 +7,7 @@ Sonic Refinerは、音色と音場をリアルタイムで調整するfoobar2000
 
 ## Version
 
-**v0.1.1 — 正式名称・文書表記の修正版**
+**v0.2.0 — Master Strength正式搭載版**
 
 ## 主な機能
 
@@ -15,6 +15,7 @@ Sonic Refinerは、音色と音場をリアルタイムで調整するfoobar2000
 - **Clarity**：約3.5 kHz以上の高域シェルフ補正、最大約+14 dB
 - **Width**：約180 Hz以下を保護するMid/Side方式、Side最大600%
 - **Ambience**：約11 ms・19 msの短い初期反射、Wet Mix最大85%
+- **Master Strength**：4つの補正効果を0～100%で一括調整
 - **Output Gain**：-12.0～+6.0 dB、0.5 dB刻み
 - **自動ヘッドルーム保護**：ブロックピーク約-0.2 dBFSを目安に減衰
 - **レベルマッチ・バイパス**：処理前後の平均音量差を抑えた比較
@@ -47,6 +48,7 @@ Depth
 → Clarity
 → Width
 → Ambience
+→ Master Strengthによる実効効果量
 → レベルマッチ
 → 出力ゲイン
 → 自動ヘッドルーム保護
@@ -65,7 +67,7 @@ Sonic Refinerは音色と音場を調整します。
 
 ## インストール
 
-1. `foo_sonic_refiner_v0.1.1.fb2k-component`をダブルクリックします。
+1. `foo_sonic_refiner_v0.2.0.fb2k-component`をダブルクリックします。
 2. foobar2000のコンポーネント画面で適用します。
 3. foobar2000を再起動します。
 4. DSP Managerから`Sonic Refiner`を追加します。
@@ -74,8 +76,9 @@ Sonic Refinerは音色と音場を調整します。
 
 1. まず内蔵プリセットの「標準」を呼び出します。
 2. Depth、Clarity、Width、Ambienceを調整します。
-3. 必要に応じてOutput Gainを調整します。
-4. 調整結果を任意プリセットとして保存します。
+3. Master Strengthで全体の効き具合を調整します。
+4. 必要に応じてOutput Gainを調整します。
+5. 調整結果を任意プリセットとして保存します。
 
 ### 補正範囲の目安
 
@@ -88,7 +91,7 @@ Sonic Refinerは音色と音場を調整します。
 - 最大20件
 - 日本語名対応
 - 名前は40文字まで
-- 補正値、Output Gain、保護機能、レベルマッチ、本体有効状態を保存
+- 補正値、Master Strength、Output Gain、保護機能、レベルマッチ、本体有効状態を保存
 - `.srpbackup`ファイルで全件をバックアップ可能
 
 バックアップを読み込むと、現在の任意プリセット一覧がバックアップ内の一覧で置き換えられます。内蔵プリセットと現在のDSP設定は変更されません。
@@ -109,7 +112,8 @@ Sonic Refinerは音色と音場を調整します。
 - foobar2000 SDK 2025-03-07を使用してビルド
 - C++17
 - 旧プレビュー版の設定を継承
-- SRP1／SRP2形式の任意プリセットを読み込み可能
+- SRP1／SRP2／SRP3形式の任意プリセットを読み込み可能
+- Master Strengthを持たない旧設定は100%として読み込み
 - Output Gainを持たない旧設定は0.0 dBとして読み込み
 
 ## ソースからのビルド
@@ -124,7 +128,7 @@ Sonic Refinerは音色と音場を調整します。
 `build_and_package.cmd`を実行すると、Release / x64でリビルドし、次を生成します。
 
 ```text
-dist\foo_sonic_refiner_v0.1.1.fb2k-component
+dist\foo_sonic_refiner_v0.2.0.fb2k-component
 dist\SHA256SUMS.txt
 ```
 

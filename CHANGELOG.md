@@ -2,6 +2,23 @@
 
 All notable public changes to Sonic Refiner are documented here.
 
+## [0.2.0] - 2026-08-03
+
+### Added
+
+- Master Strength control from 0% to 100%
+- Effective-value labels that reflect Master Strength
+- SRP3 user-preset format with Master Strength storage
+- Integrated Help, Glossary and Safety Notice documentation for Master Strength
+
+### Compatibility
+
+- v0.1.x DSP settings load with Master Strength at 100%
+- SRP1 and SRP2 user presets load with Master Strength at 100%
+- Output Gain, Automatic Headroom and Level Match are not scaled
+- Existing built-in presets retain their original sound at 100%
+- Confirmed operation at 0%, 50% and 100%, preset save/restore, backup import/export, restart persistence, cancellation, light/dark modes and continuous playback control
+
 ## [0.1.1] - 2026-08-02
 
 ### Changed
