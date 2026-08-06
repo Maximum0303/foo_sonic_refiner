@@ -1,8 +1,8 @@
 # Sonic Refiner Quick Start
 
-## 1. DSPを追加
+## English
 
-foobar2000のDSP Managerで、次の順に配置します。
+### 1. Add the DSP
 
 ```text
 Sonic Refiner
@@ -10,36 +10,88 @@ Sonic Refiner
 → Output
 ```
 
-## 2. 最初の設定
+### 2. Select a language
 
-1. Sonic Refinerの設定を開く
-2. 内蔵プリセット「標準」を呼び出す
-3. 自動ヘッドルーム保護をオン
-4. レベルマッチ・バイパスをオン
-5. Master Strengthを100%にする
-6. Output Gainを0.0 dBにする
+Use the language selector at the top of the settings window.
 
-## 3. 調整の目安
+```text
+日本語
+English
+```
 
-- 低音を増やす：Depth
-- ボーカルや輪郭を明瞭にする：Clarity
-- 左右を広げる：Width
-- 空間・奥行きを加える：Ambience
+The display changes immediately. Audio settings and playback processing are not changed.
+
+### 3. Initial settings
+
+1. Load the built-in **Standard** preset.
+2. Keep **Auto Headroom Protection** enabled.
+3. Keep **Level-Matched Bypass** enabled.
+4. Set **Master Strength** to 100%.
+5. Set **Output Gain** to 0.0 dB.
+
+### 4. Adjust
+
+- More bass/body: Depth
+- More vocal/instrument definition: Clarity
+- Wider stereo image: Width
+- More space/depth: Ambience
+- Reduce all four while preserving balance: Master Strength
+
+Use 0–60% for normal adjustment. Values above 80% are for extreme effects and testing.
+
+### 5. Save and back up
+
+- `Save...`: save the current settings as a user preset
+- `Export...`: save all user presets to `.srpbackup`
+- `Import...`: replace the current user preset list with a backup
+
+Auto Headroom Protection is lightweight protection, not a True Peak limiter.
+
+---
+
+## 日本語
+
+### 1. DSPを追加
+
+```text
+Sonic Refiner
+→ R128 Real-time Loudness Normalizer
+→ Output
+```
+
+### 2. 言語を選択
+
+設定画面上部の選択欄から変更します。
+
+```text
+日本語
+English
+```
+
+表示はその場で切り替わり、音質設定や再生処理は変更されません。
+
+### 3. 最初の設定
+
+1. 内蔵プリセット「標準」を呼び出す
+2. 自動ヘッドルーム保護をオン
+3. レベルマッチ・バイパスをオン
+4. Master Strengthを100%
+5. Output Gainを0.0 dB
+
+### 4. 調整
+
+- 低音・厚み：Depth
+- ボーカルや楽器の輪郭：Clarity
+- 左右の広がり：Width
+- 空間・奥行き：Ambience
 - 4項目のバランスを保って全体を弱める：Master Strength
 
-通常は0～60%を中心に調整してください。  
-80%以上は強い効果や動作確認用です。
+通常は0～60%を中心に調整し、80%以上は強い効果や動作確認に使用します。
 
-## 4. 保存
+### 5. 保存とバックアップ
 
-好みの設定ができたら「保存...」から任意プリセットとして保存します。
-
-## 5. バックアップ
-
+- `保存...`：現在の設定を任意プリセットとして保存
 - `書出...`：任意プリセット全件を`.srpbackup`へ保存
 - `読込...`：現在の任意プリセット一覧をバックアップ内容で置換
 
-## 6. 安全確認
-
-極端な設定を試す前に再生音量を下げてください。  
-自動ヘッドルーム保護は軽量な安全機能であり、True Peakリミッターではありません。
+自動ヘッドルーム保護は軽量な保護であり、True Peakリミッターではありません。

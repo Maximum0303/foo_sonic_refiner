@@ -59,7 +59,7 @@ double expanded_parameter_value(
     const double normalized = normalized_parameter(value);
 
     if (normalized <= 0.60) {
-        // Preserve the dev.22 response throughout the normal-use range.
+        // Preserve the v0.2.0 response throughout the normal-use range.
         return normalized * standard_maximum;
     }
 
@@ -972,62 +972,132 @@ constexpr t_size maximum_preset_name_characters = 40;
 
 cfg_string g_user_presets(guid_user_presets, "");
 
+
+constexpr GUID guid_ui_language = {
+    0x7c189419, 0xe2e1, 0x4a1d,
+    { 0xa5, 0x35, 0x1d, 0x63, 0xa4, 0x6c, 0x28, 0xf1 }
+};
+
+enum class ui_language : t_int32 {
+    japanese = 0,
+    english = 1
+};
+
+cfg_string g_ui_language(guid_ui_language, "");
+
+bool is_english(ui_language language) noexcept {
+    return language == ui_language::english;
+}
+
+const wchar_t* localized(
+    ui_language language,
+    const wchar_t* japanese,
+    const wchar_t* english
+) noexcept {
+    return is_english(language) ? english : japanese;
+}
+
+const char* localized_utf8(
+    ui_language language,
+    const char* japanese,
+    const char* english
+) noexcept {
+    return is_english(language) ? english : japanese;
+}
+
+ui_language detect_default_ui_language() noexcept {
+    const LANGID language_id = ::GetUserDefaultUILanguage();
+    return PRIMARYLANGID(language_id) == LANG_JAPANESE
+        ? ui_language::japanese
+        : ui_language::english;
+}
+
+ui_language load_ui_language() noexcept {
+    const char* saved = g_ui_language.get_ptr();
+
+    if (saved != nullptr && std::strcmp(saved, "ja") == 0) {
+        return ui_language::japanese;
+    }
+
+    if (saved != nullptr && std::strcmp(saved, "en") == 0) {
+        return ui_language::english;
+    }
+
+    const ui_language detected = detect_default_ui_language();
+    g_ui_language = is_english(detected) ? "en" : "ja";
+    return detected;
+}
+
+void save_ui_language(ui_language language) noexcept {
+    g_ui_language = is_english(language) ? "en" : "ja";
+}
+
 struct user_preset {
     pfc::string8 name;
     sonic_refiner::settings value;
 };
 
 struct built_in_preset {
-    const wchar_t* name;
+    const wchar_t* name_japanese;
+    const wchar_t* name_english;
     sonic_refiner::settings value;
 };
 
 const built_in_preset g_built_in_presets[] = {
     {
-        L"標準",
+        L"標準", L"Standard",
         { 55.0f, 45.0f, 50.0f, 40.0f, 100.0f, 0.0f, true, true, true }
     },
     {
-        L"低域強化",
+        L"低域強化", L"Bass Boost",
         { 90.0f, 30.0f, 30.0f, 25.0f, 100.0f, 0.0f, true, true, true }
     },
     {
-        L"ボーカル重視",
+        L"ボーカル重視", L"Vocal Focus",
         { 35.0f, 90.0f, 25.0f, 25.0f, 100.0f, 0.0f, true, true, true }
     },
     {
-        L"ワイド",
+        L"ワイド", L"Wide",
         { 40.0f, 45.0f, 90.0f, 30.0f, 100.0f, 0.0f, true, true, true }
     },
     {
-        L"ライブ",
+        L"ライブ", L"Live",
         { 55.0f, 50.0f, 70.0f, 80.0f, 100.0f, 0.0f, true, true, true }
     },
     {
-        L"ヘッドホン",
+        L"ヘッドホン", L"Headphones",
         { 45.0f, 50.0f, 65.0f, 40.0f, 100.0f, 0.0f, true, true, true }
     },
     {
-        L"超低域強化",
+        L"超低域強化", L"Extreme Bass",
         { 100.0f, 35.0f, 30.0f, 20.0f, 100.0f, 0.0f, true, true, true }
     },
     {
-        L"超明瞭",
+        L"超明瞭", L"Extreme Clarity",
         { 30.0f, 100.0f, 25.0f, 20.0f, 100.0f, 0.0f, true, true, true }
     },
     {
-        L"超ワイド",
+        L"超ワイド", L"Extreme Wide",
         { 30.0f, 40.0f, 100.0f, 25.0f, 100.0f, 0.0f, true, true, true }
     },
     {
-        L"大ホール",
+        L"大ホール", L"Large Hall",
         { 45.0f, 45.0f, 75.0f, 100.0f, 100.0f, 0.0f, true, true, true }
     },
     {
-        L"フルブースト",
+        L"フルブースト", L"Full Boost",
         { 100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 0.0f, true, true, true }
     },
 };
+
+const wchar_t* built_in_preset_name(
+    const built_in_preset& preset,
+    ui_language language
+) noexcept {
+    return is_english(language)
+        ? preset.name_english
+        : preset.name_japanese;
+}
 
 constexpr t_size built_in_preset_count =
     sizeof(g_built_in_presets) /
@@ -1416,24 +1486,37 @@ bool parse_preset_backup(
 
 bool choose_preset_export_path(
     HWND parent,
+    ui_language language,
     std::wstring& path
 ) {
     wchar_t file_name[32768] =
         L"Sonic_Refiner_User_Presets.srpbackup";
 
-    constexpr wchar_t filter[] =
+    constexpr wchar_t japanese_filter[] =
         L"Sonic Refiner プリセット (*.srpbackup)\0"
         L"*.srpbackup\0"
         L"すべてのファイル (*.*)\0"
+        L"*.*\0\0";
+    constexpr wchar_t english_filter[] =
+        L"Sonic Refiner Presets (*.srpbackup)\0"
+        L"*.srpbackup\0"
+        L"All Files (*.*)\0"
         L"*.*\0\0";
 
     OPENFILENAMEW dialog = {};
     dialog.lStructSize = sizeof(dialog);
     dialog.hwndOwner = parent;
-    dialog.lpstrFilter = filter;
+    dialog.lpstrFilter = is_english(language)
+        ? english_filter
+        : japanese_filter;
     dialog.lpstrFile = file_name;
     dialog.nMaxFile = static_cast<DWORD>(_countof(file_name));
     dialog.lpstrDefExt = L"srpbackup";
+    dialog.lpstrTitle = localized(
+        language,
+        L"任意プリセットを書き出す",
+        L"Export User Presets"
+    );
     dialog.Flags =
         OFN_OVERWRITEPROMPT |
         OFN_PATHMUSTEXIST |
@@ -1450,23 +1533,36 @@ bool choose_preset_export_path(
 
 bool choose_preset_import_path(
     HWND parent,
+    ui_language language,
     std::wstring& path
 ) {
     wchar_t file_name[32768] = {};
 
-    constexpr wchar_t filter[] =
+    constexpr wchar_t japanese_filter[] =
         L"Sonic Refiner プリセット (*.srpbackup)\0"
         L"*.srpbackup\0"
         L"すべてのファイル (*.*)\0"
+        L"*.*\0\0";
+    constexpr wchar_t english_filter[] =
+        L"Sonic Refiner Presets (*.srpbackup)\0"
+        L"*.srpbackup\0"
+        L"All Files (*.*)\0"
         L"*.*\0\0";
 
     OPENFILENAMEW dialog = {};
     dialog.lStructSize = sizeof(dialog);
     dialog.hwndOwner = parent;
-    dialog.lpstrFilter = filter;
+    dialog.lpstrFilter = is_english(language)
+        ? english_filter
+        : japanese_filter;
     dialog.lpstrFile = file_name;
     dialog.nMaxFile = static_cast<DWORD>(_countof(file_name));
     dialog.lpstrDefExt = L"srpbackup";
+    dialog.lpstrTitle = localized(
+        language,
+        L"任意プリセットを読み込む",
+        L"Import User Presets"
+    );
     dialog.Flags =
         OFN_FILEMUSTEXIST |
         OFN_PATHMUSTEXIST |
@@ -1604,10 +1700,14 @@ std::wstring preset_name_to_wide(const char* name) {
 class preset_name_dialog final :
     public CDialogImpl<preset_name_dialog> {
 public:
-    explicit preset_name_dialog(const char* initial_name)
+    preset_name_dialog(
+        const char* initial_name,
+        ui_language language
+    )
         : initial_name_(
             initial_name != nullptr ? initial_name : ""
-        ) {
+        ),
+          language_(language) {
     }
 
     enum { IDD = IDD_PRESET_NAME };
@@ -1625,6 +1725,30 @@ public:
 private:
     BOOL on_init_dialog(CWindow, LPARAM) {
         dark_mode_.AddDialogWithControls(m_hWnd);
+
+        ::SetWindowTextW(
+            m_hWnd,
+            localized(
+                language_,
+                L"任意プリセットを保存",
+                L"Save User Preset"
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_PRESET_NAME_LABEL,
+            localized(
+                language_,
+                L"プリセット名（40文字以内）",
+                L"Preset name (up to 40 characters)"
+            )
+        );
+        ::SetDlgItemTextW(m_hWnd, IDOK, L"OK");
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDCANCEL,
+            localized(language_, L"キャンセル", L"Cancel")
+        );
 
         const std::wstring initial =
             preset_name_to_wide(initial_name_.get_ptr());
@@ -1690,7 +1814,11 @@ private:
         if (name.empty()) {
             ::MessageBoxW(
                 m_hWnd,
-                L"プリセット名を入力してください。",
+                localized(
+                    language_,
+                    L"プリセット名を入力してください。",
+                    L"Enter a preset name."
+                ),
                 L"Sonic Refiner",
                 MB_OK | MB_ICONINFORMATION
             );
@@ -1706,11 +1834,11 @@ private:
 
     pfc::string8 initial_name_;
     pfc::string8 result_;
+    ui_language language_ = ui_language::english;
     fb2k::CDarkModeHooks dark_mode_;
 };
 
-
-constexpr const wchar_t* sonic_refiner_help_text = LR"INFO(
+constexpr const wchar_t* sonic_refiner_help_text_japanese = LR"INFO(
 Sonic Refiner ヘルプ
 
 ■ 概要
@@ -1756,7 +1884,53 @@ R128 Real-time Loudness Normalizerは、ラウドネス、True Peak、
 穏やかに抑え、単なる音量差に惑わされにくくなります。
 )INFO";
 
-constexpr const wchar_t* sonic_refiner_glossary_text = LR"INFO(
+constexpr const wchar_t* sonic_refiner_help_text_english = LR"INFO(
+Sonic Refiner Help
+
+■ Overview
+Sonic Refiner is an adaptive audio enhancement DSP for foobar2000.
+It adjusts low-frequency body, clarity, stereo width, and depth created
+by short early reflections.
+
+■ Recommended DSP Order
+Sonic Refiner
+↓
+R128 Real-time Loudness Normalizer
+↓
+Output
+
+Sonic Refiner shapes tone and soundstage.
+R128 Real-time Loudness Normalizer handles final loudness management,
+including loudness control, True Peak protection, and limiting.
+
+■ Basic Operation
+1. Load a built-in preset.
+2. Adjust Depth, Clarity, Width, and Ambience to taste.
+3. Use Master Strength to adjust all four effects together.
+4. Adjust Output Gain when necessary.
+5. Save the result as a user preset.
+
+■ Slider Ranges
+0–60%: Normal adjustment range
+60–80%: Strong enhancement range
+80–100%: Extreme effects and testing
+
+■ Presets
+Built-in presets cannot be changed or deleted.
+After loading and adjusting one, you can save the result under a new
+name as a user preset. Up to 20 user presets can be stored.
+
+■ Backup
+"Export..." saves all user presets to an .srpbackup file.
+"Import..." replaces the current user preset list with the list in the
+backup. Built-in presets and the current sound settings are unchanged.
+
+■ Comparison
+Level-Matched Bypass gently reduces average level added by processing,
+helping you compare the sound without being misled by loudness alone.
+)INFO";
+
+constexpr const wchar_t* sonic_refiner_glossary_text_japanese = LR"INFO(
 Sonic Refiner 用語集
 
 ■ Depth（音の厚み）
@@ -1811,7 +1985,65 @@ Sonic Refinerとは別の後段DSPです。
 ラウドネス正規化、True Peak保護、リミッターなどを担当します。
 )INFO";
 
-constexpr const wchar_t* sonic_refiner_notice_text = LR"INFO(
+constexpr const wchar_t* sonic_refiner_glossary_text_english = LR"INFO(
+Sonic Refiner Glossary
+
+■ Depth
+A low-shelf adjustment centered around 120 Hz.
+The maximum boost is approximately +16 dB. It adds bass weight, body,
+and low-mid presence.
+
+■ Clarity
+A high-shelf adjustment above approximately 3.5 kHz.
+The maximum boost is approximately +14 dB. It emphasizes vocal and
+instrument definition and presence.
+
+■ Width
+Expands the stereo Side component using Mid/Side processing.
+Frequencies below approximately 180 Hz are protected, and the maximum
+Side level is 600%. Mono sources are not widened.
+
+■ Ambience
+Adds short early reflections at approximately 11 ms and 19 ms.
+The maximum Wet Mix is 85%. It creates space and depth with nearby
+reflections rather than a long reverb tail.
+
+■ Master Strength
+Adjusts the effective amount of Depth, Clarity, Width, and Ambience
+from 0% to 100% while preserving their balance.
+At 0%, all four are neutral. At 100%, each slider works at its full
+configured value. Output Gain, Auto Headroom Protection, and Level
+Match are not affected.
+
+■ Output Gain
+Adjusts level after all tone, soundstage, and level-match processing.
+The range is -12.0 to +6.0 dB in 0.5 dB steps.
+
+■ Auto Headroom Protection
+Immediately reduces gain when the processed block peak would exceed
+approximately -0.2 dBFS, then releases over approximately 1.5 seconds.
+This is lightweight sample/block peak protection, not a True Peak limiter.
+
+■ Level-Matched Bypass
+Measures average power before and after processing over approximately
+0.75 seconds. It only reduces average level added by processing and
+never raises level, making on/off comparison fairer.
+
+■ Built-in Presets
+Fixed settings included with Sonic Refiner.
+They cannot be overwritten or deleted.
+
+■ User Presets
+Settings saved under a user-defined name.
+They store the enhancement values, Master Strength, Output Gain,
+protection, level match, and the enabled state.
+
+■ R128 Real-time Loudness Normalizer
+A separate downstream DSP used after Sonic Refiner.
+It handles loudness normalization, True Peak protection, and limiting.
+)INFO";
+
+constexpr const wchar_t* sonic_refiner_notice_text_japanese = LR"INFO(
 Sonic Refiner 使用上の注意
 
 ■ 80%以上の拡張レンジ
@@ -1860,7 +2092,56 @@ Output Gainと保護・比較機能の設定値は変更されません。
 重要な用途では、実際の出力レベルと音質を確認してください。
 )INFO";
 
-constexpr const wchar_t* sonic_refiner_license_text = LR"INFO(
+constexpr const wchar_t* sonic_refiner_notice_text_english = LR"INFO(
+Sonic Refiner Important Notes
+
+■ Extended Range Above 80%
+The 80–100% range is intended for extreme effects and testing.
+It is not a natural adjustment range intended for continuous use.
+
+■ Depth
+Strong bass enhancement can place a heavy load on speakers,
+subwoofers, and amplifiers. Lower the playback volume before adjusting it.
+
+■ Clarity
+High settings can emphasize sibilance, cymbals, recording noise,
+and distortion. Reduce the value if the sound becomes harsh.
+
+■ Width
+High settings can weaken centered vocals, destabilize left/right imaging,
+and reduce mono compatibility.
+
+■ Ambience
+High settings can make reflections sound like separate echoes, move vocals
+farther away, or make the sound muddy.
+
+■ Master Strength
+At 0%, Depth, Clarity, Width, and Ambience are neutral.
+Output Gain and protection/comparison settings are unchanged.
+
+■ Output Gain
+Using positive Output Gain with Auto Headroom Protection disabled may
+produce peaks above 0 dBFS.
+
+■ Auto Headroom Protection
+This is lightweight block-peak protection, not a True Peak limiter that
+guarantees control of inter-sample peaks. For normal use, also enable the
+downstream R128 Real-time Loudness Normalizer.
+
+■ Hearing and Equipment Safety
+Lower the playback volume before trying extreme settings such as Full Boost.
+Avoid prolonged listening at high volume.
+
+■ Preset Import
+Importing a backup replaces the entire current user preset list.
+Export any presets you need before importing.
+
+■ Operating Notes
+Results vary with the source material and playback system.
+For critical use, check the actual output level and sound quality.
+)INFO";
+
+constexpr const wchar_t* sonic_refiner_license_text_japanese = LR"INFO(
 Sonic Refiner ライセンス
 
 MIT License
@@ -1889,15 +2170,47 @@ SOFTWARE.
 foobar2000およびfoobar2000 SDKには、それぞれの権利と利用条件が適用されます。
 )INFO";
 
+constexpr const wchar_t* sonic_refiner_license_text_english = LR"INFO(
+Sonic Refiner License
+
+MIT License
+
+Copyright (c) 2026 Maximum
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+This license notice applies to the Sonic Refiner source code itself.
+foobar2000 and the foobar2000 SDK are subject to their respective rights and
+terms of use.
+)INFO";
+
 class sonic_refiner_information_dialog final :
     public CDialogImpl<sonic_refiner_information_dialog> {
 public:
     sonic_refiner_information_dialog(
         const wchar_t* title,
-        const wchar_t* text
+        const wchar_t* text,
+        ui_language language
     )
         : title_(title != nullptr ? title : L"Sonic Refiner"),
-          text_(text != nullptr ? text : L"") {
+          text_(text != nullptr ? text : L""),
+          language_(language) {
     }
 
     enum { IDD = IDD_INFORMATION };
@@ -1913,6 +2226,11 @@ private:
         dark_mode_.AddDialogWithControls(m_hWnd);
 
         ::SetWindowTextW(m_hWnd, title_.c_str());
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDOK,
+            localized(language_, L"閉じる", L"Close")
+        );
 
         std::wstring display_text;
         display_text.reserve(text_.size() + 64);
@@ -1967,6 +2285,7 @@ private:
 
     std::wstring title_;
     std::wstring text_;
+    ui_language language_ = ui_language::english;
     fb2k::CDarkModeHooks dark_mode_;
 };
 
@@ -1987,6 +2306,11 @@ public:
     BEGIN_MSG_MAP_EX(sonic_refiner_dialog)
         MSG_WM_INITDIALOG(on_init_dialog)
         MSG_WM_HSCROLL(on_hscroll)
+        COMMAND_HANDLER_EX(
+            IDC_LANGUAGE_COMBO,
+            CBN_SELCHANGE,
+            on_language_changed
+        )
         COMMAND_HANDLER_EX(
             IDC_ENABLE,
             BN_CLICKED,
@@ -2086,6 +2410,24 @@ private:
         built_in_preset_combo_ =
             GetDlgItem(IDC_BUILTIN_PRESET_COMBO);
         preset_combo_ = GetDlgItem(IDC_PRESET_COMBO);
+        language_combo_ = GetDlgItem(IDC_LANGUAGE_COMBO);
+        language_ = load_ui_language();
+
+        ::SendMessageW(
+            language_combo_,
+            CB_ADDSTRING,
+            0,
+            reinterpret_cast<LPARAM>(L"日本語")
+        );
+        ::SendMessageW(
+            language_combo_,
+            CB_ADDSTRING,
+            0,
+            reinterpret_cast<LPARAM>(L"English")
+        );
+        language_combo_.SetCurSel(
+            is_english(language_) ? 1 : 0
+        );
 
         configure_slider(
             depth_slider_,
@@ -2115,13 +2457,13 @@ private:
         );
 
         apply_settings_to_controls();
-        refresh_builtin_preset_combo();
 
         user_presets_ = load_user_presets();
         refresh_preset_combo(
             user_presets_.empty() ? -1 : 0
         );
 
+        apply_language();
         refresh_labels();
         return TRUE;
     }
@@ -2192,6 +2534,239 @@ private:
         );
     }
 
+    void apply_language() {
+        const int selected_builtin =
+            selected_builtin_preset_index();
+
+        ::SetWindowTextW(
+            m_hWnd,
+            L"Sonic Refiner - 0.3.0"
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_ENABLE,
+            localized(
+                language_,
+                L"Sonic Refiner を有効にする",
+                L"Enable Sonic Refiner"
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_LANGUAGE_LABEL,
+            localized(language_, L"言語:", L"Language:")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_HELP_BUTTON,
+            localized(language_, L"ヘルプ", L"Help")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_GLOSSARY_BUTTON,
+            localized(language_, L"用語集", L"Glossary")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_NOTICE_BUTTON,
+            localized(language_, L"注意事項", L"Important Notes")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_LICENSE_BUTTON,
+            localized(language_, L"ライセンス", L"License")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_GROUP_TONE,
+            localized(language_, L"音色・音場補正", L"Tone & Soundstage")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_DEPTH_LABEL,
+            localized(language_, L"音の厚み (Depth)", L"Depth")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_DEPTH_DESCRIPTION,
+            localized(
+                language_,
+                L"120 Hz付近を中心に、最大約+16 dBまで厚みを加えます。",
+                L"Adds body around 120 Hz, up to approximately +16 dB."
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_CLARITY_LABEL,
+            localized(language_, L"明瞭感 (Clarity)", L"Clarity")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_CLARITY_DESCRIPTION,
+            localized(
+                language_,
+                L"3.5 kHz付近から最大約+14 dBまで輪郭を強調します。",
+                L"Enhances definition above approximately 3.5 kHz, up to +14 dB."
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_WIDTH_LABEL,
+            localized(language_, L"音場の広がり (Width)", L"Width")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_WIDTH_DESCRIPTION,
+            localized(
+                language_,
+                L"約180 Hz以下を保護し、Side最大600%まで広げます。",
+                L"Protects below approximately 180 Hz and expands Side up to 600%."
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_AMBIENCE_LABEL,
+            localized(
+                language_,
+                L"空間・奥行き感 (Ambience)",
+                L"Ambience"
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_AMBIENCE_DESCRIPTION,
+            localized(
+                language_,
+                L"11 ms・19 msの初期反射を最大Mix 85%まで加えます。",
+                L"Adds 11 ms and 19 ms early reflections, up to 85% Mix."
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_GROUP_BUILTIN,
+            localized(language_, L"内蔵プリセット", L"Built-in Presets")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_BUILTIN_PRESET_LOAD,
+            localized(language_, L"呼出", L"Load")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_BUILTIN_DESCRIPTION,
+            localized(
+                language_,
+                L"固定プリセット。調整後は任意プリセットへ保存できます。",
+                L"Fixed presets. Adjust and save as a user preset."
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_GROUP_USER,
+            localized(
+                language_,
+                L"任意プリセット（最大20件）",
+                L"User Presets (Max. 20)"
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_PRESET_SAVE,
+            localized(language_, L"保存...", L"Save...")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_PRESET_LOAD,
+            localized(language_, L"呼出", L"Load")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_PRESET_DELETE,
+            localized(language_, L"削除", L"Delete")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_PRESET_EXPORT,
+            localized(language_, L"書出...", L"Export...")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_PRESET_IMPORT,
+            localized(language_, L"読込...", L"Import...")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_USER_DESCRIPTION,
+            localized(
+                language_,
+                L"全件をバックアップし、読み込み時は現在の一覧を置換します。",
+                L"Exports all. Import replaces the current list."
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_GROUP_MASTER,
+            localized(
+                language_,
+                L"全体効果・出力・保護",
+                L"Master, Output & Protection"
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_MASTER_STRENGTH_LABEL,
+            localized(
+                language_,
+                L"全体効果量 (Master Strength)",
+                L"Master Strength"
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_OUTPUT_GAIN_LABEL,
+            localized(
+                language_,
+                L"出力ゲイン (Output Gain)",
+                L"Output Gain"
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_AUTO_HEADROOM,
+            localized(
+                language_,
+                L"自動ヘッドルーム保護（約-0.2 dBFS）",
+                L"Auto Headroom Protection (approx. -0.2 dBFS)"
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_LEVEL_MATCH,
+            localized(
+                language_,
+                L"レベルマッチ・バイパス（平均音量差を補正）",
+                L"Level-Matched Bypass (average level compensation)"
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_EXTREME_NOTICE,
+            localized(
+                language_,
+                L"80%以上は強い演出用：定位・残響の変化に注意",
+                L"80% and above is for extreme effects: check imaging and ambience."
+            )
+        );
+        ::SetDlgItemTextW(m_hWnd, IDOK, L"OK");
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDCANCEL,
+            localized(language_, L"キャンセル", L"Cancel")
+        );
+
+        refresh_builtin_preset_combo(selected_builtin);
+    }
+
     void apply_settings_to_controls() {
         depth_slider_.SetPos(
             static_cast<int>(std::lround(settings_.depth))
@@ -2243,7 +2818,13 @@ private:
         return selected;
     }
 
-    void refresh_builtin_preset_combo() {
+    void refresh_builtin_preset_combo(
+        int selected_index = -1
+    ) {
+        if (selected_index < 0) {
+            selected_index = selected_builtin_preset_index();
+        }
+
         built_in_preset_combo_.ResetContent();
 
         for (t_size index = 0;
@@ -2254,12 +2835,21 @@ private:
                 CB_ADDSTRING,
                 0,
                 reinterpret_cast<LPARAM>(
-                    g_built_in_presets[index].name
+                    built_in_preset_name(
+                        g_built_in_presets[index],
+                        language_
+                    )
                 )
             );
         }
 
-        built_in_preset_combo_.SetCurSel(0);
+        if (selected_index < 0 ||
+            static_cast<t_size>(selected_index) >=
+                built_in_preset_count) {
+            selected_index = 0;
+        }
+
+        built_in_preset_combo_.SetCurSel(selected_index);
         refresh_builtin_preset_button();
     }
 
@@ -2322,6 +2912,27 @@ private:
         );
     }
 
+    void on_language_changed(UINT, int, CWindow) {
+        const int selected = language_combo_.GetCurSel();
+
+        if (selected != 0 && selected != 1) {
+            return;
+        }
+
+        const ui_language selected_language = selected == 1
+            ? ui_language::english
+            : ui_language::japanese;
+
+        if (selected_language == language_) {
+            return;
+        }
+
+        language_ = selected_language;
+        save_ui_language(language_);
+        apply_language();
+        refresh_labels();
+    }
+
     void on_hscroll(UINT, UINT, CScrollBar) {
         settings_.depth =
             static_cast<float>(depth_slider_.GetPos());
@@ -2371,35 +2982,71 @@ private:
         const wchar_t* title,
         const wchar_t* text
     ) {
-        sonic_refiner_information_dialog dialog(title, text);
+        sonic_refiner_information_dialog dialog(
+            title,
+            text,
+            language_
+        );
         dialog.DoModal(m_hWnd);
     }
 
     void on_help(UINT, int, CWindow) {
         show_information(
-            L"Sonic Refiner ヘルプ",
-            sonic_refiner_help_text
+            localized(
+                language_,
+                L"Sonic Refiner ヘルプ",
+                L"Sonic Refiner Help"
+            ),
+            localized(
+                language_,
+                sonic_refiner_help_text_japanese,
+                sonic_refiner_help_text_english
+            )
         );
     }
 
     void on_glossary(UINT, int, CWindow) {
         show_information(
-            L"Sonic Refiner 用語集",
-            sonic_refiner_glossary_text
+            localized(
+                language_,
+                L"Sonic Refiner 用語集",
+                L"Sonic Refiner Glossary"
+            ),
+            localized(
+                language_,
+                sonic_refiner_glossary_text_japanese,
+                sonic_refiner_glossary_text_english
+            )
         );
     }
 
     void on_notice(UINT, int, CWindow) {
         show_information(
-            L"Sonic Refiner 使用上の注意",
-            sonic_refiner_notice_text
+            localized(
+                language_,
+                L"Sonic Refiner 使用上の注意",
+                L"Sonic Refiner Important Notes"
+            ),
+            localized(
+                language_,
+                sonic_refiner_notice_text_japanese,
+                sonic_refiner_notice_text_english
+            )
         );
     }
 
     void on_license(UINT, int, CWindow) {
         show_information(
-            L"Sonic Refiner ライセンス",
-            sonic_refiner_license_text
+            localized(
+                language_,
+                L"Sonic Refiner ライセンス",
+                L"Sonic Refiner License"
+            ),
+            localized(
+                language_,
+                sonic_refiner_license_text_japanese,
+                sonic_refiner_license_text_english
+            )
         );
     }
 
@@ -2448,7 +3095,7 @@ private:
                 ].name.get_ptr();
         }
 
-        preset_name_dialog dialog(initial_name);
+        preset_name_dialog dialog(initial_name, language_);
 
         if (dialog.DoModal(m_hWnd) != IDOK) {
             return;
@@ -2463,9 +3110,11 @@ private:
         if (existing >= 0) {
             const std::wstring wide_name =
                 preset_name_to_wide(name.get_ptr());
-            const std::wstring message =
-                L"「" + wide_name +
-                L"」を現在の設定で上書きしますか？";
+            const std::wstring message = is_english(language_)
+                ? L"Overwrite “" + wide_name +
+                    L"” with the current settings?"
+                : L"「" + wide_name +
+                    L"」を現在の設定で上書きしますか？";
 
             if (::MessageBoxW(
                     m_hWnd,
@@ -2486,7 +3135,11 @@ private:
                 maximum_user_presets) {
                 ::MessageBoxW(
                     m_hWnd,
-                    L"任意プリセットは最大20件まで保存できます。",
+                    localized(
+                        language_,
+                        L"任意プリセットは最大20件まで保存できます。",
+                        L"You can save up to 20 user presets."
+                    ),
                     L"Sonic Refiner",
                     MB_OK | MB_ICONINFORMATION
                 );
@@ -2535,9 +3188,9 @@ private:
                 static_cast<std::size_t>(selected)
             ].name.get_ptr()
         );
-        const std::wstring message =
-            L"「" + wide_name +
-            L"」を削除しますか？";
+        const std::wstring message = is_english(language_)
+            ? L"Delete the user preset “" + wide_name + L"”?"
+            : L"「" + wide_name + L"」を削除しますか？";
 
         if (::MessageBoxW(
                 m_hWnd,
@@ -2570,7 +3223,11 @@ private:
         if (user_presets_.empty()) {
             ::MessageBoxW(
                 m_hWnd,
-                L"書き出す任意プリセットがありません。",
+                localized(
+                    language_,
+                    L"書き出す任意プリセットがありません。",
+                    L"There are no user presets to export."
+                ),
                 L"Sonic Refiner",
                 MB_OK | MB_ICONINFORMATION
             );
@@ -2579,7 +3236,11 @@ private:
 
         std::wstring path;
 
-        if (!choose_preset_export_path(m_hWnd, path)) {
+        if (!choose_preset_export_path(
+                m_hWnd,
+                language_,
+                path
+            )) {
             return;
         }
 
@@ -2589,16 +3250,29 @@ private:
         if (!write_preset_backup_file(path, backup)) {
             ::MessageBoxW(
                 m_hWnd,
-                L"プリセットの書き出しに失敗しました。",
+                localized(
+                    language_,
+                    L"プリセットの書き出しに失敗しました。",
+                    L"Could not export the preset backup."
+                ),
                 L"Sonic Refiner",
                 MB_OK | MB_ICONERROR
             );
             return;
         }
 
-        const std::wstring message =
-            std::to_wstring(user_presets_.size()) +
-            L"件の任意プリセットを書き出しました。";
+        std::wstring message;
+        const std::size_t count = user_presets_.size();
+
+        if (is_english(language_)) {
+            message = L"Exported " + std::to_wstring(count) +
+                (count == 1
+                    ? L" user preset."
+                    : L" user presets.");
+        } else {
+            message = std::to_wstring(count) +
+                L"件の任意プリセットを書き出しました。";
+        }
 
         ::MessageBoxW(
             m_hWnd,
@@ -2611,7 +3285,11 @@ private:
     void on_preset_import(UINT, int, CWindow) {
         std::wstring path;
 
-        if (!choose_preset_import_path(m_hWnd, path)) {
+        if (!choose_preset_import_path(
+                m_hWnd,
+                language_,
+                path
+            )) {
             return;
         }
 
@@ -2620,7 +3298,11 @@ private:
         if (!read_preset_backup_file(path, backup)) {
             ::MessageBoxW(
                 m_hWnd,
-                L"バックアップファイルを読み込めませんでした。",
+                localized(
+                    language_,
+                    L"バックアップファイルを読み込めませんでした。",
+                    L"Could not read the backup file."
+                ),
                 L"Sonic Refiner",
                 MB_OK | MB_ICONERROR
             );
@@ -2632,18 +3314,36 @@ private:
         if (!parse_preset_backup(backup, imported)) {
             ::MessageBoxW(
                 m_hWnd,
-                L"有効なSonic Refinerプリセットバックアップではありません。",
+                localized(
+                    language_,
+                    L"有効なSonic Refinerプリセットバックアップではありません。",
+                    L"This is not a valid Sonic Refiner preset backup."
+                ),
                 L"Sonic Refiner",
                 MB_OK | MB_ICONERROR
             );
             return;
         }
 
-        const std::wstring confirmation =
-            L"現在の任意プリセットを、バックアップ内の" +
-            std::to_wstring(imported.size()) +
-            L"件で置き換えますか？\n\n"
-            L"内蔵プリセットと現在の音質設定は変更されません。";
+        std::wstring confirmation;
+        const std::size_t count = imported.size();
+
+        if (is_english(language_)) {
+            confirmation =
+                L"Replace the current user preset list with " +
+                std::to_wstring(count) +
+                (count == 1
+                    ? L" preset from the backup?\n\n"
+                    : L" presets from the backup?\n\n") +
+                L"Built-in presets and the current sound settings "
+                L"will not be changed.";
+        } else {
+            confirmation =
+                L"現在の任意プリセットを、バックアップ内の" +
+                std::to_wstring(count) +
+                L"件で置き換えますか？\n\n"
+                L"内蔵プリセットと現在の音質設定は変更されません。";
+        }
 
         if (::MessageBoxW(
                 m_hWnd,
@@ -2662,9 +3362,17 @@ private:
             user_presets_.empty() ? -1 : 0
         );
 
-        const std::wstring message =
-            std::to_wstring(user_presets_.size()) +
-            L"件の任意プリセットを読み込みました。";
+        std::wstring message;
+
+        if (is_english(language_)) {
+            message = L"Imported " + std::to_wstring(count) +
+                (count == 1
+                    ? L" user preset."
+                    : L" user presets.");
+        } else {
+            message = std::to_wstring(count) +
+                L"件の任意プリセットを読み込みました。";
+        }
 
         ::MessageBoxW(
             m_hWnd,
@@ -2720,7 +3428,11 @@ private:
         pfc::string_formatter depth_text;
         depth_text
             << depth
-            << "%  /  約 +"
+            << localized_utf8(
+                language_,
+                "%  /  約 +",
+                "%  /  approx. +"
+            )
             << pfc::format_float(
                 effective_depth_gain_db(
                     settings_.depth,
@@ -2739,7 +3451,11 @@ private:
         pfc::string_formatter clarity_text;
         clarity_text
             << clarity
-            << "%  /  約 +"
+            << localized_utf8(
+                language_,
+                "%  /  約 +",
+                "%  /  approx. +"
+            )
             << pfc::format_float(
                 effective_clarity_gain_db(
                     settings_.clarity,
@@ -2826,22 +3542,38 @@ private:
         GetDlgItem(IDC_AUTO_HEADROOM).EnableWindow(enabled);
         GetDlgItem(IDC_LEVEL_MATCH).EnableWindow(enabled);
 
-        const char* status_text = "処理状態: バイパス";
+        const char* status_text = localized_utf8(
+            language_,
+            "処理状態: バイパス",
+            "Status: Bypassed"
+        );
 
         if (settings_.enabled) {
             if (settings_.auto_headroom &&
                 settings_.level_matched_bypass) {
-                status_text =
-                    "処理状態: 有効 / 保護オン / レベル一致オン";
+                status_text = localized_utf8(
+                    language_,
+                    "処理状態: 有効 / 保護オン / レベル一致オン",
+                    "Status: Active / Protection On / Level Match On"
+                );
             } else if (settings_.auto_headroom) {
-                status_text =
-                    "処理状態: 有効 / 保護オン / レベル一致オフ";
+                status_text = localized_utf8(
+                    language_,
+                    "処理状態: 有効 / 保護オン / レベル一致オフ",
+                    "Status: Active / Protection On / Level Match Off"
+                );
             } else if (settings_.level_matched_bypass) {
-                status_text =
-                    "処理状態: 有効 / 保護オフ / レベル一致オン";
+                status_text = localized_utf8(
+                    language_,
+                    "処理状態: 有効 / 保護オフ / レベル一致オン",
+                    "Status: Active / Protection Off / Level Match On"
+                );
             } else {
-                status_text =
-                    "処理状態: 有効 / 保護オフ / レベル一致オフ";
+                status_text = localized_utf8(
+                    language_,
+                    "処理状態: 有効 / 保護オフ / レベル一致オフ",
+                    "Status: Active / Protection Off / Level Match Off"
+                );
             }
         }
 
@@ -2871,6 +3603,8 @@ private:
     CButton level_match_checkbox_;
     CComboBox built_in_preset_combo_;
     CComboBox preset_combo_;
+    CComboBox language_combo_;
+    ui_language language_ = ui_language::english;
     fb2k::CDarkModeHooks dark_mode_;
 };
 

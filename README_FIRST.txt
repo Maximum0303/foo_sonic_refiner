@@ -1,4 +1,47 @@
-﻿Sonic Refiner v0.2.0 — ビルドと梱包
+Sonic Refiner v0.3.0 — Build and Package / ビルドと梱包
+
+ENGLISH
+
+Required environment:
+- foobar2000 SDK 2025-03-07
+- Visual Studio 2022
+- Windows x64
+- C++17
+- Release / x64
+- WTL
+
+Place this folder at:
+F:\foobar2000-dev\SDK-2025-03-07\foobar2000\foo_sonic_refiner
+
+Confirm that this WTL file exists:
+F:\foobar2000-dev\WTL\Include\atlapp.h
+
+Run:
+build_and_package.cmd
+
+The Japanese-named launcher runs the same process:
+ビルドと梱包.cmd
+
+Outputs:
+DLL:
+x64\Release\foo_sonic_refiner.dll
+
+Package:
+dist\foo_sonic_refiner_v0.3.0.fb2k-component
+
+Checksum:
+dist\SHA256SUMS.txt
+
+Manual build:
+1. Open foo_sonic_refiner.sln in Visual Studio 2022.
+2. Select Release and x64.
+3. Run Build -> Rebuild Solution.
+
+This source builds the official Sonic Refiner v0.3.0 package.
+
+------------------------------------------------------------
+
+日本語
 
 ■ 対象環境
 - foobar2000 SDK 2025-03-07
@@ -8,42 +51,32 @@
 - Release / x64
 - WTL
 
-■ 配置例
-このフォルダーを次の位置へ配置します。
-
+■ 配置先
 F:\foobar2000-dev\SDK-2025-03-07\foobar2000\foo_sonic_refiner
 
-WTLは次のファイルが存在するように配置します。
-
+■ WTL確認先
 F:\foobar2000-dev\WTL\Include\atlapp.h
 
-別ドライブを使う場合も、SDKフォルダーとWTLフォルダーの相対構成を
-同じにしてください。
-
 ■ 自動ビルドと梱包
-次のファイルをダブルクリックします。
-
+次をダブルクリックします。
 build_and_package.cmd
 
-日本語名の「ビルドと梱包.cmd」からも同じ処理を実行できます。
+日本語名の次のファイルでも同じ処理を実行できます。
+ビルドと梱包.cmd
 
 ■ 出力
 DLL:
 x64\Release\foo_sonic_refiner.dll
 
 配布パッケージ:
-dist\foo_sonic_refiner_v0.2.0.fb2k-component
+dist\foo_sonic_refiner_v0.3.0.fb2k-component
 
 チェックサム:
 dist\SHA256SUMS.txt
 
 ■ 手動ビルド
 1. foo_sonic_refiner.slnをVisual Studio 2022で開きます。
-2. 構成を「Release」、プラットフォームを「x64」にします。
-3. 「ビルド」→「ソリューションのリビルド」を実行します。
+2. 構成をRelease、プラットフォームをx64にします。
+3. ビルド→ソリューションのリビルドを実行します。
 
-■ インストール
-生成されたfoo_sonic_refiner_v0.2.0.fb2k-componentをダブルクリックし、
-foobar2000へインストールします。
-
-詳細はREADME.mdとQUICK_START.mdを参照してください。
+このソースからSonic Refiner v0.3.0正式版パッケージを作成できます。

@@ -1,4 +1,4 @@
-﻿param(
+param(
     [ValidateSet("Debug", "Release")]
     [string]$Configuration = "Release"
 )
@@ -10,8 +10,8 @@ $Project = Join-Path $ProjectRoot "foo_sonic_refiner.vcxproj"
 $OutputDll = Join-Path $ProjectRoot "x64\$Configuration\foo_sonic_refiner.dll"
 $DistRoot = Join-Path $ProjectRoot "dist"
 $StageRoot = Join-Path $DistRoot "foo_sonic_refiner"
-$PackagePath = Join-Path $DistRoot "foo_sonic_refiner_v0.2.0.fb2k-component"
-$TempZip = Join-Path $DistRoot "foo_sonic_refiner_v0.2.0.zip"
+$PackagePath = Join-Path $DistRoot "foo_sonic_refiner_v0.3.0.fb2k-component"
+$TempZip = Join-Path $DistRoot "foo_sonic_refiner_v0.3.0.zip"
 
 $SdkRoot = [IO.Path]::GetFullPath((Join-Path $ProjectRoot "..\.."))
 $DevRoot = [IO.Path]::GetFullPath((Join-Path $SdkRoot ".."))

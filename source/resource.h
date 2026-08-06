@@ -37,3 +37,23 @@
 
 #define IDC_MASTER_STRENGTH_SLIDER     1031
 #define IDC_MASTER_STRENGTH_VALUE      1032
+#define IDC_LANGUAGE_LABEL              1033
+#define IDC_LANGUAGE_COMBO              1034
+#define IDC_GROUP_TONE                  1035
+#define IDC_DEPTH_LABEL                 1036
+#define IDC_DEPTH_DESCRIPTION           1037
+#define IDC_CLARITY_LABEL               1038
+#define IDC_CLARITY_DESCRIPTION         1039
+#define IDC_WIDTH_LABEL                 1040
+#define IDC_WIDTH_DESCRIPTION           1041
+#define IDC_AMBIENCE_LABEL              1042
+#define IDC_AMBIENCE_DESCRIPTION        1043
+#define IDC_GROUP_BUILTIN               1044
+#define IDC_BUILTIN_DESCRIPTION         1045
+#define IDC_GROUP_USER                  1046
+#define IDC_USER_DESCRIPTION            1047
+#define IDC_GROUP_MASTER                1048
+#define IDC_MASTER_STRENGTH_LABEL       1049
+#define IDC_OUTPUT_GAIN_LABEL           1050
+#define IDC_EXTREME_NOTICE              1051
+#define IDC_PRESET_NAME_LABEL           1052

@@ -2,6 +2,34 @@
 
 All notable public changes to Sonic Refiner are documented here.
 
+## [0.3.0] - 2026-08-06
+
+### Added
+
+- Japanese and English user interface
+- Language selection based on the Windows display language on first use
+- Instant language switching without restarting foobar2000
+- Persistent language preference stored separately from DSP settings
+- Localized built-in preset names, controls, messages, file dialogs, Help, Glossary, Important Notes and License pages
+- English-first public documentation
+
+### Compatibility
+
+- DSP processing behavior is unchanged from v0.2.0
+- `preset_version 8` remains unchanged
+- User-preset format remains `SRP3`
+- SRP1, SRP2 and SRP3 remain readable
+- `.srpbackup` format remains unchanged
+- Existing user-preset names are preserved and are not translated
+- Settings window remains 560 × 320
+
+### Validation
+
+- Release / x64 build and package creation confirmed
+- Japanese and English switching confirmed without restart or crash
+- User-preset save/load and backup export/import confirmed
+- Light and dark modes, restart persistence, cancellation, and continuous playback operation confirmed
+
 ## [0.2.0] - 2026-08-03
 
 ### Added
