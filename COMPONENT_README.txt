@@ -1,5 +1,6 @@
-Sonic Refiner 0.3.0
+Sonic Refiner 0.4.0
 Adaptive Audio Enhancement DSP for foobar2000
+Release / 正式版: A/B comparison slots and direct settings access from the Playback menu.
 
 This release adds a Japanese/English user interface. DSP processing behavior
 is unchanged from v0.2.0.
@@ -25,6 +26,7 @@ MAIN FEATURES
 - Eleven built-in presets
 - Up to 20 UTF-8 user presets
 - .srpbackup export and import
+- Temporary A/B comparison slots (in-memory only)
 - Light and dark mode support
 
 RECOMMENDED DSP ORDER
@@ -51,7 +53,7 @@ component's License page.
 
 日本語
 
-Sonic Refiner 0.3.0は、日本語／英語表示に対応した正式版です。
+Sonic Refiner 0.4.0は、v0.3.0を基にA/B比較スロットとPlaybackメニューからの設定画面直接起動を追加した正式版です。
 DSPの音声処理はv0.2.0から変更していません。
 
 - 初回はWindowsの表示言語から日本語／英語を選択
@@ -61,6 +63,16 @@ DSPの音声処理はv0.2.0から変更していません。
   ヘルプ、用語集、注意事項、ライセンスを切り替え
 - 既存の任意プリセット名は翻訳せず維持
 - preset_version 8、SRP3、.srpbackup互換性を維持
+- A/B比較スロットはfoobar2000起動中のみ保持し、再起動後は空に戻る
 
 推奨DSP順序:
 Sonic Refiner -> R128 Real-time Loudness Normalizer -> Output
+
+
+Direct settings access / 設定画面の直接起動
+------------------------------------------------------------
+English: Playback -> Sonic Refiner Settings...
+日本語: Playback -> Sonic Refiner の設定...
+
+The command is also available under foobar2000 Keyboard Shortcuts.
+このコマンドにはfoobar2000のKeyboard Shortcutsから任意のキーを割り当てられます。

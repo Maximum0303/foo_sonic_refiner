@@ -1,0 +1,27 @@
+Sonic Refiner v0.4.0 implementation summary
+
+Added:
+- Temporary A/B comparison slots for Depth, Clarity, Width, Ambience, and Master Strength.
+- Direct settings command under Playback.
+- Modeless owned direct settings window.
+- Keyboard Shortcuts exposure through the main-menu command.
+- Missing/multiple DSP-instance safety checks and runtime chain-change protection.
+
+A/B behavior:
+- Output Gain, Auto Headroom Protection, Level-Matched Bypass, and component enabled state are outside the A/B slots.
+- End Comparison restores the full settings from immediately before comparison began.
+- A/B data is memory-only and is cleared when foobar2000 exits.
+
+Compatibility retained:
+- DSP processing and processing order unchanged from v0.3.0.
+- SRP3 / preset_version 8 / .srpbackup unchanged.
+- SRP1/SRP2/SRP3 read compatibility retained.
+- Existing settings and user presets remain compatible.
+- Japanese/English behavior retained.
+- Settings window remains 560 x 320.
+
+Validated:
+- Release / x64 development build and installation.
+- A/B comparison, presets, backup isolation, restart clearing, and playback switching.
+- Direct opening, duplicate-window prevention, owner-window behavior, OK/Cancel, safety checks, and keyboard shortcuts.
+- Japanese/English in Light/Dark modes.

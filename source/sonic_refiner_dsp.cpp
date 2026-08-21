@@ -985,6 +985,12 @@ enum class ui_language : t_int32 {
 
 cfg_string g_ui_language(guid_ui_language, "");
 
+// v0.4.0: modeless direct settings window opened from Playback.
+// These HWNDs are runtime-only and are never serialized.
+HWND g_direct_sonic_refiner_settings_window = nullptr;
+HWND g_standard_sonic_refiner_settings_window = nullptr;
+constexpr UINT wm_sonic_refiner_direct_chain_invalidated = WM_APP + 0x04A1;
+
 bool is_english(ui_language language) noexcept {
     return language == ui_language::english;
 }
@@ -1036,6 +1042,46 @@ struct user_preset {
     pfc::string8 name;
     sonic_refiner::settings value;
 };
+
+struct ab_comparison_value {
+    float depth = 55.0f;
+    float clarity = 45.0f;
+    float width = 50.0f;
+    float ambience = 40.0f;
+    float master_strength = 100.0f;
+};
+
+struct ab_comparison_slot {
+    bool has_value = false;
+    ab_comparison_value value;
+};
+
+ab_comparison_slot g_ab_slot_a;
+ab_comparison_slot g_ab_slot_b;
+
+ab_comparison_value capture_ab_comparison_value(
+    const sonic_refiner::settings& settings
+) noexcept {
+    return {
+        settings.depth,
+        settings.clarity,
+        settings.width,
+        settings.ambience,
+        settings.master_strength
+    };
+}
+
+void apply_ab_comparison_value(
+    const ab_comparison_value& value,
+    sonic_refiner::settings& settings
+) noexcept {
+    settings.depth = value.depth;
+    settings.clarity = value.clarity;
+    settings.width = value.width;
+    settings.ambience = value.ambience;
+    settings.master_strength = value.master_strength;
+    settings = sonic_refiner::sanitize(settings);
+}
 
 struct built_in_preset {
     const wchar_t* name_japanese;
@@ -1879,6 +1925,21 @@ R128 Real-time Loudness Normalizerは、ラウドネス、True Peak、
 「読込...」では、現在の任意プリセット一覧をバックアップ内の
 一覧で置き換えます。内蔵プリセットと現在の音質設定は変わりません。
 
+■ A/B比較
+「Aへ保存」「Bへ保存」でDepth、Clarity、Width、Ambience、
+Master Strengthを一時保存できます。「Aを試聴」「Bを試聴」で
+即時に切り替え、「比較終了」で比較開始直前の全設定へ戻ります。
+A/Bスロットはfoobar2000起動中だけ保持され、再起動すると空になります。
+任意プリセットや.srpbackupには保存されません。
+
+■ Playbackメニューから直接開く
+Playbackメニューの「Sonic Refiner の設定...」から、DSP Managerを
+経由せず設定画面を直接開けます。直接起動画面を開いたまま
+foobar2000本体を操作できます。Preferences → Keyboard Shortcutsから
+このコマンドへ任意のショートカットキーを割り当てることもできます。
+Sonic RefinerがDSPチェーンにない場合や複数登録されている場合は、
+誤編集防止のため直接編集を開始しません。
+
 ■ 比較
 レベルマッチ・バイパスを有効にすると、補正で増えた平均音量を
 穏やかに抑え、単なる音量差に惑わされにくくなります。
@@ -1924,6 +1985,20 @@ name as a user preset. Up to 20 user presets can be stored.
 "Export..." saves all user presets to an .srpbackup file.
 "Import..." replaces the current user preset list with the list in the
 backup. Built-in presets and the current sound settings are unchanged.
+
+■ A/B Comparison
+Store A and Store B temporarily save Depth, Clarity, Width, Ambience, and
+Master Strength. Listen A and Listen B switch instantly. End Comparison
+restores the complete settings from immediately before comparison began.
+A/B slots remain only while foobar2000 is running and are cleared after a
+restart. They are not stored in user presets or .srpbackup files.
+
+■ Open Directly from the Playback Menu
+Use Playback → Sonic Refiner Settings... to open the settings window without
+going through DSP Manager. The direct window is modeless, so foobar2000 remains
+usable while it is open. You can also assign this command to any key in
+Preferences → Keyboard Shortcuts. If Sonic Refiner is missing from the active
+DSP chain or appears more than once, direct editing is not started for safety.
 
 ■ Comparison
 Level-Matched Bypass gently reduces average level added by processing,
@@ -1979,6 +2054,11 @@ Sonic Refinerに固定で収録された設定です。
 ユーザーが名前を付けて保存する設定です。
 補正値、Master Strength、出力ゲイン、保護、レベル一致、
 本体の有効状態を保存します。
+
+■ A/B比較
+Depth、Clarity、Width、Ambience、Master Strengthの5項目だけを
+A/Bへ一時保存して比較する機能です。Output Gain、保護、レベル一致、
+本体の有効状態はA/Bへ保存しません。A/B内容は再起動後に消去されます。
 
 ■ R128 Real-time Loudness Normalizer
 Sonic Refinerとは別の後段DSPです。
@@ -2038,6 +2118,11 @@ Settings saved under a user-defined name.
 They store the enhancement values, Master Strength, Output Gain,
 protection, level match, and the enabled state.
 
+■ A/B Comparison
+Temporarily stores only Depth, Clarity, Width, Ambience, and Master Strength
+in A or B. Output Gain, protection, level match, and the enabled state are not
+stored in A/B. The slots are cleared when foobar2000 restarts.
+
 ■ R128 Real-time Loudness Normalizer
 A separate downstream DSP used after Sonic Refiner.
 It handles loudness normalization, True Peak protection, and limiting.
@@ -2082,6 +2167,10 @@ Output Gainと保護・比較機能の設定値は変更されません。
 ■ 聴覚と機器の保護
 フルブーストなどの極端な設定を試す際は、再生音量を十分に下げてください。
 長時間の大音量再生は避けてください。
+
+■ A/B比較
+A/Bスロットは一時比較専用で、foobar2000終了時に消去されます。
+残したい設定は任意プリセットとして保存してください。
 
 ■ プリセット読み込み
 バックアップの読み込みは、現在の任意プリセット一覧を全件置換します。
@@ -2131,6 +2220,10 @@ downstream R128 Real-time Loudness Normalizer.
 ■ Hearing and Equipment Safety
 Lower the playback volume before trying extreme settings such as Full Boost.
 Avoid prolonged listening at high volume.
+
+■ A/B Comparison
+A/B slots are temporary and are cleared when foobar2000 exits. Save settings
+you want to keep as a user preset.
 
 ■ Preset Import
 Importing a backup replaces the entire current user preset list.
@@ -2294,11 +2387,26 @@ class sonic_refiner_dialog final :
 public:
     sonic_refiner_dialog(
         const dsp_preset& initial_preset,
-        dsp_preset_edit_callback& callback
+        dsp_preset_edit_callback& callback,
+        bool modeless = false,
+        HWND* tracked_window = nullptr
     )
         : initial_preset_(initial_preset),
           callback_(callback),
-          settings_(sonic_refiner::parse_preset(initial_preset)) {
+          settings_(sonic_refiner::parse_preset(initial_preset)),
+          modeless_(modeless),
+          tracked_window_(tracked_window) {
+    }
+
+    void OnFinalMessage(HWND window) override {
+        if (tracked_window_ != nullptr &&
+            *tracked_window_ == window) {
+            *tracked_window_ = nullptr;
+        }
+
+        if (modeless_) {
+            delete this;
+        }
     }
 
     enum { IDD = IDD_SONIC_REFINER };
@@ -2386,12 +2494,46 @@ public:
             CBN_SELCHANGE,
             on_preset_selection_changed
         )
+        COMMAND_HANDLER_EX(
+            IDC_AB_STORE_A,
+            BN_CLICKED,
+            on_ab_store_a
+        )
+        COMMAND_HANDLER_EX(
+            IDC_AB_LISTEN_A,
+            BN_CLICKED,
+            on_ab_listen_a
+        )
+        COMMAND_HANDLER_EX(
+            IDC_AB_STORE_B,
+            BN_CLICKED,
+            on_ab_store_b
+        )
+        COMMAND_HANDLER_EX(
+            IDC_AB_LISTEN_B,
+            BN_CLICKED,
+            on_ab_listen_b
+        )
+        COMMAND_HANDLER_EX(
+            IDC_AB_END,
+            BN_CLICKED,
+            on_ab_end
+        )
         COMMAND_HANDLER_EX(IDOK, BN_CLICKED, on_button)
         COMMAND_HANDLER_EX(IDCANCEL, BN_CLICKED, on_button)
+        MSG_WM_CLOSE(on_close)
+        MESSAGE_HANDLER(
+            wm_sonic_refiner_direct_chain_invalidated,
+            on_direct_chain_invalidated
+        )
     END_MSG_MAP()
 
 private:
     BOOL on_init_dialog(CWindow, LPARAM) {
+        if (tracked_window_ != nullptr) {
+            *tracked_window_ = m_hWnd;
+        }
+
         dark_mode_.AddDialogWithControls(m_hWnd);
 
         depth_slider_ = GetDlgItem(IDC_DEPTH_SLIDER);
@@ -2412,6 +2554,8 @@ private:
         preset_combo_ = GetDlgItem(IDC_PRESET_COMBO);
         language_combo_ = GetDlgItem(IDC_LANGUAGE_COMBO);
         language_ = load_ui_language();
+        comparison_state_ = comparison_state::none;
+        comparison_start_valid_ = false;
 
         ::SendMessageW(
             language_combo_,
@@ -2540,7 +2684,7 @@ private:
 
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - 0.3.0"
+            L"Sonic Refiner - 0.4.0"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -2705,6 +2849,36 @@ private:
         );
         ::SetDlgItemTextW(
             m_hWnd,
+            IDC_GROUP_AB,
+            localized(language_, L"A/B比較", L"A/B Comparison")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_AB_STORE_A,
+            localized(language_, L"Aへ保存", L"Store A")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_AB_LISTEN_A,
+            localized(language_, L"Aを試聴", L"Listen A")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_AB_STORE_B,
+            localized(language_, L"Bへ保存", L"Store B")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_AB_LISTEN_B,
+            localized(language_, L"Bを試聴", L"Listen B")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_AB_END,
+            localized(language_, L"比較終了", L"End Comparison")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
             IDC_GROUP_MASTER,
             localized(
                 language_,
@@ -2765,6 +2939,7 @@ private:
         );
 
         refresh_builtin_preset_combo(selected_builtin);
+        refresh_ab_controls();
     }
 
     void apply_settings_to_controls() {
@@ -2909,6 +3084,135 @@ private:
         GetDlgItem(IDC_PRESET_DELETE).EnableWindow(selected);
         GetDlgItem(IDC_PRESET_EXPORT).EnableWindow(
             user_presets_.empty() ? FALSE : TRUE
+        );
+    }
+
+    enum class comparison_state {
+        none,
+        slot_a,
+        slot_b
+    };
+
+    void begin_comparison_if_needed() {
+        if (comparison_state_ != comparison_state::none) {
+            return;
+        }
+
+        comparison_start_settings_ = settings_;
+        comparison_start_valid_ = true;
+    }
+
+    void store_ab_slot(ab_comparison_slot& slot) {
+        slot.value = capture_ab_comparison_value(settings_);
+        slot.has_value = true;
+        refresh_ab_controls();
+    }
+
+    void listen_ab_slot(
+        const ab_comparison_slot& slot,
+        comparison_state state
+    ) {
+        if (!slot.has_value) {
+            return;
+        }
+
+        begin_comparison_if_needed();
+        apply_ab_comparison_value(slot.value, settings_);
+        comparison_state_ = state;
+        apply_settings_to_controls();
+        notify_changed();
+        refresh_labels();
+    }
+
+    void on_ab_store_a(UINT, int, CWindow) {
+        store_ab_slot(g_ab_slot_a);
+    }
+
+    void on_ab_listen_a(UINT, int, CWindow) {
+        listen_ab_slot(g_ab_slot_a, comparison_state::slot_a);
+    }
+
+    void on_ab_store_b(UINT, int, CWindow) {
+        store_ab_slot(g_ab_slot_b);
+    }
+
+    void on_ab_listen_b(UINT, int, CWindow) {
+        listen_ab_slot(g_ab_slot_b, comparison_state::slot_b);
+    }
+
+    void on_ab_end(UINT, int, CWindow) {
+        if (comparison_state_ == comparison_state::none ||
+            !comparison_start_valid_) {
+            return;
+        }
+
+        settings_ = comparison_start_settings_;
+        comparison_state_ = comparison_state::none;
+        comparison_start_valid_ = false;
+        apply_settings_to_controls();
+        notify_changed();
+        refresh_labels();
+    }
+
+    void refresh_ab_controls() {
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_AB_STATUS_A,
+            g_ab_slot_a.has_value
+                ? localized(language_, L"保存済み", L"Saved")
+                : localized(language_, L"未保存", L"Empty")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_AB_STATUS_B,
+            g_ab_slot_b.has_value
+                ? localized(language_, L"保存済み", L"Saved")
+                : localized(language_, L"未保存", L"Empty")
+        );
+
+        const wchar_t* current = localized(
+            language_,
+            L"現在：比較なし",
+            L"Current: None"
+        );
+
+        if (comparison_state_ == comparison_state::slot_a) {
+            current = localized(language_, L"現在：A", L"Current: A");
+        } else if (comparison_state_ == comparison_state::slot_b) {
+            current = localized(language_, L"現在：B", L"Current: B");
+        }
+
+        ::SetDlgItemTextW(m_hWnd, IDC_AB_CURRENT, current);
+        ::CheckDlgButton(
+            m_hWnd,
+            IDC_AB_LISTEN_A,
+            comparison_state_ == comparison_state::slot_a
+                ? BST_CHECKED
+                : BST_UNCHECKED
+        );
+        ::CheckDlgButton(
+            m_hWnd,
+            IDC_AB_LISTEN_B,
+            comparison_state_ == comparison_state::slot_b
+                ? BST_CHECKED
+                : BST_UNCHECKED
+        );
+        ::CheckDlgButton(
+            m_hWnd,
+            IDC_AB_END,
+            BST_UNCHECKED
+        );
+
+        GetDlgItem(IDC_AB_LISTEN_A).EnableWindow(
+            g_ab_slot_a.has_value ? TRUE : FALSE
+        );
+        GetDlgItem(IDC_AB_LISTEN_B).EnableWindow(
+            g_ab_slot_b.has_value ? TRUE : FALSE
+        );
+        GetDlgItem(IDC_AB_END).EnableWindow(
+            comparison_state_ != comparison_state::none
+                ? TRUE
+                : FALSE
         );
     }
 
@@ -3383,14 +3687,40 @@ private:
     }
 
     void on_button(UINT, int id, CWindow) {
+        close_settings_dialog(id);
+    }
+
+    void on_close() {
+        close_settings_dialog(IDCANCEL);
+    }
+
+    void close_settings_dialog(int id) {
         if (id == IDCANCEL) {
             callback_.on_preset_changed(initial_preset_);
         }
 
-        EndDialog(id);
+        if (modeless_) {
+            DestroyWindow();
+        } else {
+            EndDialog(id);
+        }
+    }
+
+    LRESULT on_direct_chain_invalidated(
+        UINT,
+        WPARAM,
+        LPARAM,
+        BOOL&
+    ) {
+        direct_invalidated_ = true;
+        refresh_labels();
+        return 0;
     }
 
     void notify_changed() {
+        if (direct_invalidated_) {
+            return;
+        }
         dsp_preset_impl preset;
         sonic_refiner::make_preset(settings_, preset);
         callback_.on_preset_changed(preset);
@@ -3585,12 +3915,48 @@ private:
 
         refresh_builtin_preset_button();
         refresh_preset_buttons();
+        refresh_ab_controls();
+
+        if (direct_invalidated_) {
+            const int edit_control_ids[] = {
+                IDC_ENABLE,
+                IDC_DEPTH_SLIDER, IDC_DEPTH_VALUE,
+                IDC_CLARITY_SLIDER, IDC_CLARITY_VALUE,
+                IDC_WIDTH_SLIDER, IDC_WIDTH_VALUE,
+                IDC_AMBIENCE_SLIDER, IDC_AMBIENCE_VALUE,
+                IDC_BUILTIN_PRESET_COMBO, IDC_BUILTIN_PRESET_LOAD,
+                IDC_PRESET_COMBO, IDC_PRESET_SAVE, IDC_PRESET_LOAD,
+                IDC_PRESET_DELETE, IDC_PRESET_EXPORT, IDC_PRESET_IMPORT,
+                IDC_AB_STORE_A, IDC_AB_LISTEN_A,
+                IDC_AB_STORE_B, IDC_AB_LISTEN_B, IDC_AB_END,
+                IDC_MASTER_STRENGTH_SLIDER, IDC_MASTER_STRENGTH_VALUE,
+                IDC_OUTPUT_GAIN_SLIDER, IDC_OUTPUT_GAIN_VALUE,
+                IDC_AUTO_HEADROOM, IDC_LEVEL_MATCH
+            };
+
+            for (const int control_id : edit_control_ids) {
+                GetDlgItem(control_id).EnableWindow(FALSE);
+            }
+
+            uSetDlgItemText(
+                m_hWnd,
+                IDC_STATUS,
+                localized_utf8(
+                    language_,
+                    "処理状態: 直接編集を停止しました",
+                    "Status: Direct editing stopped"
+                )
+            );
+        }
     }
 
-    const dsp_preset& initial_preset_;
+    dsp_preset_impl initial_preset_;
     dsp_preset_edit_callback& callback_;
     sonic_refiner::settings settings_;
     std::vector<user_preset> user_presets_;
+    comparison_state comparison_state_ = comparison_state::none;
+    bool comparison_start_valid_ = false;
+    sonic_refiner::settings comparison_start_settings_;
 
     CTrackBarCtrl depth_slider_;
     CTrackBarCtrl clarity_slider_;
@@ -3606,19 +3972,300 @@ private:
     CComboBox language_combo_;
     ui_language language_ = ui_language::english;
     fb2k::CDarkModeHooks dark_mode_;
+    bool modeless_ = false;
+    HWND* tracked_window_ = nullptr;
+    bool direct_invalidated_ = false;
 };
+
+class direct_sonic_refiner_preset_callback final
+    : public dsp_preset_edit_callback {
+public:
+    void prepare(HWND dialog) noexcept {
+        dialog_ = dialog;
+        invalidated_ = false;
+    }
+
+    void on_preset_changed(
+        const dsp_preset& new_preset
+    ) override {
+        if (invalidated_) {
+            return;
+        }
+
+        static_api_ptr_t<dsp_config_manager> manager;
+        dsp_chain_config_impl chain;
+        manager->get_core_settings(chain);
+
+        t_size match_count = 0;
+        t_size match_index = 0;
+
+        for (t_size index = 0;
+             index < chain.get_count();
+             ++index) {
+            if (chain.get_item(index).get_owner() ==
+                sonic_refiner::guid) {
+                match_index = index;
+                ++match_count;
+            }
+        }
+
+        if (match_count != 1) {
+            invalidated_ = true;
+            const ui_language language = load_ui_language();
+
+            const wchar_t* message = match_count == 0
+                ? localized(
+                    language,
+                    L"Sonic RefinerがDSPチェーンから削除されました。\n"
+                    L"この設定画面からの変更はこれ以上適用できません。",
+                    L"Sonic Refiner has been removed from the DSP chain.\n"
+                    L"Further changes from this window cannot be applied."
+                )
+                : localized(
+                    language,
+                    L"Sonic Refinerが複数登録されたため、\n"
+                    L"直接編集を続行できません。",
+                    L"Multiple Sonic Refiner instances are now present in the DSP chain.\n"
+                    L"Direct editing cannot continue."
+                );
+
+            ::MessageBoxW(
+                IsWindow(dialog_) ? dialog_ : core_api::get_main_window(),
+                message,
+                L"Sonic Refiner",
+                MB_OK | MB_ICONWARNING
+            );
+
+            if (IsWindow(dialog_)) {
+                ::PostMessageW(
+                    dialog_,
+                    wm_sonic_refiner_direct_chain_invalidated,
+                    0,
+                    0
+                );
+            }
+            return;
+        }
+
+        chain.replace_item(new_preset, match_index);
+        manager->set_core_settings(chain);
+    }
+
+private:
+    HWND dialog_ = nullptr;
+    bool invalidated_ = false;
+};
+
+static direct_sonic_refiner_preset_callback
+    g_direct_sonic_refiner_preset_callback;
+
+static const GUID guid_mainmenu_open_sonic_refiner_settings = {
+    0x9d5ae2c4, 0x7fa1, 0x4ab9,
+    { 0x86, 0x8d, 0x57, 0x6b, 0x0d, 0x4f, 0x2b, 0x91 }
+};
+
+void activate_existing_sonic_refiner_dialog(HWND dialog) {
+    if (!IsWindow(dialog)) {
+        return;
+    }
+
+    if (IsIconic(dialog)) {
+        ::ShowWindow(dialog, SW_RESTORE);
+    } else {
+        ::ShowWindow(dialog, SW_SHOW);
+    }
+
+    ::SetForegroundWindow(dialog);
+}
+
+void show_sonic_refiner_settings_from_main_menu() {
+    if (IsWindow(g_direct_sonic_refiner_settings_window)) {
+        activate_existing_sonic_refiner_dialog(
+            g_direct_sonic_refiner_settings_window
+        );
+        return;
+    }
+
+    if (IsWindow(g_standard_sonic_refiner_settings_window)) {
+        activate_existing_sonic_refiner_dialog(
+            g_standard_sonic_refiner_settings_window
+        );
+        return;
+    }
+
+    static_api_ptr_t<dsp_config_manager> manager;
+    dsp_chain_config_impl chain;
+    manager->get_core_settings(chain);
+
+    t_size match_count = 0;
+    t_size match_index = 0;
+
+    for (t_size index = 0;
+         index < chain.get_count();
+         ++index) {
+        if (chain.get_item(index).get_owner() ==
+            sonic_refiner::guid) {
+            match_index = index;
+            ++match_count;
+        }
+    }
+
+    const HWND owner = core_api::get_main_window();
+    const ui_language language = load_ui_language();
+
+    if (match_count == 0) {
+        ::MessageBoxW(
+            owner,
+            localized(
+                language,
+                L"Sonic Refinerは現在のDSPチェーンに追加されていません。\n\n"
+                L"DSP ManagerでSonic RefinerをActive DSPsへ追加してから、\n"
+                L"もう一度お試しください。",
+                L"Sonic Refiner is not currently in the active DSP chain.\n\n"
+                L"Add Sonic Refiner to Active DSPs in DSP Manager,\n"
+                L"then try again."
+            ),
+            L"Sonic Refiner",
+            MB_OK | MB_ICONINFORMATION
+        );
+        return;
+    }
+
+    if (match_count > 1) {
+        ::MessageBoxW(
+            owner,
+            localized(
+                language,
+                L"Sonic Refinerが複数のDSPスロットに登録されています。\n\n"
+                L"安全のため直接編集できません。\n"
+                L"DSP Managerから設定してください。",
+                L"Multiple Sonic Refiner instances are present in the DSP chain.\n\n"
+                L"Direct editing is unavailable for safety.\n"
+                L"Configure the desired instance from DSP Manager."
+            ),
+            L"Sonic Refiner",
+            MB_OK | MB_ICONWARNING
+        );
+        return;
+    }
+
+    const dsp_preset_impl preset(chain.get_item(match_index));
+
+    auto* dialog = new sonic_refiner_dialog(
+        preset,
+        g_direct_sonic_refiner_preset_callback,
+        true,
+        &g_direct_sonic_refiner_settings_window
+    );
+
+    const HWND window = dialog->Create(owner);
+    if (!IsWindow(window)) {
+        delete dialog;
+        ::MessageBoxW(
+            owner,
+            localized(
+                language,
+                L"Sonic Refinerの設定画面を開けませんでした。",
+                L"Could not open the Sonic Refiner settings window."
+            ),
+            L"Sonic Refiner",
+            MB_OK | MB_ICONERROR
+        );
+        return;
+    }
+
+    g_direct_sonic_refiner_preset_callback.prepare(window);
+    ::ShowWindow(window, SW_SHOW);
+    ::SetForegroundWindow(window);
+}
 
 void run_config_popup(
     const dsp_preset& preset,
     HWND parent,
     dsp_preset_edit_callback& callback
 ) {
-    sonic_refiner_dialog dialog(preset, callback);
+    if (IsWindow(g_direct_sonic_refiner_settings_window)) {
+        activate_existing_sonic_refiner_dialog(
+            g_direct_sonic_refiner_settings_window
+        );
+        return;
+    }
+
+    sonic_refiner_dialog dialog(
+        preset,
+        callback,
+        false,
+        &g_standard_sonic_refiner_settings_window
+    );
 
     if (dialog.DoModal(parent) != IDOK) {
         callback.on_preset_changed(preset);
     }
 }
+
+class mainmenu_commands_sonic_refiner_settings
+    : public mainmenu_commands {
+public:
+    t_uint32 get_command_count() override {
+        return 1;
+    }
+
+    GUID get_command(t_uint32 index) override {
+        if (index != 0) {
+            uBugCheck();
+        }
+        return guid_mainmenu_open_sonic_refiner_settings;
+    }
+
+    void get_name(
+        t_uint32 index,
+        pfc::string_base& out
+    ) override {
+        if (index != 0) {
+            uBugCheck();
+        }
+
+        if (is_english(load_ui_language())) {
+            out = "Sonic Refiner Settings...";
+        } else {
+            out = "Sonic Refiner の設定...";
+        }
+    }
+
+    bool get_description(
+        t_uint32 index,
+        pfc::string_base& out
+    ) override {
+        if (index != 0) {
+            uBugCheck();
+        }
+
+        if (is_english(load_ui_language())) {
+            out = "Opens the Sonic Refiner settings dialog directly.";
+        } else {
+            out = "Sonic Refinerの設定画面を直接開きます。";
+        }
+        return true;
+    }
+
+    GUID get_parent() override {
+        return mainmenu_groups::playback;
+    }
+
+    void execute(
+        t_uint32 index,
+        service_ptr_t<service_base>
+    ) override {
+        if (index != 0) {
+            uBugCheck();
+        }
+        show_sonic_refiner_settings_from_main_menu();
+    }
+};
+
+static mainmenu_commands_factory_t<
+    mainmenu_commands_sonic_refiner_settings
+> g_mainmenu_commands_sonic_refiner_settings_factory;
 
 #endif
 

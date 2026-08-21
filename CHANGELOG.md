@@ -1,6 +1,72 @@
 # Changelog
 
+## [0.4.0] - 2026-08-22
+
+### Added
+- Temporary A/B comparison slots for Depth, Clarity, Width, Ambience, and Master Strength.
+- Playback menu command for direct Sonic Refiner settings access.
+- Modeless owned direct-settings window and Keyboard Shortcuts integration.
+- Safety checks for missing/multiple active instances and runtime DSP-chain changes.
+
+### Fixed
+- Finalized A/B layout readability and group-border rendering in Japanese/English Light/Dark modes.
+- Fixed the C3246 service-registration build error found during direct-settings development.
+
+### Compatibility
+- DSP processing remains unchanged from v0.3.0.
+- SRP3, `preset_version 8`, `.srpbackup`, and existing preset compatibility are unchanged.
+
+## [0.4.0-dev.5] - 2026-08-22
+
+### Fixed
+- Fixed the Visual Studio C3246 build failure in the direct-settings main-menu command registration.
+- Removed the invalid `final` qualifier from `mainmenu_commands_sonic_refiner_settings`; foobar2000 SDK service registration wraps and derives from this command class.
+
+### Compatibility
+- Direct-settings behavior is otherwise unchanged from v0.4.0-dev.4.
+- DSP processing, A/B comparison, SRP3, `preset_version 8`, and `.srpbackup` are unchanged.
+
+## [0.4.0-dev.4] - 2026-08-22
+
+### Added
+- Playback menu command for direct Sonic Refiner settings access.
+- Modeless owned settings window so foobar2000 remains usable while editing.
+- Keyboard Shortcuts integration through the main-menu command.
+- Safety checks for missing or multiple Sonic Refiner instances in the active DSP chain.
+- Runtime detection if the target Sonic Refiner is removed or duplicated while direct editing is open.
+
+### Compatibility
+- DSP processing is unchanged from v0.4.0-dev.3.
+- SRP3, preset_version 8 and .srpbackup remain unchanged.
+- The conventional DSP Manager configuration path remains available.
+
 All notable public changes to Sonic Refiner are documented here.
+
+## [0.4.0-dev.3] - 2026-08-22
+
+### Fixed
+- Prevented the lower-left border of the Master/Output/Protection group from being erased by the extreme-range notice control.
+- Kept the settings window at 560 x 320 with no A/B or DSP behavior changes.
+
+## [0.4.0-dev.2] - 2026-08-22
+
+### Fixed
+- Improved disabled End Comparison button readability in dark mode.
+- Adjusted A/B and Master/Output/Protection layout spacing while retaining the 560 x 320 settings window.
+
+## [0.4.0-dev.1] - 2026-08-22
+
+### Added
+- Temporary A/B comparison slots for Depth, Clarity, Width, Ambience, and Master Strength
+- Instant A/B listening with restoration of the settings present before comparison began
+- Japanese/English A/B comparison controls and status text
+
+### Compatibility
+- DSP processing algorithm is unchanged from v0.3.0
+- `preset_version 8` remains unchanged
+- User-preset write format remains `SRP3`
+- `.srpbackup` format remains unchanged
+- A/B slots are held only in memory and are cleared when foobar2000 exits
 
 ## [0.3.0] - 2026-08-06
 

@@ -57,3 +57,13 @@
 #define IDC_OUTPUT_GAIN_LABEL           1050
 #define IDC_EXTREME_NOTICE              1051
 #define IDC_PRESET_NAME_LABEL           1052
+
+#define IDC_GROUP_AB                    1053
+#define IDC_AB_STORE_A                  1054
+#define IDC_AB_LISTEN_A                 1055
+#define IDC_AB_STATUS_A                 1056
+#define IDC_AB_STORE_B                  1057
+#define IDC_AB_LISTEN_B                 1058
+#define IDC_AB_STATUS_B                 1059
+#define IDC_AB_CURRENT                  1060
+#define IDC_AB_END                      1061

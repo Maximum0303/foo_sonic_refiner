@@ -1,3 +1,7 @@
+# Sonic Refiner v0.4.0 Quick Start
+
+> v0.4.0 adds temporary A/B comparison slots and direct settings access from the Playback menu.
+
 # Sonic Refiner Quick Start
 
 ## English
@@ -95,3 +99,10 @@ English
 - `読込...`：現在の任意プリセット一覧をバックアップ内容で置換
 
 自動ヘッドルーム保護は軽量な保護であり、True Peakリミッターではありません。
+
+
+## Direct settings access / 設定画面の直接起動
+
+After installation, use **Playback → Sonic Refiner Settings...** (English) or **Playback → Sonic Refiner の設定...** (Japanese). You can assign the same command in **Preferences → Keyboard Shortcuts**.
+
+インストール後は **Playback → Sonic Refiner の設定...** から設定画面を直接開けます。同じコマンドには **Preferences → Keyboard Shortcuts** から任意のキーを割り当てられます。

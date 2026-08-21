@@ -4,7 +4,27 @@
 
 Sonic Refiner adjusts tone and soundstage in real time. It combines low-frequency body, clarity, stereo width, short early reflections, Master Strength, output gain, lightweight headroom protection, and level-matched comparison in one DSP component.
 
-> Current release: **v0.3.0**
+> Current release: **v0.4.0**
+
+## What is new in v0.4.0
+
+### Direct settings access
+
+- Open **Playback → Sonic Refiner Settings...** to configure the single active Sonic Refiner instance without going through DSP Manager.
+- The direct window is modeless and owned by foobar2000: foobar2000 remains usable, the window stays above foobar2000, and unrelated applications can still appear above it.
+- The command is also available in **Preferences → Keyboard Shortcuts**. No default key binding is assigned.
+- If Sonic Refiner is absent from the active DSP chain or appears more than once, direct editing is refused for safety.
+- The conventional DSP Manager configuration path remains available.
+
+
+v0.4.0 adds temporary A/B comparison slots and direct settings access from the Playback menu.
+
+- Store Depth, Clarity, Width, Ambience, and Master Strength in A or B
+- Listen to A or B instantly without changing Output Gain or protection settings
+- End Comparison restores the full settings that were active before comparison began
+- A/B slots are not written to DSP presets, user presets, or `.srpbackup` files
+- A/B slots remain available while foobar2000 is running and are cleared after restart
+- Japanese and English UI are both supported
 
 ## What is new in v0.3.0
 
@@ -87,7 +107,7 @@ Sonic Refiner handles tone and soundstage. The downstream **R128 Real-time Loudn
 
 ## Installation
 
-1. Double-click `foo_sonic_refiner_v0.3.0.fb2k-component`.
+1. Double-click `foo_sonic_refiner_v0.4.0.fb2k-component`.
 2. Apply the component installation in foobar2000.
 3. Restart foobar2000.
 4. Add `Sonic Refiner` from DSP Manager.
@@ -151,11 +171,11 @@ build_and_package.cmd
 Output:
 
 ```text
-dist\foo_sonic_refiner_v0.3.0.fb2k-component
+dist\foo_sonic_refiner_v0.4.0.fb2k-component
 dist\SHA256SUMS.txt
 ```
 
-See `README_FIRST.txt` for detailed build steps and `TESTING_v0.3.0.md` for the release test record.
+See `README_FIRST.txt` for detailed build steps and `TESTING_v0.4.0.md` for the release test record.
 
 ## Safety notes
 
@@ -187,7 +207,27 @@ This project is an independent clean-room implementation. It does not include or
 
 Sonic Refinerは、音色と音場をリアルタイムで調整するfoobar2000用DSPコンポーネントです。低域の厚み、明瞭感、ステレオの広がり、短い初期反射による空間・奥行き感、Master Strength、出力ゲイン、軽量な保護、レベルを合わせた比較を1つの設定画面にまとめています。
 
-> 現在の正式公開版：**v0.3.0**
+> 現在の正式公開版：**v0.4.0**
+
+## v0.4.0の変更点
+
+### 設定画面の直接起動
+
+- **Playback → Sonic Refiner の設定...** から、DSP Managerを経由せずActive DSPs内の1個のSonic Refinerを直接設定できます。
+- 直接起動画面はモードレスでfoobar2000に所有され、画面を開いたままfoobar2000本体を操作できます。別アプリは通常どおり前面に出せます。
+- **Preferences → Keyboard Shortcuts** から任意のショートカットキーを割り当てられます。初期割り当てはありません。
+- Sonic RefinerがDSPチェーンにない場合、または複数登録されている場合は、安全のため直接編集を開始しません。
+- 従来のDSP Manager経由の設定方法もそのまま利用できます。
+
+
+v0.4.0では、一時的なA/B比較スロットとPlaybackメニューからの設定画面直接起動を追加しました。
+
+- Depth、Clarity、Width、Ambience、Master StrengthをA/Bへ保存
+- Output Gainや保護設定を変えずにA/Bを即時試聴
+- 「比較終了」で比較開始直前の全設定へ復元
+- A/B内容はDSP preset、任意プリセット、`.srpbackup`へ保存しない
+- A/Bスロットはfoobar2000起動中のみ保持し、再起動後は空に戻る
+- 日本語／Englishの両方に対応
 
 ## v0.3.0の変更点
 
@@ -268,8 +308,8 @@ build_and_package.cmd
 出力：
 
 ```text
-dist\foo_sonic_refiner_v0.3.0.fb2k-component
+dist\foo_sonic_refiner_v0.4.0.fb2k-component
 dist\SHA256SUMS.txt
 ```
 
-詳しい手順は`README_FIRST.txt`、公開前確認記録は`TESTING_v0.3.0.md`を参照してください。
+詳しい手順は`README_FIRST.txt`、公開前確認記録は`TESTING_v0.4.0.md`を参照してください。
