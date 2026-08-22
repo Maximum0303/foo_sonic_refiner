@@ -12,6 +12,7 @@ struct settings {
     bool auto_headroom = true;
     bool level_matched_bypass = true;
     bool enabled = true;
+    bool adaptive_tone_balance = false;
 };
 
 inline constexpr GUID guid = {
@@ -19,7 +20,7 @@ inline constexpr GUID guid = {
     { 0x9e, 0x8a, 0xf8, 0x27, 0xee, 0xc2, 0x9e, 0x93 }
 };
 
-inline constexpr t_uint32 preset_version = 8;
+inline constexpr t_uint32 preset_version = 9;
 
 inline settings sanitize(settings value) {
     value.depth = std::clamp(value.depth, 0.0f, 100.0f);
@@ -60,6 +61,9 @@ inline void make_preset(const settings& value, dsp_preset& out) {
         safe.level_matched_bypass ? 1 : 0
     );
     builder << static_cast<t_uint32>(safe.enabled ? 1 : 0);
+    builder << static_cast<t_uint32>(
+        safe.adaptive_tone_balance ? 1 : 0
+    );
     builder.finish(guid, out);
 }
 
@@ -157,7 +161,9 @@ inline settings parse_preset(const dsp_preset& in) {
             return sanitize(value);
         }
 
-        if (version == preset_version) {
+        if (version == 8) {
+            // v0.2.0-v0.4.0 compatibility.
+            // Adaptive Tone Balance defaults to OFF.
             parser >> value.depth;
             parser >> value.clarity;
             parser >> value.width;
@@ -171,6 +177,28 @@ inline settings parse_preset(const dsp_preset& in) {
             value.level_matched_bypass =
                 level_matched_bypass != 0;
             value.enabled = enabled != 0;
+            value.adaptive_tone_balance = false;
+            return sanitize(value);
+        }
+
+        if (version == preset_version) {
+            t_uint32 adaptive_tone_balance = 0;
+            parser >> value.depth;
+            parser >> value.clarity;
+            parser >> value.width;
+            parser >> value.ambience;
+            parser >> value.master_strength;
+            parser >> value.output_gain_db;
+            parser >> auto_headroom;
+            parser >> level_matched_bypass;
+            parser >> enabled;
+            parser >> adaptive_tone_balance;
+            value.auto_headroom = auto_headroom != 0;
+            value.level_matched_bypass =
+                level_matched_bypass != 0;
+            value.enabled = enabled != 0;
+            value.adaptive_tone_balance =
+                adaptive_tone_balance != 0;
             return sanitize(value);
         }
 

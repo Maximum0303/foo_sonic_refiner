@@ -12,6 +12,13 @@ namespace {
 constexpr double depth_standard_max_boost_db = 8.0;
 constexpr double depth_extreme_max_boost_db = 16.0;
 constexpr double depth_shelf_frequency_hz = 120.0;
+// Development experiment: when Adaptive Tone Balance is enabled,
+// preserve the dry signal and add only a filtered 60-180 Hz Bass-band
+// component. Manual/fixed Depth remains the legacy 120 Hz shelf.
+constexpr double adaptive_depth_band_highpass_frequency_hz = 60.0;
+constexpr double adaptive_depth_band_lowpass_frequency_hz = 180.0;
+constexpr double adaptive_depth_band_q =
+    0.7071067811865476;
 
 constexpr double clarity_standard_max_boost_db = 7.0;
 constexpr double clarity_extreme_max_boost_db = 14.0;
@@ -42,6 +49,682 @@ constexpr double output_gain_maximum_db = 6.0;
 constexpr double output_gain_step_db = 0.5;
 
 constexpr double two_pi = 6.283185307179586476925286766559;
+
+// v0.5.0 formal release baseline. Audio and persistence behavior are unchanged from the validated release candidate.
+// Shared diagnostic helper retained for the internal analyzers.
+constexpr double adaptive_low_minimum_hz = 60.0;
+constexpr double adaptive_low_maximum_hz = 250.0;
+constexpr double adaptive_mid_minimum_hz = 300.0;
+constexpr double adaptive_mid_maximum_hz = 2000.0;
+constexpr double adaptive_high_minimum_hz = 3500.0;
+constexpr double adaptive_high_maximum_hz = 10000.0;
+constexpr double adaptive_high_minimum_usable_upper_hz = 6000.0;
+
+// Bass/Body is the active Adaptive Tone Balance Low decision metric.
+// L/M and Body/Core remain internal analysis values.
+constexpr double adaptive_bass_minimum_hz = 60.0;
+constexpr double adaptive_bass_maximum_hz = 180.0;
+constexpr double adaptive_body_minimum_hz = 200.0;
+constexpr double adaptive_body_maximum_hz = 500.0;
+constexpr double adaptive_core_minimum_hz = 500.0;
+constexpr double adaptive_core_maximum_hz = 2000.0;
+
+// Presence/Treble split used by the combined Adaptive Tone Balance High decision.
+constexpr double diagnostic_presence_minimum_hz = 2000.0;
+constexpr double diagnostic_presence_maximum_hz = 5000.0;
+constexpr double diagnostic_treble_minimum_hz = 5000.0;
+constexpr double diagnostic_treble_maximum_hz = 10000.0;
+constexpr double diagnostic_treble_minimum_usable_upper_hz = 6000.0;
+
+constexpr double adaptive_bass_body_target_db = 6.5;
+constexpr double adaptive_high_target_db = -6.0;
+constexpr double adaptive_tolerance_db = 1.5;
+
+// Validated Auto High demand map.
+//
+// Keep the existing H/M shortage gate, but once at least six valid T/P
+// windows are available, use both H/M and T/P to choose how strongly the
+// deficient High region should be restored.
+//
+// Gentle correction is approximately the Clarity 45% result used during
+// listening tests. Extra correction is allowed only when both H/M and T/P
+// indicate a deeper deficiency. The final result is never allowed to exceed
+// the legacy H/M-derived shortage estimate or the absolute Auto High cap.
+constexpr double adaptive_high_combined_gentle_db = 3.2;
+constexpr double adaptive_high_hm_severity_start_db = -13.0;
+constexpr double adaptive_high_hm_severity_full_db = -16.0;
+constexpr double adaptive_high_tp_severity_start_db = -5.0;
+constexpr double adaptive_high_tp_severity_full_db = -7.5;
+
+constexpr double adaptive_depth_absolute_maximum_db = 10.0;
+constexpr double adaptive_clarity_absolute_maximum_db = 10.0;
+
+constexpr double adaptive_analysis_window_seconds = 1.0;
+constexpr std::size_t adaptive_history_windows = 12;
+constexpr std::size_t adaptive_minimum_valid_windows = 6;
+constexpr double adaptive_shortage_increase_fraction = 0.70;
+constexpr double adaptive_shortage_release_fraction = 0.40;
+
+constexpr double adaptive_startup_delay_seconds = 1.5;
+constexpr double adaptive_intro_protection_seconds = 10.0;
+constexpr double adaptive_intro_maximum_boost_db = 1.5;
+constexpr double adaptive_gain_increase_db_per_second = 0.5;
+constexpr double adaptive_gain_decrease_db_per_second = 1.0;
+constexpr double adaptive_reset_transition_seconds = 0.18;
+constexpr double adaptive_input_gate_power =
+    3.162277660168379e-6; // 10^(-55 / 10)
+
+enum class adaptive_runtime_state : int {
+    off = 0,
+    waiting = 1,
+    analyzing = 2,
+    active = 3
+};
+
+// Runtime-only values used by the settings UI and A/B warm-start handoff.
+// They are deliberately not serialized.
+std::atomic<int> g_adaptive_runtime_state{
+    static_cast<int>(adaptive_runtime_state::off)
+};
+std::atomic<int> g_adaptive_runtime_depth_tenths_db{0};
+std::atomic<int> g_adaptive_runtime_clarity_tenths_db{0};
+
+// Development-only diagnostic snapshot. The entire diagnostic set is packed
+// into one 64-bit atomic value so that the settings UI can never combine
+// L/M, Bass/Body, Body/Core, H/M, shortage rates, or history count from different
+// analysis updates. This is runtime-only and is never serialized.
+struct adaptive_diagnostic_snapshot_values {
+    bool valid = false;
+    int low_mid_tenths_db = 0;
+    int bass_body_tenths_db = 0;
+    int body_core_tenths_db = 0;
+    int high_mid_tenths_db = 0;
+    int low_shortage_percent = 0;
+    int high_shortage_percent = 0;
+    int history_count = 0;
+    bool high_enabled = true;
+};
+
+constexpr unsigned adaptive_diagnostic_db_bits = 10;
+constexpr unsigned adaptive_diagnostic_db_mask =
+    (1u << adaptive_diagnostic_db_bits) - 1u;
+constexpr int adaptive_diagnostic_db_bias = 512;
+
+unsigned encode_adaptive_diagnostic_db(int tenths_db) noexcept {
+    const int clamped = std::clamp(tenths_db, -512, 511);
+    return static_cast<unsigned>(
+        clamped + adaptive_diagnostic_db_bias
+    );
+}
+
+int decode_adaptive_diagnostic_db(unsigned encoded) noexcept {
+    return static_cast<int>(encoded) -
+        adaptive_diagnostic_db_bias;
+}
+
+std::uint64_t pack_adaptive_diagnostic_snapshot(
+    const adaptive_diagnostic_snapshot_values& value
+) noexcept {
+    const std::uint64_t low =
+        encode_adaptive_diagnostic_db(
+            value.low_mid_tenths_db
+        );
+    const std::uint64_t bass_body =
+        encode_adaptive_diagnostic_db(
+            value.bass_body_tenths_db
+        );
+    const std::uint64_t body =
+        encode_adaptive_diagnostic_db(
+            value.body_core_tenths_db
+        );
+    const std::uint64_t high =
+        encode_adaptive_diagnostic_db(
+            value.high_mid_tenths_db
+        );
+    const std::uint64_t low_shortage =
+        static_cast<std::uint64_t>(
+            std::clamp(value.low_shortage_percent, 0, 100)
+        );
+    const std::uint64_t high_shortage =
+        static_cast<std::uint64_t>(
+            std::clamp(value.high_shortage_percent, 0, 100)
+        );
+    const std::uint64_t history =
+        static_cast<std::uint64_t>(
+            std::clamp(value.history_count, 0, 15)
+        );
+
+    std::uint64_t packed = 0;
+    packed |= low;
+    packed |= body << 10;
+    packed |= high << 20;
+    packed |= low_shortage << 30;
+    packed |= high_shortage << 37;
+    packed |= history << 44;
+
+    if (value.high_enabled) {
+        packed |= (std::uint64_t{1} << 48);
+    }
+    if (value.valid) {
+        packed |= (std::uint64_t{1} << 49);
+    }
+
+    packed |= bass_body << 50;
+
+    return packed;
+}
+
+adaptive_diagnostic_snapshot_values
+unpack_adaptive_diagnostic_snapshot(
+    std::uint64_t packed
+) noexcept {
+    adaptive_diagnostic_snapshot_values value;
+
+    value.low_mid_tenths_db =
+        decode_adaptive_diagnostic_db(
+            static_cast<unsigned>(
+                packed & adaptive_diagnostic_db_mask
+            )
+        );
+    value.bass_body_tenths_db =
+        decode_adaptive_diagnostic_db(
+            static_cast<unsigned>(
+                (packed >> 50) &
+                adaptive_diagnostic_db_mask
+            )
+        );
+    value.body_core_tenths_db =
+        decode_adaptive_diagnostic_db(
+            static_cast<unsigned>(
+                (packed >> 10) &
+                adaptive_diagnostic_db_mask
+            )
+        );
+    value.high_mid_tenths_db =
+        decode_adaptive_diagnostic_db(
+            static_cast<unsigned>(
+                (packed >> 20) &
+                adaptive_diagnostic_db_mask
+            )
+        );
+    value.low_shortage_percent =
+        static_cast<int>((packed >> 30) & 0x7Fu);
+    value.high_shortage_percent =
+        static_cast<int>((packed >> 37) & 0x7Fu);
+    value.history_count =
+        static_cast<int>((packed >> 44) & 0x0Fu);
+    value.high_enabled =
+        ((packed >> 48) & 0x01u) != 0;
+    value.valid =
+        ((packed >> 49) & 0x01u) != 0;
+
+    return value;
+}
+
+std::atomic<std::uint64_t> g_adaptive_diagnostic_snapshot{0};
+
+// dev.19 diagnostic-only H/M stability snapshot.
+// The H/M median, MAD, shortage percentage, and history count are packed
+// together so the UI cannot combine values from different analysis updates.
+struct adaptive_high_stability_snapshot_values {
+    bool valid = false;
+    bool enabled = false;
+    int high_mid_tenths_db = 0;
+    int high_mad_tenths_db = 0;
+    int high_candidate_tenths_db = 0;
+    int high_shortage_percent = 0;
+    int history_count = 0;
+};
+
+std::uint64_t pack_adaptive_high_stability_snapshot(
+    const adaptive_high_stability_snapshot_values& value
+) noexcept {
+    std::uint64_t packed = 0;
+
+    packed |= static_cast<std::uint64_t>(
+        encode_adaptive_diagnostic_db(
+            value.high_mid_tenths_db
+        )
+    );
+    packed |= static_cast<std::uint64_t>(
+        encode_adaptive_diagnostic_db(
+            value.high_mad_tenths_db
+        )
+    ) << 10;
+    packed |= static_cast<std::uint64_t>(
+        std::clamp(value.high_shortage_percent, 0, 100)
+    ) << 20;
+    packed |= static_cast<std::uint64_t>(
+        std::clamp(value.history_count, 0, 15)
+    ) << 27;
+
+    if (value.enabled) {
+        packed |= (std::uint64_t{1} << 31);
+    }
+    if (value.valid) {
+        packed |= (std::uint64_t{1} << 32);
+    }
+
+    packed |= static_cast<std::uint64_t>(
+        encode_adaptive_diagnostic_db(
+            value.high_candidate_tenths_db
+        )
+    ) << 33;
+
+    return packed;
+}
+
+adaptive_high_stability_snapshot_values
+unpack_adaptive_high_stability_snapshot(
+    std::uint64_t packed
+) noexcept {
+    adaptive_high_stability_snapshot_values value;
+
+    value.high_mid_tenths_db =
+        decode_adaptive_diagnostic_db(
+            static_cast<unsigned>(
+                packed & adaptive_diagnostic_db_mask
+            )
+        );
+    value.high_mad_tenths_db =
+        decode_adaptive_diagnostic_db(
+            static_cast<unsigned>(
+                (packed >> 10) &
+                adaptive_diagnostic_db_mask
+            )
+        );
+    value.high_shortage_percent =
+        static_cast<int>((packed >> 20) & 0x7Fu);
+    value.history_count =
+        static_cast<int>((packed >> 27) & 0x0Fu);
+    value.enabled =
+        ((packed >> 31) & 0x01u) != 0;
+    value.valid =
+        ((packed >> 32) & 0x01u) != 0;
+    value.high_candidate_tenths_db =
+        decode_adaptive_diagnostic_db(
+            static_cast<unsigned>(
+                (packed >> 33) &
+                adaptive_diagnostic_db_mask
+            )
+        );
+
+    return value;
+}
+
+std::atomic<std::uint64_t>
+    g_adaptive_high_stability_snapshot{0};
+
+
+// Development-only paired diagnostic for measuring the actual tonal change
+// produced by the Depth/Clarity filter stage. The input and post-tone values
+// are accumulated from the same frames and published together so Delta is
+// always derived from a coherent pair.
+struct tone_bass_body_comparison_snapshot_values {
+    bool valid = false;
+    int input_tenths_db = 0;
+    int post_tenths_db = 0;
+    int history_count = 0;
+};
+
+std::uint32_t pack_tone_bass_body_comparison_snapshot(
+    const tone_bass_body_comparison_snapshot_values& value
+) noexcept {
+    std::uint32_t packed = 0;
+
+    packed |= static_cast<std::uint32_t>(
+        encode_adaptive_diagnostic_db(
+            value.input_tenths_db
+        )
+    );
+    packed |= static_cast<std::uint32_t>(
+        encode_adaptive_diagnostic_db(
+            value.post_tenths_db
+        )
+    ) << 10;
+    packed |= static_cast<std::uint32_t>(
+        std::clamp(value.history_count, 0, 15)
+    ) << 20;
+
+    if (value.valid) {
+        packed |= (std::uint32_t{1} << 24);
+    }
+
+    return packed;
+}
+
+tone_bass_body_comparison_snapshot_values
+unpack_tone_bass_body_comparison_snapshot(
+    std::uint32_t packed
+) noexcept {
+    tone_bass_body_comparison_snapshot_values value;
+
+    value.input_tenths_db =
+        decode_adaptive_diagnostic_db(
+            static_cast<unsigned>(
+                packed & adaptive_diagnostic_db_mask
+            )
+        );
+    value.post_tenths_db =
+        decode_adaptive_diagnostic_db(
+            static_cast<unsigned>(
+                (packed >> 10) &
+                adaptive_diagnostic_db_mask
+            )
+        );
+    value.history_count =
+        static_cast<int>((packed >> 20) & 0x0Fu);
+    value.valid =
+        ((packed >> 24) & 0x01u) != 0;
+
+    return value;
+}
+
+std::atomic<std::uint32_t>
+    g_tone_bass_body_comparison_snapshot{0};
+
+// dev.18 diagnostic-only High-detail snapshot.
+// Packed independently from the adaptive decision snapshot so no existing
+// automatic correction logic or its coherent snapshot format is changed.
+struct tone_treble_presence_snapshot_values {
+    bool valid = false;
+    bool enabled = false;
+    int treble_presence_tenths_db = 0;
+    int treble_presence_mad_tenths_db = 0;
+    int presence_mid_tenths_db = 0;
+    int high_crest_tenths_db = 0;
+    int history_count = 0;
+};
+
+std::uint64_t pack_tone_treble_presence_snapshot(
+    const tone_treble_presence_snapshot_values& value
+) noexcept {
+    std::uint64_t packed = 0;
+
+    packed |= static_cast<std::uint64_t>(
+        encode_adaptive_diagnostic_db(
+            value.treble_presence_tenths_db
+        )
+    );
+    packed |= static_cast<std::uint64_t>(
+        encode_adaptive_diagnostic_db(
+            value.presence_mid_tenths_db
+        )
+    ) << 10;
+    packed |= static_cast<std::uint64_t>(
+        encode_adaptive_diagnostic_db(
+            value.high_crest_tenths_db
+        )
+    ) << 20;
+    packed |= static_cast<std::uint64_t>(
+        std::clamp(value.history_count, 0, 15)
+    ) << 30;
+
+    if (value.enabled) {
+        packed |= (std::uint64_t{1} << 34);
+    }
+    if (value.valid) {
+        packed |= (std::uint64_t{1} << 35);
+    }
+
+    packed |= static_cast<std::uint64_t>(
+        encode_adaptive_diagnostic_db(
+            value.treble_presence_mad_tenths_db
+        )
+    ) << 36;
+
+    return packed;
+}
+
+tone_treble_presence_snapshot_values
+unpack_tone_treble_presence_snapshot(
+    std::uint64_t packed
+) noexcept {
+    tone_treble_presence_snapshot_values value;
+
+    value.treble_presence_tenths_db =
+        decode_adaptive_diagnostic_db(
+            static_cast<unsigned>(
+                packed & adaptive_diagnostic_db_mask
+            )
+        );
+    value.presence_mid_tenths_db =
+        decode_adaptive_diagnostic_db(
+            static_cast<unsigned>(
+                (packed >> 10) &
+                adaptive_diagnostic_db_mask
+            )
+        );
+    value.high_crest_tenths_db =
+        decode_adaptive_diagnostic_db(
+            static_cast<unsigned>(
+                (packed >> 20) &
+                adaptive_diagnostic_db_mask
+            )
+        );
+    value.history_count =
+        static_cast<int>((packed >> 30) & 0x0Fu);
+    value.enabled =
+        ((packed >> 34) & 0x01u) != 0;
+    value.valid =
+        ((packed >> 35) & 0x01u) != 0;
+    value.treble_presence_mad_tenths_db =
+        decode_adaptive_diagnostic_db(
+            static_cast<unsigned>(
+                (packed >> 36) &
+                adaptive_diagnostic_db_mask
+            )
+        );
+
+    return value;
+}
+
+std::atomic<std::uint64_t>
+    g_tone_treble_presence_snapshot{0};
+
+std::atomic<int> g_adaptive_warm_required_depth_tenths_db{0};
+std::atomic<int> g_adaptive_warm_required_clarity_tenths_db{0};
+std::atomic<bool> g_adaptive_warm_valid{false};
+std::atomic<bool> g_adaptive_ab_analysis_requested{false};
+std::atomic<int> g_last_tone_depth_tenths_db{0};
+std::atomic<int> g_last_tone_clarity_tenths_db{0};
+std::atomic<bool> g_last_tone_gain_valid{false};
+std::atomic<bool> g_last_tone_was_adaptive{false};
+
+int db_to_tenths(double value) noexcept {
+    if (!std::isfinite(value)) {
+        return 0;
+    }
+    return static_cast<int>(std::lround(value * 10.0));
+}
+
+double tenths_to_db(int value) noexcept {
+    return static_cast<double>(value) / 10.0;
+}
+
+void publish_adaptive_runtime(
+    adaptive_runtime_state state,
+    double depth_db,
+    double clarity_db
+) noexcept {
+    g_adaptive_runtime_depth_tenths_db.store(
+        db_to_tenths(depth_db),
+        std::memory_order_relaxed
+    );
+    g_adaptive_runtime_clarity_tenths_db.store(
+        db_to_tenths(clarity_db),
+        std::memory_order_relaxed
+    );
+    g_adaptive_runtime_state.store(
+        static_cast<int>(state),
+        std::memory_order_relaxed
+    );
+}
+
+void clear_adaptive_diagnostics() noexcept {
+    g_adaptive_diagnostic_snapshot.store(
+        0,
+        std::memory_order_release
+    );
+    g_adaptive_high_stability_snapshot.store(
+        0,
+        std::memory_order_release
+    );
+}
+
+void clear_tone_bass_body_comparison_diagnostics() noexcept {
+    g_tone_bass_body_comparison_snapshot.store(
+        0,
+        std::memory_order_release
+    );
+}
+
+void clear_tone_treble_presence_diagnostics() noexcept {
+    g_tone_treble_presence_snapshot.store(
+        0,
+        std::memory_order_release
+    );
+}
+
+void publish_tone_treble_presence_diagnostics(
+    double treble_presence_db,
+    double treble_presence_mad_db,
+    double presence_mid_db,
+    double high_crest_db,
+    std::size_t history_count,
+    bool enabled
+) noexcept {
+    tone_treble_presence_snapshot_values snapshot;
+    snapshot.valid = true;
+    snapshot.enabled = enabled;
+    snapshot.treble_presence_tenths_db =
+        db_to_tenths(treble_presence_db);
+    snapshot.treble_presence_mad_tenths_db =
+        db_to_tenths(treble_presence_mad_db);
+    snapshot.presence_mid_tenths_db =
+        db_to_tenths(presence_mid_db);
+    snapshot.high_crest_tenths_db =
+        db_to_tenths(high_crest_db);
+    snapshot.history_count =
+        static_cast<int>(history_count);
+
+    g_tone_treble_presence_snapshot.store(
+        pack_tone_treble_presence_snapshot(snapshot),
+        std::memory_order_release
+    );
+}
+
+void publish_adaptive_high_stability_diagnostics(
+    double high_mid_db,
+    double high_mad_db,
+    double high_candidate_db,
+    double high_shortage_fraction,
+    std::size_t history_count,
+    bool enabled
+) noexcept {
+    adaptive_high_stability_snapshot_values snapshot;
+    snapshot.valid = true;
+    snapshot.enabled = enabled;
+    snapshot.high_mid_tenths_db =
+        db_to_tenths(high_mid_db);
+    snapshot.high_mad_tenths_db =
+        db_to_tenths(high_mad_db);
+    snapshot.high_candidate_tenths_db =
+        db_to_tenths(high_candidate_db);
+    snapshot.high_shortage_percent =
+        static_cast<int>(std::lround(
+            std::clamp(
+                high_shortage_fraction,
+                0.0,
+                1.0
+            ) * 100.0
+        ));
+    snapshot.history_count =
+        static_cast<int>(history_count);
+
+    g_adaptive_high_stability_snapshot.store(
+        pack_adaptive_high_stability_snapshot(snapshot),
+        std::memory_order_release
+    );
+}
+
+void publish_tone_bass_body_comparison_diagnostics(
+    double input_bass_body_db,
+    double post_bass_body_db,
+    std::size_t history_count
+) noexcept {
+    tone_bass_body_comparison_snapshot_values snapshot;
+    snapshot.valid = true;
+    snapshot.input_tenths_db =
+        db_to_tenths(input_bass_body_db);
+    snapshot.post_tenths_db =
+        db_to_tenths(post_bass_body_db);
+    snapshot.history_count =
+        static_cast<int>(history_count);
+
+    g_tone_bass_body_comparison_snapshot.store(
+        pack_tone_bass_body_comparison_snapshot(snapshot),
+        std::memory_order_release
+    );
+}
+
+void publish_adaptive_diagnostics(
+    double low_mid_db,
+    double bass_body_db,
+    double body_core_db,
+    double high_mid_db,
+    double low_shortage_fraction,
+    double high_shortage_fraction,
+    std::size_t history_count,
+    bool high_enabled
+) noexcept {
+    adaptive_diagnostic_snapshot_values snapshot;
+    snapshot.valid = true;
+    snapshot.low_mid_tenths_db =
+        db_to_tenths(low_mid_db);
+    snapshot.bass_body_tenths_db =
+        db_to_tenths(bass_body_db);
+    snapshot.body_core_tenths_db =
+        db_to_tenths(body_core_db);
+    snapshot.high_mid_tenths_db =
+        db_to_tenths(high_mid_db);
+    snapshot.low_shortage_percent =
+        static_cast<int>(std::lround(
+            std::clamp(
+                low_shortage_fraction,
+                0.0,
+                1.0
+            ) * 100.0
+        ));
+    snapshot.high_shortage_percent =
+        static_cast<int>(std::lround(
+            std::clamp(
+                high_shortage_fraction,
+                0.0,
+                1.0
+            ) * 100.0
+        ));
+    snapshot.history_count =
+        static_cast<int>(history_count);
+    snapshot.high_enabled = high_enabled;
+
+    g_adaptive_diagnostic_snapshot.store(
+        pack_adaptive_diagnostic_snapshot(snapshot),
+        std::memory_order_release
+    );
+}
+
+void clear_adaptive_warm_state() noexcept {
+    g_adaptive_warm_required_depth_tenths_db.store(
+        0,
+        std::memory_order_relaxed
+    );
+    g_adaptive_warm_required_clarity_tenths_db.store(
+        0,
+        std::memory_order_relaxed
+    );
+    g_adaptive_warm_valid.store(false, std::memory_order_relaxed);
+}
 
 double normalized_parameter(float value) noexcept {
     return std::clamp(
@@ -211,6 +894,1143 @@ void apply_output_gain(
     }
 }
 
+
+struct adaptive_analysis_channel {
+    sonic_refiner::biquad low_highpass;
+    sonic_refiner::biquad low_lowpass;
+    sonic_refiner::biquad mid_highpass;
+    sonic_refiner::biquad mid_lowpass;
+    sonic_refiner::biquad bass_highpass;
+    sonic_refiner::biquad bass_lowpass;
+    sonic_refiner::biquad body_highpass;
+    sonic_refiner::biquad body_lowpass;
+    sonic_refiner::biquad core_highpass;
+    sonic_refiner::biquad core_lowpass;
+    sonic_refiner::biquad high_highpass;
+    sonic_refiner::biquad high_lowpass;
+
+    void configure(
+        double sample_rate,
+        double high_upper_hz,
+        bool high_enabled
+    ) noexcept {
+        low_highpass.set_high_pass(
+            sample_rate,
+            adaptive_low_minimum_hz
+        );
+        low_lowpass.set_low_pass(
+            sample_rate,
+            adaptive_low_maximum_hz
+        );
+        mid_highpass.set_high_pass(
+            sample_rate,
+            adaptive_mid_minimum_hz
+        );
+        mid_lowpass.set_low_pass(
+            sample_rate,
+            adaptive_mid_maximum_hz
+        );
+
+        // Diagnostic-only Bass/Body/Core filters.
+        bass_highpass.set_high_pass(
+            sample_rate,
+            adaptive_bass_minimum_hz
+        );
+        bass_lowpass.set_low_pass(
+            sample_rate,
+            adaptive_bass_maximum_hz
+        );
+        body_highpass.set_high_pass(
+            sample_rate,
+            adaptive_body_minimum_hz
+        );
+        body_lowpass.set_low_pass(
+            sample_rate,
+            adaptive_body_maximum_hz
+        );
+        core_highpass.set_high_pass(
+            sample_rate,
+            adaptive_core_minimum_hz
+        );
+        core_lowpass.set_low_pass(
+            sample_rate,
+            adaptive_core_maximum_hz
+        );
+
+        if (high_enabled) {
+            high_highpass.set_high_pass(
+                sample_rate,
+                adaptive_high_minimum_hz
+            );
+            high_lowpass.set_low_pass(
+                sample_rate,
+                high_upper_hz
+            );
+        } else {
+            high_highpass.reset();
+            high_lowpass.reset();
+        }
+    }
+
+    void reset() noexcept {
+        low_highpass.reset();
+        low_lowpass.reset();
+        mid_highpass.reset();
+        mid_lowpass.reset();
+        bass_highpass.reset();
+        bass_lowpass.reset();
+        body_highpass.reset();
+        body_lowpass.reset();
+        core_highpass.reset();
+        core_lowpass.reset();
+        high_highpass.reset();
+        high_lowpass.reset();
+    }
+
+    double process_low(audio_sample input) noexcept {
+        return static_cast<double>(
+            low_lowpass.process(
+                low_highpass.process(input)
+            )
+        );
+    }
+
+    double process_mid(audio_sample input) noexcept {
+        return static_cast<double>(
+            mid_lowpass.process(
+                mid_highpass.process(input)
+            )
+        );
+    }
+
+    double process_bass(audio_sample input) noexcept {
+        return static_cast<double>(
+            bass_lowpass.process(
+                bass_highpass.process(input)
+            )
+        );
+    }
+
+    double process_body(audio_sample input) noexcept {
+        return static_cast<double>(
+            body_lowpass.process(
+                body_highpass.process(input)
+            )
+        );
+    }
+
+    double process_core(audio_sample input) noexcept {
+        return static_cast<double>(
+            core_lowpass.process(
+                core_highpass.process(input)
+            )
+        );
+    }
+
+    double process_high(audio_sample input) noexcept {
+        return static_cast<double>(
+            high_lowpass.process(
+                high_highpass.process(input)
+            )
+        );
+    }
+};
+
+double adaptive_descending_severity(
+    double value_db,
+    double start_db,
+    double full_db
+) noexcept {
+    if (!std::isfinite(value_db) ||
+        !std::isfinite(start_db) ||
+        !std::isfinite(full_db) ||
+        start_db <= full_db) {
+        return 0.0;
+    }
+
+    if (value_db >= start_db) {
+        return 0.0;
+    }
+    if (value_db <= full_db) {
+        return 1.0;
+    }
+
+    return std::clamp(
+        (start_db - value_db) /
+            (start_db - full_db),
+        0.0,
+        1.0
+    );
+}
+
+double adaptive_combined_high_candidate_db(
+    double high_mid_db,
+    double legacy_high_candidate_db
+) noexcept {
+    const double legacy_candidate = std::clamp(
+        legacy_high_candidate_db,
+        0.0,
+        adaptive_clarity_absolute_maximum_db
+    );
+
+    if (legacy_candidate <= 0.0) {
+        return 0.0;
+    }
+
+    const tone_treble_presence_snapshot_values
+        treble_presence =
+            unpack_tone_treble_presence_snapshot(
+                g_tone_treble_presence_snapshot.load(
+                    std::memory_order_acquire
+                )
+            );
+
+    // Before the T/P analyzer has a stable six-window history, keep the
+    // previous H/M-only behavior. This preserves startup behavior and avoids
+    // making an aggressive decision from one or two windows.
+    if (!treble_presence.valid ||
+        !treble_presence.enabled ||
+        treble_presence.history_count <
+            static_cast<int>(
+                adaptive_minimum_valid_windows
+            )) {
+        return legacy_candidate;
+    }
+
+    // If H/M does not even cross the existing shortage threshold, there is
+    // no reason to impose the gentle +3.2 dB floor.
+    if (high_mid_db >=
+        adaptive_high_target_db -
+            adaptive_tolerance_db) {
+        return 0.0;
+    }
+
+    const double treble_presence_db =
+        tenths_to_db(
+            treble_presence.treble_presence_tenths_db
+        );
+
+    const double hm_severity =
+        adaptive_descending_severity(
+            high_mid_db,
+            adaptive_high_hm_severity_start_db,
+            adaptive_high_hm_severity_full_db
+        );
+    const double tp_severity =
+        adaptive_descending_severity(
+            treble_presence_db,
+            adaptive_high_tp_severity_start_db,
+            adaptive_high_tp_severity_full_db
+        );
+
+    // AND-style continuous severity:
+    // both ratios must indicate a deep deficiency before correction moves
+    // far above the gentle baseline.
+    const double combined_severity =
+        std::sqrt(
+            std::clamp(
+                hm_severity * tp_severity,
+                0.0,
+                1.0
+            )
+        );
+
+    const double gentle_candidate = (std::min)(
+        adaptive_high_combined_gentle_db,
+        legacy_candidate
+    );
+
+    const double combined_candidate =
+        gentle_candidate +
+        (
+            adaptive_clarity_absolute_maximum_db -
+            gentle_candidate
+        ) * combined_severity;
+
+    // Never demand more correction than the original H/M shortage estimate.
+    return std::clamp(
+        (std::min)(
+            combined_candidate,
+            legacy_candidate
+        ),
+        0.0,
+        adaptive_clarity_absolute_maximum_db
+    );
+}
+
+class adaptive_tone_balance_processor {
+public:
+    void configure(
+        double sample_rate,
+        unsigned channels,
+        const sonic_refiner::settings& settings,
+        bool allow_warm_start
+    ) noexcept {
+        sample_rate_ = sample_rate;
+        analysis_channels_ = (std::min)(channels, 2u);
+        active_mode_ = settings.adaptive_tone_balance;
+        master_factor_ = master_strength_factor(
+            settings.master_strength
+        );
+
+        depth_limit_db_ = (std::min)(
+            depth_to_gain_db(settings.depth),
+            adaptive_depth_absolute_maximum_db
+        );
+        clarity_limit_db_ = (std::min)(
+            clarity_to_gain_db(settings.clarity),
+            adaptive_clarity_absolute_maximum_db
+        );
+
+        high_upper_hz_ = (std::min)(
+            adaptive_high_maximum_hz,
+            sample_rate_ * 0.45
+        );
+        high_enabled_ =
+            high_upper_hz_ >=
+                adaptive_high_minimum_usable_upper_hz &&
+            high_upper_hz_ >
+                adaptive_high_minimum_hz + 100.0;
+
+        for (unsigned channel = 0;
+             channel < analysis_channels_;
+             ++channel) {
+            analysis_filters_[channel].configure(
+                sample_rate_,
+                high_upper_hz_,
+                high_enabled_
+            );
+        }
+
+        clear_history_and_window();
+        clear_adaptive_diagnostics();
+        latest_window_signal_present_ = false;
+        elapsed_since_reset_seconds_ = 0.0;
+        fast_reset_seconds_remaining_ = 0.0;
+        warm_started_ = false;
+
+        const bool warm_available =
+            allow_warm_start &&
+            g_adaptive_warm_valid.load(
+                std::memory_order_relaxed
+            );
+
+        if (warm_available) {
+            required_depth_db_ = std::clamp(
+                tenths_to_db(
+                    g_adaptive_warm_required_depth_tenths_db.load(
+                        std::memory_order_relaxed
+                    )
+                ),
+                0.0,
+                adaptive_depth_absolute_maximum_db
+            );
+            required_clarity_db_ = high_enabled_
+                ? std::clamp(
+                    tenths_to_db(
+                        g_adaptive_warm_required_clarity_tenths_db.load(
+                            std::memory_order_relaxed
+                        )
+                    ),
+                    0.0,
+                    adaptive_clarity_absolute_maximum_db
+                )
+                : 0.0;
+            warm_started_ = true;
+            elapsed_since_reset_seconds_ =
+                adaptive_intro_protection_seconds;
+
+            if (active_mode_) {
+                current_depth_db_ =
+                    desired_depth_gain_db();
+                current_clarity_db_ =
+                    desired_clarity_gain_db();
+            } else {
+                current_depth_db_ = 0.0;
+                current_clarity_db_ = 0.0;
+            }
+        } else {
+            required_depth_db_ = 0.0;
+            required_clarity_db_ = 0.0;
+            current_depth_db_ = 0.0;
+            current_clarity_db_ = 0.0;
+        }
+
+        if (active_mode_) {
+            publish_adaptive_runtime(
+                warm_available
+                    ? adaptive_runtime_state::active
+                    : adaptive_runtime_state::waiting,
+                current_depth_db_,
+                current_clarity_db_
+            );
+        } else {
+            publish_adaptive_runtime(
+                adaptive_runtime_state::off,
+                0.0,
+                0.0
+            );
+        }
+    }
+
+    void process(
+        const audio_sample* data,
+        t_size frames,
+        unsigned channels,
+        bool analysis_requested
+    ) noexcept {
+        if (data == nullptr ||
+            frames == 0 ||
+            channels == 0 ||
+            analysis_channels_ == 0 ||
+            !std::isfinite(sample_rate_) ||
+            sample_rate_ <= 0.0) {
+            return;
+        }
+
+        const double elapsed =
+            static_cast<double>(frames) / sample_rate_;
+        elapsed_since_reset_seconds_ += elapsed;
+
+        if (analysis_requested) {
+            analyze_samples(data, frames, channels);
+        }
+
+        if (active_mode_) {
+            advance_current_gains(elapsed);
+
+            adaptive_runtime_state state =
+                adaptive_runtime_state::analyzing;
+
+            if (warm_started_ ||
+                history_count_ >=
+                    adaptive_minimum_valid_windows) {
+                state = adaptive_runtime_state::active;
+            }
+
+            publish_adaptive_runtime(
+                state,
+                current_depth_db_,
+                current_clarity_db_
+            );
+        } else {
+            current_depth_db_ = 0.0;
+            current_clarity_db_ = 0.0;
+            publish_adaptive_runtime(
+                adaptive_runtime_state::off,
+                0.0,
+                0.0
+            );
+        }
+    }
+
+    void reset_for_discontinuity() noexcept {
+        clear_history_and_window();
+        clear_adaptive_diagnostics();
+        latest_window_signal_present_ = false;
+        for (unsigned channel = 0;
+             channel < analysis_channels_;
+             ++channel) {
+            analysis_filters_[channel].reset();
+        }
+
+        required_depth_db_ = 0.0;
+        required_clarity_db_ = 0.0;
+        elapsed_since_reset_seconds_ = 0.0;
+        warm_started_ = false;
+        fast_reset_seconds_remaining_ =
+            adaptive_reset_transition_seconds;
+        clear_adaptive_warm_state();
+
+        if (active_mode_) {
+            publish_adaptive_runtime(
+                adaptive_runtime_state::analyzing,
+                current_depth_db_,
+                current_clarity_db_
+            );
+        } else {
+            publish_adaptive_runtime(
+                adaptive_runtime_state::off,
+                0.0,
+                0.0
+            );
+        }
+    }
+
+    void stop() noexcept {
+        clear_history_and_window();
+        clear_adaptive_diagnostics();
+        latest_window_signal_present_ = false;
+
+        for (unsigned channel = 0;
+             channel < analysis_channels_;
+             ++channel) {
+            analysis_filters_[channel].reset();
+        }
+
+        required_depth_db_ = 0.0;
+        required_clarity_db_ = 0.0;
+        current_depth_db_ = 0.0;
+        current_clarity_db_ = 0.0;
+        elapsed_since_reset_seconds_ = 0.0;
+        fast_reset_seconds_remaining_ = 0.0;
+        warm_started_ = false;
+        clear_adaptive_warm_state();
+
+        publish_adaptive_runtime(
+            active_mode_
+                ? adaptive_runtime_state::waiting
+                : adaptive_runtime_state::off,
+            0.0,
+            0.0
+        );
+    }
+
+    double current_depth_gain_db() const noexcept {
+        return active_mode_ ? current_depth_db_ : 0.0;
+    }
+
+    double current_clarity_gain_db() const noexcept {
+        return active_mode_ ? current_clarity_db_ : 0.0;
+    }
+
+private:
+    struct analysis_window {
+        double low_minus_mid_db = 0.0;
+        double bass_minus_body_db = 0.0;
+        double body_minus_core_db = 0.0;
+        double high_minus_mid_db = 0.0;
+    };
+
+    static double safe_ratio_db(
+        double numerator,
+        double denominator
+    ) noexcept {
+        constexpr double minimum_power = 1.0e-20;
+
+        numerator = (std::max)(numerator, minimum_power);
+        denominator = (std::max)(denominator, minimum_power);
+
+        const double ratio = 10.0 * std::log10(
+            numerator / denominator
+        );
+
+        return std::isfinite(ratio) ? ratio : 0.0;
+    }
+
+    static double median(
+        std::array<double, adaptive_history_windows> values,
+        std::size_t count
+    ) noexcept {
+        if (count == 0) {
+            return 0.0;
+        }
+
+        std::sort(
+            values.begin(),
+            values.begin() + count
+        );
+
+        const std::size_t middle = count / 2;
+
+        if ((count % 2) != 0) {
+            return values[middle];
+        }
+
+        return (
+            values[middle - 1] +
+            values[middle]
+        ) * 0.5;
+    }
+
+    static double median_absolute_deviation(
+        const std::array<
+            double,
+            adaptive_history_windows
+        >& values,
+        std::size_t count,
+        double center
+    ) noexcept {
+        if (count == 0) {
+            return 0.0;
+        }
+
+        std::array<double, adaptive_history_windows>
+            deviations{};
+
+        for (std::size_t index = 0;
+             index < count;
+             ++index) {
+            deviations[index] =
+                std::abs(values[index] - center);
+        }
+
+        return median(deviations, count);
+    }
+
+    void clear_history_and_window() noexcept {
+        history_count_ = 0;
+        window_frames_ = 0;
+        window_raw_power_sum_ = 0.0;
+        window_low_power_sum_ = 0.0;
+        window_mid_power_sum_ = 0.0;
+        window_bass_power_sum_ = 0.0;
+        window_body_power_sum_ = 0.0;
+        window_core_power_sum_ = 0.0;
+        window_high_power_sum_ = 0.0;
+    }
+
+    void push_history(
+        double low_minus_mid_db,
+        double bass_minus_body_db,
+        double body_minus_core_db,
+        double high_minus_mid_db
+    ) noexcept {
+        analysis_window item;
+        item.low_minus_mid_db = low_minus_mid_db;
+        item.bass_minus_body_db = bass_minus_body_db;
+        item.body_minus_core_db = body_minus_core_db;
+        item.high_minus_mid_db = high_minus_mid_db;
+
+        if (history_count_ <
+            adaptive_history_windows) {
+            history_[history_count_] = item;
+            ++history_count_;
+        } else {
+            for (std::size_t index = 1;
+                 index < adaptive_history_windows;
+                 ++index) {
+                history_[index - 1] = history_[index];
+            }
+            history_.back() = item;
+        }
+    }
+
+    void analyze_samples(
+        const audio_sample* data,
+        t_size frames,
+        unsigned channels
+    ) noexcept {
+        const t_size window_frame_target =
+            (std::max)(
+                static_cast<t_size>(
+                    std::lround(
+                        sample_rate_ *
+                        adaptive_analysis_window_seconds
+                    )
+                ),
+                static_cast<t_size>(1)
+            );
+
+        for (t_size frame = 0; frame < frames; ++frame) {
+            const t_size frame_offset =
+                frame * static_cast<t_size>(channels);
+
+            for (unsigned channel = 0;
+                 channel < analysis_channels_;
+                 ++channel) {
+                const double raw = static_cast<double>(
+                    data[frame_offset + channel]
+                );
+
+                if (!std::isfinite(raw)) {
+                    continue;
+                }
+
+                const double low =
+                    analysis_filters_[channel].process_low(
+                        static_cast<audio_sample>(raw)
+                    );
+                const double mid =
+                    analysis_filters_[channel].process_mid(
+                        static_cast<audio_sample>(raw)
+                    );
+                const double bass =
+                    analysis_filters_[channel].process_bass(
+                        static_cast<audio_sample>(raw)
+                    );
+                const double body =
+                    analysis_filters_[channel].process_body(
+                        static_cast<audio_sample>(raw)
+                    );
+                const double core =
+                    analysis_filters_[channel].process_core(
+                        static_cast<audio_sample>(raw)
+                    );
+                const double high = high_enabled_
+                    ? analysis_filters_[channel].process_high(
+                        static_cast<audio_sample>(raw)
+                    )
+                    : 0.0;
+
+                window_raw_power_sum_ += raw * raw;
+                window_low_power_sum_ += low * low;
+                window_mid_power_sum_ += mid * mid;
+                window_bass_power_sum_ += bass * bass;
+                window_body_power_sum_ += body * body;
+                window_core_power_sum_ += core * core;
+
+                if (high_enabled_) {
+                    window_high_power_sum_ += high * high;
+                }
+            }
+
+            ++window_frames_;
+
+            if (window_frames_ >= window_frame_target) {
+                finalize_window();
+            }
+        }
+    }
+
+    void finalize_window() noexcept {
+        const double sample_count =
+            static_cast<double>(
+                window_frames_ *
+                static_cast<t_size>(analysis_channels_)
+            );
+
+        if (sample_count <= 0.0) {
+            clear_window_only();
+            return;
+        }
+
+        const double raw_power =
+            window_raw_power_sum_ / sample_count;
+
+        latest_window_signal_present_ =
+            std::isfinite(raw_power) &&
+            raw_power >= adaptive_input_gate_power;
+
+        if (latest_window_signal_present_) {
+            const double low_power =
+                window_low_power_sum_ / sample_count;
+            const double mid_power =
+                window_mid_power_sum_ / sample_count;
+            const double bass_power =
+                window_bass_power_sum_ / sample_count;
+            const double body_power =
+                window_body_power_sum_ / sample_count;
+            const double core_power =
+                window_core_power_sum_ / sample_count;
+            const double high_power = high_enabled_
+                ? window_high_power_sum_ / sample_count
+                : 0.0;
+
+            const double low_bandwidth =
+                adaptive_low_maximum_hz -
+                adaptive_low_minimum_hz;
+            const double mid_bandwidth =
+                adaptive_mid_maximum_hz -
+                adaptive_mid_minimum_hz;
+            const double bass_bandwidth =
+                adaptive_bass_maximum_hz -
+                adaptive_bass_minimum_hz;
+            const double body_bandwidth =
+                adaptive_body_maximum_hz -
+                adaptive_body_minimum_hz;
+            const double core_bandwidth =
+                adaptive_core_maximum_hz -
+                adaptive_core_minimum_hz;
+            const double high_bandwidth =
+                (std::max)(
+                    high_upper_hz_ -
+                        adaptive_high_minimum_hz,
+                    1.0
+                );
+
+            const double low_density =
+                low_power / low_bandwidth;
+            const double mid_density =
+                mid_power / mid_bandwidth;
+            const double bass_density =
+                bass_power / bass_bandwidth;
+            const double body_density =
+                body_power / body_bandwidth;
+            const double core_density =
+                core_power / core_bandwidth;
+            const double high_density = high_enabled_
+                ? high_power / high_bandwidth
+                : 0.0;
+
+            if (std::isfinite(mid_density) &&
+                mid_density > 1.0e-20) {
+                const double low_minus_mid =
+                    safe_ratio_db(
+                        low_density,
+                        mid_density
+                    );
+                const double bass_minus_body =
+                    (std::isfinite(body_density) &&
+                     body_density > 1.0e-20)
+                        ? safe_ratio_db(
+                            bass_density,
+                            body_density
+                        )
+                        : 0.0;
+                const double body_minus_core =
+                    (std::isfinite(core_density) &&
+                     core_density > 1.0e-20)
+                        ? safe_ratio_db(
+                            body_density,
+                            core_density
+                        )
+                        : 0.0;
+                const double high_minus_mid =
+                    high_enabled_
+                        ? safe_ratio_db(
+                            high_density,
+                            mid_density
+                        )
+                        : 0.0;
+
+                push_history(
+                    low_minus_mid,
+                    bass_minus_body,
+                    body_minus_core,
+                    high_minus_mid
+                );
+                recompute_required_gains();
+            }
+        }
+
+        clear_window_only();
+    }
+
+    void clear_window_only() noexcept {
+        window_frames_ = 0;
+        window_raw_power_sum_ = 0.0;
+        window_low_power_sum_ = 0.0;
+        window_mid_power_sum_ = 0.0;
+        window_bass_power_sum_ = 0.0;
+        window_body_power_sum_ = 0.0;
+        window_core_power_sum_ = 0.0;
+        window_high_power_sum_ = 0.0;
+    }
+
+    void recompute_required_gains() noexcept {
+        if (history_count_ == 0) {
+            return;
+        }
+
+        std::array<double, adaptive_history_windows>
+            low_values{};
+        std::array<double, adaptive_history_windows>
+            bass_body_values{};
+        std::array<double, adaptive_history_windows>
+            body_core_values{};
+        std::array<double, adaptive_history_windows>
+            high_values{};
+
+        std::size_t low_shortage_count = 0;
+        std::size_t high_shortage_count = 0;
+
+        for (std::size_t index = 0;
+             index < history_count_;
+             ++index) {
+            low_values[index] =
+                history_[index].low_minus_mid_db;
+            bass_body_values[index] =
+                history_[index].bass_minus_body_db;
+            body_core_values[index] =
+                history_[index].body_minus_core_db;
+            high_values[index] =
+                history_[index].high_minus_mid_db;
+
+            if (history_[index].bass_minus_body_db <
+                adaptive_bass_body_target_db -
+                    adaptive_tolerance_db) {
+                ++low_shortage_count;
+            }
+
+            if (high_enabled_ &&
+                history_[index].high_minus_mid_db <
+                    adaptive_high_target_db -
+                        adaptive_tolerance_db) {
+                ++high_shortage_count;
+            }
+        }
+
+        const double low_median = median(
+            low_values,
+            history_count_
+        );
+        const double bass_body_median = median(
+            bass_body_values,
+            history_count_
+        );
+        const double body_core_median = median(
+            body_core_values,
+            history_count_
+        );
+        const double high_median = high_enabled_
+            ? median(high_values, history_count_)
+            : 0.0;
+        const double high_mad = high_enabled_
+            ? median_absolute_deviation(
+                high_values,
+                history_count_,
+                high_median
+            )
+            : 0.0;
+
+        const double low_candidate = std::clamp(
+            adaptive_bass_body_target_db -
+                bass_body_median,
+            0.0,
+            adaptive_depth_absolute_maximum_db
+        );
+
+        const double legacy_high_candidate = high_enabled_
+            ? std::clamp(
+                adaptive_high_target_db - high_median,
+                0.0,
+                adaptive_clarity_absolute_maximum_db
+            )
+            : 0.0;
+
+        const double high_candidate = high_enabled_
+            ? adaptive_combined_high_candidate_db(
+                high_median,
+                legacy_high_candidate
+            )
+            : 0.0;
+
+        const double low_fraction =
+            static_cast<double>(low_shortage_count) /
+            static_cast<double>(history_count_);
+        const double high_fraction = high_enabled_
+            ? static_cast<double>(high_shortage_count) /
+                static_cast<double>(history_count_)
+            : 0.0;
+
+        publish_adaptive_diagnostics(
+            low_median,
+            bass_body_median,
+            body_core_median,
+            high_median,
+            low_fraction,
+            high_fraction,
+            history_count_,
+            high_enabled_
+        );
+        publish_adaptive_high_stability_diagnostics(
+            high_median,
+            high_mad,
+            high_candidate,
+            high_fraction,
+            history_count_,
+            high_enabled_
+        );
+
+        if (history_count_ <
+            adaptive_minimum_valid_windows) {
+            if (!warm_started_ &&
+                history_count_ >= 2 &&
+                elapsed_since_reset_seconds_ >=
+                    adaptive_startup_delay_seconds) {
+                required_depth_db_ = low_candidate;
+                required_clarity_db_ = high_candidate;
+            }
+        } else {
+            if (low_fraction >=
+                adaptive_shortage_increase_fraction) {
+                required_depth_db_ = low_candidate;
+            } else if (low_fraction <
+                adaptive_shortage_release_fraction) {
+                required_depth_db_ = 0.0;
+            }
+
+            if (!high_enabled_) {
+                required_clarity_db_ = 0.0;
+            } else if (high_fraction >=
+                adaptive_shortage_increase_fraction) {
+                required_clarity_db_ = high_candidate;
+            } else if (high_fraction <
+                adaptive_shortage_release_fraction) {
+                required_clarity_db_ = 0.0;
+            }
+
+            warm_started_ = false;
+
+            g_adaptive_warm_required_depth_tenths_db.store(
+                db_to_tenths(required_depth_db_),
+                std::memory_order_relaxed
+            );
+            g_adaptive_warm_required_clarity_tenths_db.store(
+                db_to_tenths(required_clarity_db_),
+                std::memory_order_relaxed
+            );
+            g_adaptive_warm_valid.store(
+                true,
+                std::memory_order_relaxed
+            );
+        }
+    }
+
+    double desired_depth_gain_db() const noexcept {
+        double limit = (std::min)(
+            depth_limit_db_,
+            adaptive_depth_absolute_maximum_db
+        );
+
+        if (elapsed_since_reset_seconds_ <
+            adaptive_intro_protection_seconds &&
+            !warm_started_) {
+            limit = (std::min)(
+                limit,
+                adaptive_intro_maximum_boost_db
+            );
+        }
+
+        return (std::min)(
+            required_depth_db_,
+            limit
+        ) * master_factor_;
+    }
+
+    double desired_clarity_gain_db() const noexcept {
+        if (!high_enabled_) {
+            return 0.0;
+        }
+
+        double limit = (std::min)(
+            clarity_limit_db_,
+            adaptive_clarity_absolute_maximum_db
+        );
+
+        if (elapsed_since_reset_seconds_ <
+            adaptive_intro_protection_seconds &&
+            !warm_started_) {
+            limit = (std::min)(
+                limit,
+                adaptive_intro_maximum_boost_db
+            );
+        }
+
+        return (std::min)(
+            required_clarity_db_,
+            limit
+        ) * master_factor_;
+    }
+
+    static double move_toward(
+        double current,
+        double target,
+        double maximum_step
+    ) noexcept {
+        if (target > current) {
+            return (std::min)(
+                target,
+                current + maximum_step
+            );
+        }
+
+        return (std::max)(
+            target,
+            current - maximum_step
+        );
+    }
+
+    void advance_current_gains(double elapsed) noexcept {
+        if (elapsed <= 0.0 || !std::isfinite(elapsed)) {
+            return;
+        }
+
+        if (fast_reset_seconds_remaining_ > 0.0) {
+            const double fraction = std::clamp(
+                elapsed / fast_reset_seconds_remaining_,
+                0.0,
+                1.0
+            );
+
+            current_depth_db_ *= 1.0 - fraction;
+            current_clarity_db_ *= 1.0 - fraction;
+            fast_reset_seconds_remaining_ =
+                (std::max)(
+                    0.0,
+                    fast_reset_seconds_remaining_ - elapsed
+                );
+
+            if (fast_reset_seconds_remaining_ <= 0.0) {
+                current_depth_db_ = 0.0;
+                current_clarity_db_ = 0.0;
+            }
+            return;
+        }
+
+        // Very low-level input is excluded from analysis. Once a complete
+        // silent/very-low window is observed, hold the current correction
+        // instead of continuing to chase the previous target.
+        if (!latest_window_signal_present_ && history_count_ > 0) {
+            return;
+        }
+
+        const double desired_depth =
+            desired_depth_gain_db();
+        const double desired_clarity =
+            desired_clarity_gain_db();
+
+        const double depth_rate =
+            desired_depth > current_depth_db_
+                ? adaptive_gain_increase_db_per_second
+                : adaptive_gain_decrease_db_per_second;
+        const double clarity_rate =
+            desired_clarity > current_clarity_db_
+                ? adaptive_gain_increase_db_per_second
+                : adaptive_gain_decrease_db_per_second;
+
+        current_depth_db_ = move_toward(
+            current_depth_db_,
+            desired_depth,
+            depth_rate * elapsed
+        );
+        current_clarity_db_ = move_toward(
+            current_clarity_db_,
+            desired_clarity,
+            clarity_rate * elapsed
+        );
+    }
+
+    double sample_rate_ = 0.0;
+    unsigned analysis_channels_ = 0;
+    bool active_mode_ = false;
+    bool high_enabled_ = false;
+    bool warm_started_ = false;
+    bool latest_window_signal_present_ = false;
+
+    double high_upper_hz_ = adaptive_high_maximum_hz;
+    double master_factor_ = 1.0;
+    double depth_limit_db_ = 0.0;
+    double clarity_limit_db_ = 0.0;
+
+    std::array<
+        adaptive_analysis_channel,
+        2
+    > analysis_filters_{};
+    std::array<
+        analysis_window,
+        adaptive_history_windows
+    > history_{};
+    std::size_t history_count_ = 0;
+
+    t_size window_frames_ = 0;
+    double window_raw_power_sum_ = 0.0;
+    double window_low_power_sum_ = 0.0;
+    double window_mid_power_sum_ = 0.0;
+    double window_bass_power_sum_ = 0.0;
+    double window_body_power_sum_ = 0.0;
+    double window_core_power_sum_ = 0.0;
+    double window_high_power_sum_ = 0.0;
+
+    double required_depth_db_ = 0.0;
+    double required_clarity_db_ = 0.0;
+    double current_depth_db_ = 0.0;
+    double current_clarity_db_ = 0.0;
+    double elapsed_since_reset_seconds_ = 0.0;
+    double fast_reset_seconds_remaining_ = 0.0;
+};
+
 #ifdef _WIN32
 void run_config_popup(
     const dsp_preset& preset,
@@ -219,17 +2039,980 @@ void run_config_popup(
 );
 #endif
 
+
+class tone_bass_body_comparison_analyzer {
+public:
+    void configure(
+        double sample_rate,
+        unsigned channels
+    ) noexcept {
+        sample_rate_ = sample_rate;
+        analysis_channels_ = (std::min)(channels, 2u);
+
+        for (unsigned channel = 0;
+             channel < analysis_channels_;
+             ++channel) {
+            input_filters_[channel].configure(
+                sample_rate_,
+                0.0,
+                false
+            );
+            post_filters_[channel].configure(
+                sample_rate_,
+                0.0,
+                false
+            );
+        }
+
+        reset();
+    }
+
+    void reset() noexcept {
+        history_count_ = 0;
+        window_frames_ = 0;
+        window_input_raw_power_sum_ = 0.0;
+        window_input_bass_power_sum_ = 0.0;
+        window_input_body_power_sum_ = 0.0;
+        window_post_bass_power_sum_ = 0.0;
+        window_post_body_power_sum_ = 0.0;
+
+        for (unsigned channel = 0;
+             channel < analysis_channels_;
+             ++channel) {
+            input_filters_[channel].reset();
+            post_filters_[channel].reset();
+        }
+
+        clear_tone_bass_body_comparison_diagnostics();
+    }
+
+    void process_frame(
+        const audio_sample* input_frame,
+        const audio_sample* post_tone_frame,
+        unsigned channels
+    ) noexcept {
+        if (input_frame == nullptr ||
+            post_tone_frame == nullptr ||
+            channels == 0 ||
+            analysis_channels_ == 0 ||
+            !std::isfinite(sample_rate_) ||
+            sample_rate_ <= 0.0) {
+            return;
+        }
+
+        const unsigned channels_to_analyze =
+            (std::min)(
+                analysis_channels_,
+                channels
+            );
+
+        for (unsigned channel = 0;
+             channel < channels_to_analyze;
+             ++channel) {
+            const double input_value =
+                static_cast<double>(
+                    input_frame[channel]
+                );
+            const double post_value =
+                static_cast<double>(
+                    post_tone_frame[channel]
+                );
+
+            if (!std::isfinite(input_value) ||
+                !std::isfinite(post_value)) {
+                continue;
+            }
+
+            const double input_bass =
+                input_filters_[channel].process_bass(
+                    static_cast<audio_sample>(
+                        input_value
+                    )
+                );
+            const double input_body =
+                input_filters_[channel].process_body(
+                    static_cast<audio_sample>(
+                        input_value
+                    )
+                );
+            const double post_bass =
+                post_filters_[channel].process_bass(
+                    static_cast<audio_sample>(
+                        post_value
+                    )
+                );
+            const double post_body =
+                post_filters_[channel].process_body(
+                    static_cast<audio_sample>(
+                        post_value
+                    )
+                );
+
+            window_input_raw_power_sum_ +=
+                input_value * input_value;
+            window_input_bass_power_sum_ +=
+                input_bass * input_bass;
+            window_input_body_power_sum_ +=
+                input_body * input_body;
+            window_post_bass_power_sum_ +=
+                post_bass * post_bass;
+            window_post_body_power_sum_ +=
+                post_body * post_body;
+        }
+
+        ++window_frames_;
+
+        const t_size window_frame_target =
+            (std::max)(
+                static_cast<t_size>(
+                    std::lround(
+                        sample_rate_ *
+                        adaptive_analysis_window_seconds
+                    )
+                ),
+                static_cast<t_size>(1)
+            );
+
+        if (window_frames_ >= window_frame_target) {
+            finalize_window();
+        }
+    }
+
+private:
+    struct paired_window {
+        double input_bass_body_db = 0.0;
+        double post_bass_body_db = 0.0;
+    };
+
+    static double safe_ratio_db(
+        double numerator,
+        double denominator
+    ) noexcept {
+        constexpr double minimum_power = 1.0e-20;
+
+        numerator = (std::max)(
+            numerator,
+            minimum_power
+        );
+        denominator = (std::max)(
+            denominator,
+            minimum_power
+        );
+
+        const double ratio =
+            10.0 * std::log10(
+                numerator / denominator
+            );
+
+        return std::isfinite(ratio)
+            ? ratio
+            : 0.0;
+    }
+
+    static double median(
+        std::array<double, adaptive_history_windows> values,
+        std::size_t count
+    ) noexcept {
+        if (count == 0) {
+            return 0.0;
+        }
+
+        std::sort(
+            values.begin(),
+            values.begin() + count
+        );
+
+        const std::size_t middle = count / 2;
+
+        if ((count % 2) != 0) {
+            return values[middle];
+        }
+
+        return (
+            values[middle - 1] +
+            values[middle]
+        ) * 0.5;
+    }
+
+    void clear_window_only() noexcept {
+        window_frames_ = 0;
+        window_input_raw_power_sum_ = 0.0;
+        window_input_bass_power_sum_ = 0.0;
+        window_input_body_power_sum_ = 0.0;
+        window_post_bass_power_sum_ = 0.0;
+        window_post_body_power_sum_ = 0.0;
+    }
+
+    void push_history(
+        double input_bass_body_db,
+        double post_bass_body_db
+    ) noexcept {
+        paired_window item;
+        item.input_bass_body_db =
+            input_bass_body_db;
+        item.post_bass_body_db =
+            post_bass_body_db;
+
+        if (history_count_ <
+            adaptive_history_windows) {
+            history_[history_count_] = item;
+            ++history_count_;
+        } else {
+            for (std::size_t index = 1;
+                 index < adaptive_history_windows;
+                 ++index) {
+                history_[index - 1] =
+                    history_[index];
+            }
+            history_.back() = item;
+        }
+    }
+
+    void finalize_window() noexcept {
+        const double sample_count =
+            static_cast<double>(
+                window_frames_ *
+                static_cast<t_size>(
+                    analysis_channels_
+                )
+            );
+
+        if (sample_count <= 0.0) {
+            clear_window_only();
+            return;
+        }
+
+        const double input_raw_power =
+            window_input_raw_power_sum_ /
+                sample_count;
+
+        if (std::isfinite(input_raw_power) &&
+            input_raw_power >=
+                adaptive_input_gate_power) {
+            const double bass_bandwidth =
+                adaptive_bass_maximum_hz -
+                adaptive_bass_minimum_hz;
+            const double body_bandwidth =
+                adaptive_body_maximum_hz -
+                adaptive_body_minimum_hz;
+
+            const double input_bass_density =
+                (window_input_bass_power_sum_ /
+                    sample_count) /
+                bass_bandwidth;
+            const double input_body_density =
+                (window_input_body_power_sum_ /
+                    sample_count) /
+                body_bandwidth;
+            const double post_bass_density =
+                (window_post_bass_power_sum_ /
+                    sample_count) /
+                bass_bandwidth;
+            const double post_body_density =
+                (window_post_body_power_sum_ /
+                    sample_count) /
+                body_bandwidth;
+
+            if (std::isfinite(input_body_density) &&
+                input_body_density > 1.0e-20 &&
+                std::isfinite(post_body_density) &&
+                post_body_density > 1.0e-20) {
+                push_history(
+                    safe_ratio_db(
+                        input_bass_density,
+                        input_body_density
+                    ),
+                    safe_ratio_db(
+                        post_bass_density,
+                        post_body_density
+                    )
+                );
+                publish_current_medians();
+            }
+        }
+
+        clear_window_only();
+    }
+
+    void publish_current_medians() noexcept {
+        if (history_count_ == 0) {
+            return;
+        }
+
+        std::array<double, adaptive_history_windows>
+            input_values{};
+        std::array<double, adaptive_history_windows>
+            post_values{};
+
+        for (std::size_t index = 0;
+             index < history_count_;
+             ++index) {
+            input_values[index] =
+                history_[index].input_bass_body_db;
+            post_values[index] =
+                history_[index].post_bass_body_db;
+        }
+
+        publish_tone_bass_body_comparison_diagnostics(
+            median(
+                input_values,
+                history_count_
+            ),
+            median(
+                post_values,
+                history_count_
+            ),
+            history_count_
+        );
+    }
+
+    double sample_rate_ = 0.0;
+    unsigned analysis_channels_ = 0;
+
+    std::array<
+        adaptive_analysis_channel,
+        2
+    > input_filters_{};
+    std::array<
+        adaptive_analysis_channel,
+        2
+    > post_filters_{};
+
+    std::array<
+        paired_window,
+        adaptive_history_windows
+    > history_{};
+    std::size_t history_count_ = 0;
+
+    t_size window_frames_ = 0;
+    double window_input_raw_power_sum_ = 0.0;
+    double window_input_bass_power_sum_ = 0.0;
+    double window_input_body_power_sum_ = 0.0;
+    double window_post_bass_power_sum_ = 0.0;
+    double window_post_body_power_sum_ = 0.0;
+};
+
+static double safe_crest_db(
+    double peak_abs,
+    double mean_square
+) noexcept {
+    constexpr double minimum_power = 1.0e-20;
+
+    if (!std::isfinite(peak_abs) ||
+        peak_abs <= 0.0 ||
+        !std::isfinite(mean_square) ||
+        mean_square <= minimum_power) {
+        return 0.0;
+    }
+
+    const double rms = std::sqrt(mean_square);
+    if (!std::isfinite(rms) || rms <= 0.0) {
+        return 0.0;
+    }
+
+    const double ratio = (std::max)(
+        peak_abs / rms,
+        1.0
+    );
+    const double crest_db =
+        20.0 * std::log10(ratio);
+
+    return std::isfinite(crest_db)
+        ? crest_db
+        : 0.0;
+}
+
+class tone_treble_presence_analyzer {
+public:
+    void configure(
+        double sample_rate,
+        unsigned channels
+    ) noexcept {
+        sample_rate_ = sample_rate;
+        analysis_channels_ = (std::min)(channels, 2u);
+
+        treble_upper_hz_ = (std::min)(
+            diagnostic_treble_maximum_hz,
+            sample_rate_ * 0.45
+        );
+        enabled_ =
+            treble_upper_hz_ >=
+                diagnostic_treble_minimum_usable_upper_hz &&
+            treble_upper_hz_ >
+                diagnostic_treble_minimum_hz + 100.0;
+
+        for (unsigned channel = 0;
+             channel < analysis_channels_;
+             ++channel) {
+            filters_[channel].configure(
+                sample_rate_,
+                treble_upper_hz_,
+                enabled_
+            );
+        }
+
+        reset();
+    }
+
+    void reset() noexcept {
+        history_count_ = 0;
+        window_frames_ = 0;
+        window_raw_power_sum_ = 0.0;
+        window_mid_power_sum_ = 0.0;
+        window_presence_power_sum_ = 0.0;
+        window_treble_power_sum_ = 0.0;
+        window_high_crest_power_sum_ = 0.0;
+        window_high_crest_peak_abs_ = 0.0;
+
+        for (unsigned channel = 0;
+             channel < analysis_channels_;
+             ++channel) {
+            filters_[channel].reset();
+        }
+
+        clear_tone_treble_presence_diagnostics();
+    }
+
+    void process(
+        const audio_sample* data,
+        t_size frames,
+        unsigned channels
+    ) noexcept {
+        if (!enabled_ ||
+            data == nullptr ||
+            frames == 0 ||
+            channels == 0 ||
+            analysis_channels_ == 0 ||
+            !std::isfinite(sample_rate_) ||
+            sample_rate_ <= 0.0) {
+            return;
+        }
+
+        const t_size window_frame_target =
+            (std::max)(
+                static_cast<t_size>(
+                    std::lround(
+                        sample_rate_ *
+                        adaptive_analysis_window_seconds
+                    )
+                ),
+                static_cast<t_size>(1)
+            );
+
+        for (t_size frame = 0; frame < frames; ++frame) {
+            const t_size frame_offset =
+                frame * static_cast<t_size>(channels);
+
+            for (unsigned channel = 0;
+                 channel < analysis_channels_;
+                 ++channel) {
+                const double raw = static_cast<double>(
+                    data[frame_offset + channel]
+                );
+
+                if (!std::isfinite(raw)) {
+                    continue;
+                }
+
+                const audio_sample sample =
+                    static_cast<audio_sample>(raw);
+                const double mid =
+                    filters_[channel].process_mid(sample);
+                const double presence =
+                    filters_[channel].process_presence(sample);
+                const double treble =
+                    filters_[channel].process_treble(sample);
+                const double high_crest_band =
+                    filters_[channel].process_high_crest(sample);
+
+                window_raw_power_sum_ += raw * raw;
+                window_mid_power_sum_ +=
+                    mid * mid;
+                window_presence_power_sum_ +=
+                    presence * presence;
+                window_treble_power_sum_ +=
+                    treble * treble;
+                window_high_crest_power_sum_ +=
+                    high_crest_band * high_crest_band;
+                window_high_crest_peak_abs_ =
+                    (std::max)(
+                        window_high_crest_peak_abs_,
+                        std::abs(high_crest_band)
+                    );
+            }
+
+            ++window_frames_;
+
+            if (window_frames_ >= window_frame_target) {
+                finalize_window();
+            }
+        }
+    }
+
+private:
+    struct diagnostic_channel {
+        sonic_refiner::biquad mid_highpass;
+        sonic_refiner::biquad mid_lowpass;
+        sonic_refiner::biquad presence_highpass;
+        sonic_refiner::biquad presence_lowpass;
+        sonic_refiner::biquad treble_highpass;
+        sonic_refiner::biquad treble_lowpass;
+        sonic_refiner::biquad high_crest_highpass;
+        sonic_refiner::biquad high_crest_lowpass;
+
+        void configure(
+            double sample_rate,
+            double treble_upper_hz,
+            bool enabled
+        ) noexcept {
+            if (!enabled) {
+                reset();
+                return;
+            }
+
+            mid_highpass.set_high_pass(
+                sample_rate,
+                adaptive_mid_minimum_hz
+            );
+            mid_lowpass.set_low_pass(
+                sample_rate,
+                adaptive_mid_maximum_hz
+            );
+            presence_highpass.set_high_pass(
+                sample_rate,
+                diagnostic_presence_minimum_hz
+            );
+            presence_lowpass.set_low_pass(
+                sample_rate,
+                diagnostic_presence_maximum_hz
+            );
+            treble_highpass.set_high_pass(
+                sample_rate,
+                diagnostic_treble_minimum_hz
+            );
+            treble_lowpass.set_low_pass(
+                sample_rate,
+                treble_upper_hz
+            );
+            high_crest_highpass.set_high_pass(
+                sample_rate,
+                diagnostic_presence_minimum_hz
+            );
+            high_crest_lowpass.set_low_pass(
+                sample_rate,
+                treble_upper_hz
+            );
+        }
+
+        void reset() noexcept {
+            mid_highpass.reset();
+            mid_lowpass.reset();
+            presence_highpass.reset();
+            presence_lowpass.reset();
+            treble_highpass.reset();
+            treble_lowpass.reset();
+            high_crest_highpass.reset();
+            high_crest_lowpass.reset();
+        }
+
+        double process_mid(
+            audio_sample input
+        ) noexcept {
+            return static_cast<double>(
+                mid_lowpass.process(
+                    mid_highpass.process(input)
+                )
+            );
+        }
+
+        double process_presence(
+            audio_sample input
+        ) noexcept {
+            return static_cast<double>(
+                presence_lowpass.process(
+                    presence_highpass.process(input)
+                )
+            );
+        }
+
+        double process_treble(
+            audio_sample input
+        ) noexcept {
+            return static_cast<double>(
+                treble_lowpass.process(
+                    treble_highpass.process(input)
+                )
+            );
+        }
+
+        double process_high_crest(
+            audio_sample input
+        ) noexcept {
+            return static_cast<double>(
+                high_crest_lowpass.process(
+                    high_crest_highpass.process(input)
+                )
+            );
+        }
+    };
+
+    static double safe_ratio_db(
+        double numerator,
+        double denominator
+    ) noexcept {
+        constexpr double minimum_power = 1.0e-20;
+
+        numerator = (std::max)(
+            numerator,
+            minimum_power
+        );
+        denominator = (std::max)(
+            denominator,
+            minimum_power
+        );
+
+        const double ratio =
+            10.0 * std::log10(
+                numerator / denominator
+            );
+
+        return std::isfinite(ratio)
+            ? ratio
+            : 0.0;
+    }
+
+    static double median(
+        std::array<double, adaptive_history_windows> values,
+        std::size_t count
+    ) noexcept {
+        if (count == 0) {
+            return 0.0;
+        }
+
+        std::sort(
+            values.begin(),
+            values.begin() + count
+        );
+
+        const std::size_t middle = count / 2;
+
+        if ((count % 2) != 0) {
+            return values[middle];
+        }
+
+        return (
+            values[middle - 1] +
+            values[middle]
+        ) * 0.5;
+    }
+
+    static double median_absolute_deviation(
+        const std::array<
+            double,
+            adaptive_history_windows
+        >& values,
+        std::size_t count,
+        double center
+    ) noexcept {
+        if (count == 0) {
+            return 0.0;
+        }
+
+        std::array<double, adaptive_history_windows>
+            deviations{};
+
+        for (std::size_t index = 0;
+             index < count;
+             ++index) {
+            deviations[index] =
+                std::abs(values[index] - center);
+        }
+
+        return median(deviations, count);
+    }
+
+    struct diagnostic_history_entry {
+        double treble_presence_db = 0.0;
+        double presence_mid_db = 0.0;
+        double high_crest_db = 0.0;
+    };
+
+    void push_history(
+        double treble_presence_db,
+        double presence_mid_db,
+        double high_crest_db
+    ) noexcept {
+        diagnostic_history_entry entry;
+        entry.treble_presence_db =
+            treble_presence_db;
+        entry.presence_mid_db =
+            presence_mid_db;
+        entry.high_crest_db =
+            high_crest_db;
+
+        if (history_count_ <
+            adaptive_history_windows) {
+            history_[history_count_] = entry;
+            ++history_count_;
+        } else {
+            for (std::size_t index = 1;
+                 index < adaptive_history_windows;
+                 ++index) {
+                history_[index - 1] =
+                    history_[index];
+            }
+            history_.back() = entry;
+        }
+    }
+
+    void clear_window_only() noexcept {
+        window_frames_ = 0;
+        window_raw_power_sum_ = 0.0;
+        window_mid_power_sum_ = 0.0;
+        window_presence_power_sum_ = 0.0;
+        window_treble_power_sum_ = 0.0;
+        window_high_crest_power_sum_ = 0.0;
+        window_high_crest_peak_abs_ = 0.0;
+    }
+
+    void finalize_window() noexcept {
+        const double sample_count =
+            static_cast<double>(
+                window_frames_ *
+                static_cast<t_size>(
+                    analysis_channels_
+                )
+            );
+
+        if (sample_count <= 0.0) {
+            clear_window_only();
+            return;
+        }
+
+        const double raw_power =
+            window_raw_power_sum_ /
+                sample_count;
+
+        if (std::isfinite(raw_power) &&
+            raw_power >= adaptive_input_gate_power) {
+            const double mid_bandwidth =
+                adaptive_mid_maximum_hz -
+                adaptive_mid_minimum_hz;
+            const double presence_bandwidth =
+                diagnostic_presence_maximum_hz -
+                diagnostic_presence_minimum_hz;
+            const double treble_bandwidth =
+                (std::max)(
+                    treble_upper_hz_ -
+                        diagnostic_treble_minimum_hz,
+                    1.0
+                );
+
+            const double mid_density =
+                (window_mid_power_sum_ /
+                    sample_count) /
+                mid_bandwidth;
+            const double presence_density =
+                (window_presence_power_sum_ /
+                    sample_count) /
+                presence_bandwidth;
+            const double treble_density =
+                (window_treble_power_sum_ /
+                    sample_count) /
+                treble_bandwidth;
+
+            if (std::isfinite(mid_density) &&
+                mid_density > 1.0e-20 &&
+                std::isfinite(presence_density) &&
+                presence_density > 1.0e-20 &&
+                std::isfinite(treble_density)) {
+                push_history(
+                    safe_ratio_db(
+                        treble_density,
+                        presence_density
+                    ),
+                    safe_ratio_db(
+                        presence_density,
+                        mid_density
+                    ),
+                    safe_crest_db(
+                        window_high_crest_peak_abs_,
+                        window_high_crest_power_sum_ /
+                            sample_count
+                    )
+                );
+                publish_current_median();
+            }
+        }
+
+        clear_window_only();
+    }
+
+    void publish_current_median() noexcept {
+        if (history_count_ == 0) {
+            return;
+        }
+
+        std::array<double, adaptive_history_windows>
+            treble_presence_values{};
+        std::array<double, adaptive_history_windows>
+            presence_mid_values{};
+        std::array<double, adaptive_history_windows>
+            high_crest_values{};
+
+        for (std::size_t index = 0;
+             index < history_count_;
+             ++index) {
+            treble_presence_values[index] =
+                history_[index].treble_presence_db;
+            presence_mid_values[index] =
+                history_[index].presence_mid_db;
+            high_crest_values[index] =
+                history_[index].high_crest_db;
+        }
+
+        const double treble_presence_median =
+            median(
+                treble_presence_values,
+                history_count_
+            );
+        const double treble_presence_mad =
+            median_absolute_deviation(
+                treble_presence_values,
+                history_count_,
+                treble_presence_median
+            );
+
+        publish_tone_treble_presence_diagnostics(
+            treble_presence_median,
+            treble_presence_mad,
+            median(
+                presence_mid_values,
+                history_count_
+            ),
+            median(
+                high_crest_values,
+                history_count_
+            ),
+            history_count_,
+            enabled_
+        );
+    }
+
+    double sample_rate_ = 0.0;
+    unsigned analysis_channels_ = 0;
+    double treble_upper_hz_ =
+        diagnostic_treble_maximum_hz;
+    bool enabled_ = false;
+
+    std::array<diagnostic_channel, 2> filters_{};
+    std::array<
+        diagnostic_history_entry,
+        adaptive_history_windows
+    > history_{};
+    std::size_t history_count_ = 0;
+
+    t_size window_frames_ = 0;
+    double window_raw_power_sum_ = 0.0;
+    double window_mid_power_sum_ = 0.0;
+    double window_presence_power_sum_ = 0.0;
+    double window_treble_power_sum_ = 0.0;
+    double window_high_crest_power_sum_ = 0.0;
+    double window_high_crest_peak_abs_ = 0.0;
+};
+
 struct channel_filters {
     sonic_refiner::biquad depth;
+    sonic_refiner::biquad adaptive_band_highpass;
+    sonic_refiner::biquad adaptive_band_lowpass;
     sonic_refiner::biquad clarity;
+
+    bool adaptive_depth_mode = false;
+    double adaptive_band_add_linear = 0.0;
 
     void reset() noexcept {
         depth.reset();
+        adaptive_band_highpass.reset();
+        adaptive_band_lowpass.reset();
         clarity.reset();
     }
 
+    void configure_legacy_depth(
+        double sample_rate,
+        double gain_db,
+        bool reset_state
+    ) noexcept {
+        depth.set_low_shelf(
+            sample_rate,
+            depth_shelf_frequency_hz,
+            gain_db,
+            reset_state
+        );
+        adaptive_depth_mode = false;
+        adaptive_band_add_linear = 0.0;
+    }
+
+    void configure_adaptive_depth(
+        double sample_rate,
+        double gain_db,
+        bool reset_state
+    ) noexcept {
+        adaptive_band_highpass.set_high_pass(
+            sample_rate,
+            adaptive_depth_band_highpass_frequency_hz,
+            adaptive_depth_band_q,
+            reset_state
+        );
+        adaptive_band_lowpass.set_low_pass(
+            sample_rate,
+            adaptive_depth_band_lowpass_frequency_hz,
+            adaptive_depth_band_q,
+            reset_state
+        );
+
+        adaptive_depth_mode = true;
+
+        const double sanitized_gain_db =
+            std::isfinite(gain_db)
+                ? (std::max)(gain_db, 0.0)
+                : 0.0;
+        const double requested_linear =
+            std::pow(
+                10.0,
+                sanitized_gain_db / 20.0
+            );
+
+        adaptive_band_add_linear =
+            std::isfinite(requested_linear)
+                ? (std::max)(
+                    requested_linear - 1.0,
+                    0.0
+                )
+                : 0.0;
+    }
+
     audio_sample process(audio_sample input) noexcept {
-        return clarity.process(depth.process(input));
+        audio_sample depth_output = input;
+
+        if (adaptive_depth_mode) {
+            const audio_sample band =
+                adaptive_band_lowpass.process(
+                    adaptive_band_highpass.process(input)
+                );
+
+            const double combined =
+                static_cast<double>(input) +
+                (static_cast<double>(band) *
+                    adaptive_band_add_linear);
+
+            depth_output = std::isfinite(combined)
+                ? static_cast<audio_sample>(combined)
+                : input;
+        } else {
+            depth_output = depth.process(input);
+        }
+
+        return clarity.process(depth_output);
     }
 };
 
@@ -736,6 +3519,13 @@ class dsp_sonic_refiner : public dsp_impl_base {
 public:
     explicit dsp_sonic_refiner(const dsp_preset& preset)
         : settings_(sonic_refiner::parse_preset(preset)) {
+        publish_adaptive_runtime(
+            settings_.adaptive_tone_balance
+                ? adaptive_runtime_state::waiting
+                : adaptive_runtime_state::off,
+            0.0,
+            0.0
+        );
     }
 
     static GUID g_get_guid() {
@@ -768,6 +3558,33 @@ public:
     bool on_chunk(audio_chunk* chunk, abort_callback& abort) override {
         abort.check();
 
+        if (chunk == nullptr || chunk->is_empty()) {
+            return true;
+        }
+
+        if (!settings_.enabled) {
+            publish_adaptive_runtime(
+                adaptive_runtime_state::off,
+                0.0,
+                0.0
+            );
+            g_last_tone_gain_valid.store(
+                false,
+                std::memory_order_relaxed
+            );
+            g_last_tone_was_adaptive.store(
+                false,
+                std::memory_order_relaxed
+            );
+            return true;
+        }
+
+        const bool analysis_requested =
+            settings_.adaptive_tone_balance ||
+            g_adaptive_ab_analysis_requested.load(
+                std::memory_order_relaxed
+            );
+
         const bool enhancement_active =
             settings_.master_strength > 0.0f &&
             (settings_.depth > 0.0f ||
@@ -775,11 +3592,9 @@ public:
              settings_.width > 0.0f ||
              settings_.ambience > 0.0f);
 
-        if (chunk == nullptr ||
-            chunk->is_empty() ||
-            !settings_.enabled ||
-            (!enhancement_active &&
-             std::abs(settings_.output_gain_db) <= 0.0001f)) {
+        if (!enhancement_active &&
+            std::abs(settings_.output_gain_db) <= 0.0001f &&
+            !analysis_requested) {
             return true;
         }
 
@@ -791,7 +3606,28 @@ public:
         }
 
         if (sample_rate != sample_rate_ || channels != channels_) {
-            configure_processors(sample_rate, channels);
+            const bool format_changed =
+                sample_rate_ != 0 &&
+                (sample_rate != sample_rate_ ||
+                 channels != channels_);
+
+            if (format_changed) {
+                clear_adaptive_warm_state();
+                g_last_tone_gain_valid.store(
+                    false,
+                    std::memory_order_relaxed
+                );
+                g_last_tone_was_adaptive.store(
+                    false,
+                    std::memory_order_relaxed
+                );
+            }
+
+            configure_processors(
+                sample_rate,
+                channels,
+                !format_changed
+            );
         }
 
         audio_sample* data = chunk->get_data();
@@ -800,6 +3636,45 @@ public:
         if (data == nullptr || filters_.size() != channels) {
             return true;
         }
+
+        if (settings_.adaptive_tone_balance) {
+            tone_treble_presence_analyzer_.process(
+                data,
+                frames,
+                channels
+            );
+        }
+
+        adaptive_tone_balance_processor_.process(
+            data,
+            frames,
+            channels,
+            analysis_requested
+        );
+
+        const double desired_depth_gain_db =
+            settings_.adaptive_tone_balance
+                ? adaptive_tone_balance_processor_
+                    .current_depth_gain_db()
+                : effective_depth_gain_db(
+                    settings_.depth,
+                    settings_.master_strength
+                );
+        const double desired_clarity_gain_db =
+            settings_.adaptive_tone_balance
+                ? adaptive_tone_balance_processor_
+                    .current_clarity_gain_db()
+                : effective_clarity_gain_db(
+                    settings_.clarity,
+                    settings_.master_strength
+                );
+
+        advance_tone_transition(
+            desired_depth_gain_db,
+            desired_clarity_gain_db,
+            static_cast<double>(frames) /
+                static_cast<double>(sample_rate)
+        );
 
         const t_size sample_count =
             frames * static_cast<t_size>(channels);
@@ -863,14 +3738,39 @@ public:
     }
 
     void on_endofplayback(abort_callback&) override {
-        reset_processors();
+        adaptive_tone_balance_processor_.stop();
+        reset_audio_processors();
+        g_last_tone_gain_valid.store(
+            false,
+            std::memory_order_relaxed
+        );
+        g_last_tone_was_adaptive.store(
+            false,
+            std::memory_order_relaxed
+        );
     }
 
     void on_endoftrack(abort_callback&) override {
+        adaptive_tone_balance_processor_
+            .reset_for_discontinuity();
+        tone_bass_body_comparison_analyzer_.reset();
+        tone_treble_presence_analyzer_.reset();
+
+        if (settings_.adaptive_tone_balance) {
+            tone_transition_seconds_remaining_ =
+                adaptive_reset_transition_seconds;
+        }
     }
 
     void flush() override {
-        reset_processors();
+        adaptive_tone_balance_processor_
+            .reset_for_discontinuity();
+        reset_audio_processors();
+
+        if (settings_.adaptive_tone_balance) {
+            tone_transition_seconds_remaining_ =
+                adaptive_reset_transition_seconds;
+        }
     }
 
     double get_latency() override {
@@ -878,38 +3778,94 @@ public:
     }
 
     bool need_track_change_mark() override {
-        return false;
+        return true;
     }
 
 private:
-    void configure_processors(unsigned sample_rate, unsigned channels) {
+    void configure_processors(
+        unsigned sample_rate,
+        unsigned channels,
+        bool allow_warm_start
+    ) {
         sample_rate_ = sample_rate;
         channels_ = channels;
 
         filters_.assign(channels, channel_filters{});
 
-        const double depth_gain_db = effective_depth_gain_db(
-            settings_.depth,
-            settings_.master_strength
-        );
-        const double clarity_gain_db = effective_clarity_gain_db(
-            settings_.clarity,
-            settings_.master_strength
+        adaptive_tone_balance_processor_.configure(
+            static_cast<double>(sample_rate),
+            channels,
+            settings_,
+            allow_warm_start
         );
 
-        for (auto& filters : filters_) {
-            filters.depth.set_low_shelf(
-                static_cast<double>(sample_rate),
-                depth_shelf_frequency_hz,
-                depth_gain_db
+        tone_bass_body_comparison_analyzer_.configure(
+            static_cast<double>(sample_rate),
+            channels
+        );
+
+        tone_treble_presence_analyzer_.configure(
+            static_cast<double>(sample_rate),
+            channels
+        );
+
+        const double desired_depth_gain_db =
+            settings_.adaptive_tone_balance
+                ? adaptive_tone_balance_processor_
+                    .current_depth_gain_db()
+                : effective_depth_gain_db(
+                    settings_.depth,
+                    settings_.master_strength
+                );
+        const double desired_clarity_gain_db =
+            settings_.adaptive_tone_balance
+                ? adaptive_tone_balance_processor_
+                    .current_clarity_gain_db()
+                : effective_clarity_gain_db(
+                    settings_.clarity,
+                    settings_.master_strength
+                );
+
+        const bool previous_was_adaptive =
+            g_last_tone_was_adaptive.load(
+                std::memory_order_relaxed
+            );
+        const bool handoff_available =
+            allow_warm_start &&
+            (settings_.adaptive_tone_balance ||
+             previous_was_adaptive) &&
+            g_last_tone_gain_valid.load(
+                std::memory_order_relaxed
             );
 
-            filters.clarity.set_high_shelf(
-                static_cast<double>(sample_rate),
-                clarity_shelf_frequency_hz,
-                clarity_gain_db
-            );
+        if (handoff_available) {
+            current_tone_depth_gain_db_ =
+                tenths_to_db(
+                    g_last_tone_depth_tenths_db.load(
+                        std::memory_order_relaxed
+                    )
+                );
+            current_tone_clarity_gain_db_ =
+                tenths_to_db(
+                    g_last_tone_clarity_tenths_db.load(
+                        std::memory_order_relaxed
+                    )
+                );
+            tone_transition_seconds_remaining_ =
+                adaptive_reset_transition_seconds;
+        } else {
+            current_tone_depth_gain_db_ =
+                desired_depth_gain_db;
+            current_tone_clarity_gain_db_ =
+                desired_clarity_gain_db;
+            tone_transition_seconds_remaining_ = 0.0;
         }
+
+        set_tone_filter_gains(
+            current_tone_depth_gain_db_,
+            current_tone_clarity_gain_db_,
+            true
+        );
 
         width_processor_.configure(
             static_cast<double>(sample_rate),
@@ -935,7 +3891,144 @@ private:
         );
     }
 
-    void reset_processors() noexcept {
+    void set_tone_filter_gains(
+        double depth_gain_db,
+        double clarity_gain_db,
+        bool reset_state
+    ) noexcept {
+        if (!std::isfinite(depth_gain_db)) {
+            depth_gain_db = 0.0;
+        }
+        if (!std::isfinite(clarity_gain_db)) {
+            clarity_gain_db = 0.0;
+        }
+
+        const bool desired_depth_is_adaptive_band =
+            settings_.adaptive_tone_balance;
+        const bool depth_mode_changed =
+            desired_depth_is_adaptive_band !=
+                configured_depth_is_adaptive_band_;
+
+        const bool depth_changed =
+            reset_state ||
+            depth_mode_changed ||
+            std::abs(
+                depth_gain_db -
+                configured_depth_gain_db_
+            ) >= 0.005;
+        const bool clarity_changed =
+            reset_state ||
+            std::abs(
+                clarity_gain_db -
+                configured_clarity_gain_db_
+            ) >= 0.005;
+
+        if (!depth_changed && !clarity_changed) {
+            return;
+        }
+
+        for (auto& filters : filters_) {
+            if (depth_changed) {
+                const bool reset_depth_state =
+                    reset_state ||
+                    depth_mode_changed;
+
+                if (desired_depth_is_adaptive_band) {
+                    filters.configure_adaptive_depth(
+                        static_cast<double>(sample_rate_),
+                        depth_gain_db,
+                        reset_depth_state
+                    );
+                } else {
+                    filters.configure_legacy_depth(
+                        static_cast<double>(sample_rate_),
+                        depth_gain_db,
+                        reset_depth_state
+                    );
+                }
+            }
+
+            if (clarity_changed) {
+                filters.clarity.set_high_shelf(
+                    static_cast<double>(sample_rate_),
+                    clarity_shelf_frequency_hz,
+                    clarity_gain_db,
+                    reset_state
+                );
+            }
+        }
+
+        configured_depth_gain_db_ = depth_gain_db;
+        configured_depth_is_adaptive_band_ =
+            desired_depth_is_adaptive_band;
+        configured_clarity_gain_db_ = clarity_gain_db;
+    }
+
+    void advance_tone_transition(
+        double desired_depth_gain_db,
+        double desired_clarity_gain_db,
+        double elapsed_seconds
+    ) noexcept {
+        if (!std::isfinite(elapsed_seconds) ||
+            elapsed_seconds <= 0.0) {
+            return;
+        }
+
+        if (tone_transition_seconds_remaining_ > 0.0) {
+            const double fraction = std::clamp(
+                elapsed_seconds /
+                    tone_transition_seconds_remaining_,
+                0.0,
+                1.0
+            );
+
+            current_tone_depth_gain_db_ +=
+                (desired_depth_gain_db -
+                 current_tone_depth_gain_db_) *
+                fraction;
+            current_tone_clarity_gain_db_ +=
+                (desired_clarity_gain_db -
+                 current_tone_clarity_gain_db_) *
+                fraction;
+
+            tone_transition_seconds_remaining_ =
+                (std::max)(
+                    0.0,
+                    tone_transition_seconds_remaining_ -
+                        elapsed_seconds
+                );
+        } else {
+            current_tone_depth_gain_db_ =
+                desired_depth_gain_db;
+            current_tone_clarity_gain_db_ =
+                desired_clarity_gain_db;
+        }
+
+        set_tone_filter_gains(
+            current_tone_depth_gain_db_,
+            current_tone_clarity_gain_db_,
+            false
+        );
+
+        g_last_tone_depth_tenths_db.store(
+            db_to_tenths(current_tone_depth_gain_db_),
+            std::memory_order_relaxed
+        );
+        g_last_tone_clarity_tenths_db.store(
+            db_to_tenths(current_tone_clarity_gain_db_),
+            std::memory_order_relaxed
+        );
+        g_last_tone_gain_valid.store(
+            true,
+            std::memory_order_relaxed
+        );
+        g_last_tone_was_adaptive.store(
+            settings_.adaptive_tone_balance,
+            std::memory_order_relaxed
+        );
+    }
+
+    void reset_audio_processors() noexcept {
         for (auto& filters : filters_) {
             filters.reset();
         }
@@ -944,6 +4037,8 @@ private:
         ambience_processor_.reset();
         level_match_processor_.reset();
         auto_headroom_processor_.reset();
+        tone_bass_body_comparison_analyzer_.reset();
+        tone_treble_presence_analyzer_.reset();
     }
 
     sonic_refiner::settings settings_;
@@ -954,6 +4049,19 @@ private:
     ambience_processor ambience_processor_;
     level_match_processor level_match_processor_;
     auto_headroom_processor auto_headroom_processor_;
+    adaptive_tone_balance_processor
+        adaptive_tone_balance_processor_;
+    tone_bass_body_comparison_analyzer
+        tone_bass_body_comparison_analyzer_;
+    tone_treble_presence_analyzer
+        tone_treble_presence_analyzer_;
+
+    double configured_depth_gain_db_ = 0.0;
+    bool configured_depth_is_adaptive_band_ = false;
+    double configured_clarity_gain_db_ = 0.0;
+    double current_tone_depth_gain_db_ = 0.0;
+    double current_tone_clarity_gain_db_ = 0.0;
+    double tone_transition_seconds_remaining_ = 0.0;
 };
 
 dsp_factory_t<dsp_sonic_refiner> g_dsp_factory;
@@ -1049,6 +4157,7 @@ struct ab_comparison_value {
     float width = 50.0f;
     float ambience = 40.0f;
     float master_strength = 100.0f;
+    bool adaptive_tone_balance = false;
 };
 
 struct ab_comparison_slot {
@@ -1067,7 +4176,8 @@ ab_comparison_value capture_ab_comparison_value(
         settings.clarity,
         settings.width,
         settings.ambience,
-        settings.master_strength
+        settings.master_strength,
+        settings.adaptive_tone_balance
     };
 }
 
@@ -1080,6 +4190,8 @@ void apply_ab_comparison_value(
     settings.width = value.width;
     settings.ambience = value.ambience;
     settings.master_strength = value.master_strength;
+    settings.adaptive_tone_balance =
+        value.adaptive_tone_balance;
     settings = sonic_refiner::sanitize(settings);
 }
 
@@ -1092,47 +4204,47 @@ struct built_in_preset {
 const built_in_preset g_built_in_presets[] = {
     {
         L"標準", L"Standard",
-        { 55.0f, 45.0f, 50.0f, 40.0f, 100.0f, 0.0f, true, true, true }
+        { 55.0f, 45.0f, 50.0f, 40.0f, 100.0f, 0.0f, true, true, true, false }
     },
     {
         L"低域強化", L"Bass Boost",
-        { 90.0f, 30.0f, 30.0f, 25.0f, 100.0f, 0.0f, true, true, true }
+        { 90.0f, 30.0f, 30.0f, 25.0f, 100.0f, 0.0f, true, true, true, false }
     },
     {
         L"ボーカル重視", L"Vocal Focus",
-        { 35.0f, 90.0f, 25.0f, 25.0f, 100.0f, 0.0f, true, true, true }
+        { 35.0f, 90.0f, 25.0f, 25.0f, 100.0f, 0.0f, true, true, true, false }
     },
     {
         L"ワイド", L"Wide",
-        { 40.0f, 45.0f, 90.0f, 30.0f, 100.0f, 0.0f, true, true, true }
+        { 40.0f, 45.0f, 90.0f, 30.0f, 100.0f, 0.0f, true, true, true, false }
     },
     {
         L"ライブ", L"Live",
-        { 55.0f, 50.0f, 70.0f, 80.0f, 100.0f, 0.0f, true, true, true }
+        { 55.0f, 50.0f, 70.0f, 80.0f, 100.0f, 0.0f, true, true, true, false }
     },
     {
         L"ヘッドホン", L"Headphones",
-        { 45.0f, 50.0f, 65.0f, 40.0f, 100.0f, 0.0f, true, true, true }
+        { 45.0f, 50.0f, 65.0f, 40.0f, 100.0f, 0.0f, true, true, true, false }
     },
     {
         L"超低域強化", L"Extreme Bass",
-        { 100.0f, 35.0f, 30.0f, 20.0f, 100.0f, 0.0f, true, true, true }
+        { 100.0f, 35.0f, 30.0f, 20.0f, 100.0f, 0.0f, true, true, true, false }
     },
     {
         L"超明瞭", L"Extreme Clarity",
-        { 30.0f, 100.0f, 25.0f, 20.0f, 100.0f, 0.0f, true, true, true }
+        { 30.0f, 100.0f, 25.0f, 20.0f, 100.0f, 0.0f, true, true, true, false }
     },
     {
         L"超ワイド", L"Extreme Wide",
-        { 30.0f, 40.0f, 100.0f, 25.0f, 100.0f, 0.0f, true, true, true }
+        { 30.0f, 40.0f, 100.0f, 25.0f, 100.0f, 0.0f, true, true, true, false }
     },
     {
         L"大ホール", L"Large Hall",
-        { 45.0f, 45.0f, 75.0f, 100.0f, 100.0f, 0.0f, true, true, true }
+        { 45.0f, 45.0f, 75.0f, 100.0f, 100.0f, 0.0f, true, true, true, false }
     },
     {
         L"フルブースト", L"Full Boost",
-        { 100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 0.0f, true, true, true }
+        { 100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 0.0f, true, true, true, false }
     },
 };
 
@@ -1273,7 +4385,7 @@ std::string serialize_user_presets(
     const std::vector<user_preset>& presets
 ) {
     std::ostringstream stream;
-    stream << "SRP3\n";
+    stream << "SRP4\n";
 
     const std::size_t count = (std::min)(
         presets.size(),
@@ -1309,6 +4421,8 @@ std::string serialize_user_presets(
             << (value.level_matched_bypass ? 1 : 0)
             << '\t'
             << (value.enabled ? 1 : 0)
+            << '\t'
+            << (value.adaptive_tone_balance ? 1 : 0)
             << '\n';
     }
 
@@ -1336,8 +4450,12 @@ bool parse_user_presets(
     const bool srp1_format = line == "SRP1";
     const bool srp2_format = line == "SRP2";
     const bool srp3_format = line == "SRP3";
+    const bool srp4_format = line == "SRP4";
 
-    if (!srp1_format && !srp2_format && !srp3_format) {
+    if (!srp1_format &&
+        !srp2_format &&
+        !srp3_format &&
+        !srp4_format) {
         return false;
     }
 
@@ -1357,7 +4475,11 @@ bool parse_user_presets(
         const std::vector<std::string> fields =
             split_tab_fields(line);
         const std::size_t expected_fields =
-            srp3_format ? 10 : (srp2_format ? 9 : 8);
+            srp4_format
+                ? 11
+                : (srp3_format
+                    ? 10
+                    : (srp2_format ? 9 : 8));
 
         if (fields.size() != expected_fields) {
             if (strict) {
@@ -1384,6 +4506,7 @@ bool parse_user_presets(
         int auto_headroom = 0;
         int level_match = 0;
         int enabled = 0;
+        int adaptive_tone_balance = 0;
 
         bool parsed =
             parse_integer(fields[1], depth) &&
@@ -1391,7 +4514,18 @@ bool parse_user_presets(
             parse_integer(fields[3], width) &&
             parse_integer(fields[4], ambience);
 
-        if (srp3_format) {
+        if (srp4_format) {
+            parsed = parsed &&
+                parse_integer(fields[5], master_strength) &&
+                parse_integer(fields[6], output_gain_steps) &&
+                parse_integer(fields[7], auto_headroom) &&
+                parse_integer(fields[8], level_match) &&
+                parse_integer(fields[9], enabled) &&
+                parse_integer(
+                    fields[10],
+                    adaptive_tone_balance
+                );
+        } else if (srp3_format) {
             parsed = parsed &&
                 parse_integer(fields[5], master_strength) &&
                 parse_integer(fields[6], output_gain_steps) &&
@@ -1417,7 +4551,7 @@ bool parse_user_presets(
             clarity >= 0 && clarity <= 100 &&
             width >= 0 && width <= 100 &&
             ambience >= 0 && ambience <= 100 &&
-            (!srp3_format ||
+            (!(srp3_format || srp4_format) ||
                 (master_strength >= 0 &&
                  master_strength <= 100)) &&
             (srp1_format ||
@@ -1425,7 +4559,9 @@ bool parse_user_presets(
                  output_gain_steps <= 12)) &&
             is_boolean_integer(auto_headroom) &&
             is_boolean_integer(level_match) &&
-            is_boolean_integer(enabled);
+            is_boolean_integer(enabled) &&
+            (!srp4_format ||
+                is_boolean_integer(adaptive_tone_balance));
 
         if (!values_valid) {
             if (strict) {
@@ -1438,15 +4574,19 @@ bool parse_user_presets(
         preset.value.clarity = static_cast<float>(clarity);
         preset.value.width = static_cast<float>(width);
         preset.value.ambience = static_cast<float>(ambience);
-        preset.value.master_strength = srp3_format
-            ? static_cast<float>(master_strength)
-            : 100.0f;
+        preset.value.master_strength =
+            (srp3_format || srp4_format)
+                ? static_cast<float>(master_strength)
+                : 100.0f;
         preset.value.output_gain_db = srp1_format
             ? 0.0f
             : static_cast<float>(output_gain_steps) * 0.5f;
         preset.value.auto_headroom = auto_headroom != 0;
         preset.value.level_matched_bypass = level_match != 0;
         preset.value.enabled = enabled != 0;
+        preset.value.adaptive_tone_balance =
+            srp4_format &&
+            adaptive_tone_balance != 0;
         preset.value = sonic_refiner::sanitize(preset.value);
 
         bool duplicate = false;
@@ -1910,6 +5050,14 @@ R128 Real-time Loudness Normalizerは、ラウドネス、True Peak、
 4. 必要に応じて出力ゲインを調整します。
 5. 調整結果を任意プリセットとして保存します。
 
+■ 適応型音色補正 (Adaptive Tone Balance)
+オンにすると、処理前の原音を低域60～250 Hz、中域300 Hz～2.0 kHz、
+高域3.5～10 kHzの3帯域で解析します。低域・高域が基準より不足する
+音源だけをゆっくり補正します。自動カットは行いません。
+このモードではDepthとClarityは固定補正量ではなく自動補正の上限です。
+自動Depthは最大+10 dB、自動Clarityは最大+10 dBです。
+初期値はオフなので、オフ時は従来と同じ固定補正になります。
+
 ■ スライダーの範囲
 0～60%：通常の調整域
 60～80%：強い補正域
@@ -1927,7 +5075,8 @@ R128 Real-time Loudness Normalizerは、ラウドネス、True Peak、
 
 ■ A/B比較
 「Aへ保存」「Bへ保存」でDepth、Clarity、Width、Ambience、
-Master Strengthを一時保存できます。「Aを試聴」「Bを試聴」で
+Master Strength、適応型音色補正のオン／オフを一時保存できます。
+「Aを試聴」「Bを試聴」で
 即時に切り替え、「比較終了」で比較開始直前の全設定へ戻ります。
 A/Bスロットはfoobar2000起動中だけ保持され、再起動すると空になります。
 任意プリセットや.srpbackupには保存されません。
@@ -1971,6 +5120,14 @@ including loudness control, True Peak protection, and limiting.
 4. Adjust Output Gain when necessary.
 5. Save the result as a user preset.
 
+■ Adaptive Tone Balance
+When enabled, Sonic Refiner analyzes the original pre-processing signal in
+three bands: Low 60–250 Hz, Mid 300 Hz–2.0 kHz, and High 3.5–10 kHz.
+Only missing low/high energy is raised slowly; automatic cutting is not used.
+In this mode, Depth and Clarity become maximum permissions for the automatic
+boost instead of fixed boost amounts. Auto Depth and Auto Clarity are
+both capped at +10 dB. The default is Off, preserving the previous fixed mode.
+
 ■ Slider Ranges
 0–60%: Normal adjustment range
 60–80%: Strong enhancement range
@@ -1987,8 +5144,9 @@ name as a user preset. Up to 20 user presets can be stored.
 backup. Built-in presets and the current sound settings are unchanged.
 
 ■ A/B Comparison
-Store A and Store B temporarily save Depth, Clarity, Width, Ambience, and
-Master Strength. Listen A and Listen B switch instantly. End Comparison
+Store A and Store B temporarily save Depth, Clarity, Width, Ambience,
+Master Strength, and the Adaptive Tone Balance On/Off state. Listen A and
+Listen B switch instantly. End Comparison
 restores the complete settings from immediately before comparison began.
 A/B slots remain only while foobar2000 is running and are cleared after a
 restart. They are not stored in user presets or .srpbackup files.
@@ -2032,6 +5190,13 @@ Depth、Clarity、Width、Ambienceのバランスを保ったまま、
 0%では4項目が無補正、100%では各スライダーの設定どおりになります。
 Output Gain、自動ヘッドルーム保護、レベルマッチは対象外です。
 
+■ 適応型音色補正 (Adaptive Tone Balance)
+処理前の音源をLow 60～250 Hz、Mid 300 Hz～2.0 kHz、
+High 3.5～10 kHzで解析し、中域との相対バランスから不足した
+低域・高域だけを自動で持ち上げます。自動カットは行いません。
+オン時はDepth／Clarityが自動補正量の上限として働きます。
+解析結果そのものはプリセットやバックアップへ保存されません。
+
 ■ Output Gain（出力ゲイン）
 すべての音質・音場補正とレベルマッチの後で音量を調整します。
 範囲は-12.0～+6.0 dB、0.5 dB刻みです。
@@ -2053,12 +5218,13 @@ Sonic Refinerに固定で収録された設定です。
 ■ 任意プリセット
 ユーザーが名前を付けて保存する設定です。
 補正値、Master Strength、出力ゲイン、保護、レベル一致、
-本体の有効状態を保存します。
+本体の有効状態、適応型音色補正のオン／オフを保存します。
 
 ■ A/B比較
-Depth、Clarity、Width、Ambience、Master Strengthの5項目だけを
-A/Bへ一時保存して比較する機能です。Output Gain、保護、レベル一致、
-本体の有効状態はA/Bへ保存しません。A/B内容は再起動後に消去されます。
+Depth、Clarity、Width、Ambience、Master Strengthと適応型音色補正の
+オン／オフをA/Bへ一時保存して比較する機能です。Output Gain、保護、
+レベル一致、本体の有効状態はA/Bへ保存しません。解析履歴も保存せず、
+A/B内容は再起動後に消去されます。
 
 ■ R128 Real-time Loudness Normalizer
 Sonic Refinerとは別の後段DSPです。
@@ -2095,6 +5261,13 @@ At 0%, all four are neutral. At 100%, each slider works at its full
 configured value. Output Gain, Auto Headroom Protection, and Level
 Match are not affected.
 
+■ Adaptive Tone Balance
+Analyzes the original source in Low 60–250 Hz, Mid 300 Hz–2.0 kHz, and
+High 3.5–10 kHz bands, then raises only low/high energy that is deficient
+relative to the mid reference. It never applies automatic cuts. When enabled,
+Depth and Clarity act as maximum permissions for the automatic correction.
+Runtime analysis results are never stored in presets or backups.
+
 ■ Output Gain
 Adjusts level after all tone, soundstage, and level-match processing.
 The range is -12.0 to +6.0 dB in 0.5 dB steps.
@@ -2116,12 +5289,14 @@ They cannot be overwritten or deleted.
 ■ User Presets
 Settings saved under a user-defined name.
 They store the enhancement values, Master Strength, Output Gain,
-protection, level match, and the enabled state.
+protection, level match, the enabled state, and the Adaptive Tone Balance
+On/Off state.
 
 ■ A/B Comparison
-Temporarily stores only Depth, Clarity, Width, Ambience, and Master Strength
-in A or B. Output Gain, protection, level match, and the enabled state are not
-stored in A/B. The slots are cleared when foobar2000 restarts.
+Temporarily stores Depth, Clarity, Width, Ambience, Master Strength, and
+the Adaptive Tone Balance On/Off state in A or B. Output Gain, protection,
+level match, the enabled state, and runtime analysis history are not stored
+in A/B. The slots are cleared when foobar2000 restarts.
 
 ■ R128 Real-time Loudness Normalizer
 A separate downstream DSP used after Sonic Refiner.
@@ -2154,6 +5329,12 @@ Sonic Refiner 使用上の注意
 ■ Master Strength
 0%にするとDepth、Clarity、Width、Ambienceは無補正になります。
 Output Gainと保護・比較機能の設定値は変更されません。
+
+■ 適応型音色補正
+音源の周波数バランスによって結果は変わります。低域・高域とも
+最大+10 dBまでの自動ブーストに制限されていますが、
+レコード取り込みなどノイズを含む音源ではノイズも強調される場合があります。
+不自然に感じる場合はDepth／Clarityを下げるか機能をオフにしてください。
 
 ■ 出力ゲイン
 正の出力ゲインを使用し、自動ヘッドルーム保護を無効にすると、
@@ -2207,6 +5388,12 @@ farther away, or make the sound muddy.
 ■ Master Strength
 At 0%, Depth, Clarity, Width, and Ambience are neutral.
 Output Gain and protection/comparison settings are unchanged.
+
+■ Adaptive Tone Balance
+Results depend on the source spectrum. Automatic boosts are limited to
++10 dB for both low and high frequencies, but noise can
+also be emphasized in sources such as vinyl transfers. Reduce Depth/Clarity
+or turn Adaptive Tone Balance off if the result sounds unnatural.
 
 ■ Output Gain
 Using positive Output Gain with Auto Headroom Protection disabled may
@@ -2435,6 +5622,11 @@ public:
             on_level_match_changed
         )
         COMMAND_HANDLER_EX(
+            IDC_ADAPTIVE_TONE_BALANCE,
+            BN_CLICKED,
+            on_adaptive_tone_balance_changed
+        )
+        COMMAND_HANDLER_EX(
             IDC_HELP_BUTTON,
             BN_CLICKED,
             on_help
@@ -2521,6 +5713,8 @@ public:
         )
         COMMAND_HANDLER_EX(IDOK, BN_CLICKED, on_button)
         COMMAND_HANDLER_EX(IDCANCEL, BN_CLICKED, on_button)
+        MSG_WM_TIMER(on_timer)
+        MSG_WM_DESTROY(on_destroy)
         MSG_WM_CLOSE(on_close)
         MESSAGE_HANDLER(
             wm_sonic_refiner_direct_chain_invalidated,
@@ -2549,6 +5743,8 @@ private:
             GetDlgItem(IDC_AUTO_HEADROOM);
         level_match_checkbox_ =
             GetDlgItem(IDC_LEVEL_MATCH);
+        adaptive_tone_balance_checkbox_ =
+            GetDlgItem(IDC_ADAPTIVE_TONE_BALANCE);
         built_in_preset_combo_ =
             GetDlgItem(IDC_BUILTIN_PRESET_COMBO);
         preset_combo_ = GetDlgItem(IDC_PRESET_COMBO);
@@ -2609,6 +5805,7 @@ private:
 
         apply_language();
         refresh_labels();
+        SetTimer(1, 250);
         return TRUE;
     }
 
@@ -2684,7 +5881,7 @@ private:
 
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - 0.4.0"
+            L"Sonic Refiner - 0.5.0"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -2735,8 +5932,8 @@ private:
             IDC_DEPTH_DESCRIPTION,
             localized(
                 language_,
-                L"120 Hz付近を中心に、最大約+16 dBまで厚みを加えます。",
-                L"Adds body around 120 Hz, up to approximately +16 dB."
+                L"通常は120 Hz付近を補正。適応型ではBass帯の自動補正上限です。",
+                L"Normally adjusts around 120 Hz; in adaptive mode this sets the Auto Bass limit."
             )
         );
         ::SetDlgItemTextW(
@@ -2783,6 +5980,15 @@ private:
                 language_,
                 L"11 ms・19 msの初期反射を最大Mix 85%まで加えます。",
                 L"Adds 11 ms and 19 ms early reflections, up to 85% Mix."
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_ADAPTIVE_TONE_BALANCE,
+            localized(
+                language_,
+                L"適応型音色補正",
+                L"Adaptive Tone Balance"
             )
         );
         ::SetDlgItemTextW(
@@ -2976,6 +6182,11 @@ private:
         );
         level_match_checkbox_.SetCheck(
             settings_.level_matched_bypass
+                ? BST_CHECKED
+                : BST_UNCHECKED
+        );
+        adaptive_tone_balance_checkbox_.SetCheck(
+            settings_.adaptive_tone_balance
                 ? BST_CHECKED
                 : BST_UNCHECKED
         );
@@ -3214,6 +6425,18 @@ private:
                 ? TRUE
                 : FALSE
         );
+
+        const bool adaptive_slot_present =
+            (g_ab_slot_a.has_value &&
+             g_ab_slot_a.value.adaptive_tone_balance) ||
+            (g_ab_slot_b.has_value &&
+             g_ab_slot_b.value.adaptive_tone_balance);
+
+        g_adaptive_ab_analysis_requested.store(
+            comparison_state_ != comparison_state::none &&
+                adaptive_slot_present,
+            std::memory_order_relaxed
+        );
     }
 
     void on_language_changed(UINT, int, CWindow) {
@@ -3277,6 +6500,18 @@ private:
     void on_level_match_changed(UINT, int, CWindow) {
         settings_.level_matched_bypass =
             level_match_checkbox_.GetCheck() ==
+                BST_CHECKED;
+        notify_changed();
+        refresh_labels();
+    }
+
+    void on_adaptive_tone_balance_changed(
+        UINT,
+        int,
+        CWindow
+    ) {
+        settings_.adaptive_tone_balance =
+            adaptive_tone_balance_checkbox_.GetCheck() ==
                 BST_CHECKED;
         notify_changed();
         refresh_labels();
@@ -3686,6 +6921,20 @@ private:
         );
     }
 
+    void on_timer(UINT_PTR timer_id) {
+        if (timer_id == 1) {
+            refresh_adaptive_runtime_status();
+        }
+    }
+
+    void on_destroy() {
+        KillTimer(1);
+        g_adaptive_ab_analysis_requested.store(
+            false,
+            std::memory_order_relaxed
+        );
+    }
+
     void on_button(UINT, int id, CWindow) {
         close_settings_dialog(id);
     }
@@ -3726,6 +6975,390 @@ private:
         callback_.on_preset_changed(preset);
     }
 
+    void refresh_adaptive_diagnostic_status() {
+        if (direct_invalidated_ ||
+            !settings_.enabled ||
+            !settings_.adaptive_tone_balance) {
+            return;
+        }
+
+        const adaptive_diagnostic_snapshot_values diagnostic =
+            unpack_adaptive_diagnostic_snapshot(
+                g_adaptive_diagnostic_snapshot.load(
+                    std::memory_order_acquire
+                )
+            );
+
+        if (!diagnostic.valid) {
+            uSetDlgItemText(
+                m_hWnd,
+                IDC_STATUS,
+                localized_utf8(
+                    language_,
+                    "診断: 有効な解析データを待っています...",
+                    "Diag: Waiting for valid analysis data..."
+                )
+            );
+            return;
+        }
+
+        const int low_shortage =
+            diagnostic.low_shortage_percent;
+
+        const adaptive_high_stability_snapshot_values
+            high_stability =
+                unpack_adaptive_high_stability_snapshot(
+                    g_adaptive_high_stability_snapshot.load(
+                        std::memory_order_acquire
+                    )
+                );
+
+        if (!high_stability.valid) {
+            uSetDlgItemText(
+                m_hWnd,
+                IDC_STATUS,
+                localized_utf8(
+                    language_,
+                    "診断: H/M安定度解析を待っています...",
+                    "Diag: Waiting for H/M stability analysis..."
+                )
+            );
+            return;
+        }
+
+        const double high_mid_db = tenths_to_db(
+            high_stability.high_mid_tenths_db
+        );
+        const double high_mad_db = tenths_to_db(
+            high_stability.high_mad_tenths_db
+        );
+        const double high_candidate_db = tenths_to_db(
+            high_stability.high_candidate_tenths_db
+        );
+        const int high_shortage =
+            high_stability.high_shortage_percent;
+        const bool high_enabled =
+            high_stability.enabled;
+
+        const tone_bass_body_comparison_snapshot_values
+            comparison =
+                unpack_tone_bass_body_comparison_snapshot(
+                    g_tone_bass_body_comparison_snapshot.load(
+                        std::memory_order_acquire
+                    )
+                );
+
+        if (!comparison.valid) {
+            uSetDlgItemText(
+                m_hWnd,
+                IDC_STATUS,
+                localized_utf8(
+                    language_,
+                    "診断: Bass/Body 処理前/処理後の比較を待っています...",
+                    "Diag: Waiting for pre/post Bass/Body comparison..."
+                )
+            );
+            return;
+        }
+
+        const tone_treble_presence_snapshot_values
+            treble_presence =
+                unpack_tone_treble_presence_snapshot(
+                    g_tone_treble_presence_snapshot.load(
+                        std::memory_order_acquire
+                    )
+                );
+
+        if (!treble_presence.valid) {
+            uSetDlgItemText(
+                m_hWnd,
+                IDC_STATUS,
+                localized_utf8(
+                    language_,
+                    "診断: Treble/Presence 解析を待っています...",
+                    "Diag: Waiting for Treble/Presence analysis..."
+                )
+            );
+            return;
+        }
+
+        const double treble_presence_db =
+            tenths_to_db(
+                treble_presence.treble_presence_tenths_db
+            );
+        const double treble_presence_mad_db =
+            tenths_to_db(
+                treble_presence.treble_presence_mad_tenths_db
+            );
+        const double presence_mid_db =
+            tenths_to_db(
+                treble_presence.presence_mid_tenths_db
+            );
+        const double high_crest_db =
+            tenths_to_db(
+                treble_presence.high_crest_tenths_db
+            );
+
+        const double input_bass_body_db =
+            tenths_to_db(
+                comparison.input_tenths_db
+            );
+        const double post_bass_body_db =
+            tenths_to_db(
+                comparison.post_tenths_db
+            );
+        const double delta_bass_body_db =
+            post_bass_body_db -
+            input_bass_body_db;
+
+        pfc::string_formatter text;
+        text << localized_utf8(
+            language_,
+            "診断: B/B ",
+            "Diag: B/B "
+        );
+
+        if (input_bass_body_db >= 0.0) {
+            text << "+";
+        }
+        text << pfc::format_float(
+            input_bass_body_db,
+            0,
+            1
+        );
+
+        text << localized_utf8(
+            language_,
+            "→",
+            "->"
+        );
+
+        if (post_bass_body_db >= 0.0) {
+            text << "+";
+        }
+        text << pfc::format_float(
+            post_bass_body_db,
+            0,
+            1
+        );
+
+        text << " ";
+        text << localized_utf8(
+            language_,
+            "Δ",
+            "d"
+        );
+        if (delta_bass_body_db >= 0.0) {
+            text << "+";
+        }
+        text
+            << pfc::format_float(
+                delta_bass_body_db,
+                0,
+                1
+            )
+            << " "
+            << localized_utf8(
+                language_,
+                "不",
+                "S"
+            )
+            << low_shortage
+            << "%  ";
+
+        if (high_enabled) {
+            text << "H/M ";
+            if (high_mid_db >= 0.0) {
+                text << "+";
+            }
+            text
+                << pfc::format_float(
+                    high_mid_db,
+                    0,
+                    1
+                )
+                << "±"
+                << pfc::format_float(
+                    high_mad_db,
+                    0,
+                    1
+                )
+                << " HC";
+            if (high_candidate_db >= 0.0) {
+                text << "+";
+            }
+            text
+                << pfc::format_float(
+                    high_candidate_db,
+                    0,
+                    1
+                )
+                << " "
+                << localized_utf8(
+                    language_,
+                    "不",
+                    "S"
+                )
+                << high_shortage
+                << "%";
+        } else {
+            text << localized_utf8(
+                language_,
+                "H/M使用不可",
+                "H/M unavailable"
+            );
+        }
+
+        text << "  ";
+
+        if (treble_presence.enabled) {
+            text << "T/P ";
+            if (treble_presence_db >= 0.0) {
+                text << "+";
+            }
+            text
+                << pfc::format_float(
+                    treble_presence_db,
+                    0,
+                    1
+                )
+                << "±"
+                << pfc::format_float(
+                    treble_presence_mad_db,
+                    0,
+                    1
+                )
+                << " P/M ";
+            if (presence_mid_db >= 0.0) {
+                text << "+";
+            }
+            text
+                << pfc::format_float(
+                    presence_mid_db,
+                    0,
+                    1
+                )
+                << " Cr"
+                << pfc::format_float(
+                    high_crest_db,
+                    0,
+                    1
+                );
+        } else {
+            text << localized_utf8(
+                language_,
+                "T/P・P/M・Crest使用不可",
+                "T/P, P/M & Crest unavailable"
+            );
+        }
+
+        text
+            << " n"
+            << comparison.history_count;
+
+        uSetDlgItemText(
+            m_hWnd,
+            IDC_STATUS,
+            text
+        );
+    }
+
+    void refresh_adaptive_runtime_status() {
+        if (!settings_.enabled ||
+            !settings_.adaptive_tone_balance) {
+            ::SetDlgItemTextW(
+                m_hWnd,
+                IDC_ADAPTIVE_STATUS,
+                localized(
+                    language_,
+                    L"自動補正：オフ",
+                    L"Auto: Off"
+                )
+            );
+            return;
+        }
+
+        const adaptive_runtime_state state =
+            static_cast<adaptive_runtime_state>(
+                g_adaptive_runtime_state.load(
+                    std::memory_order_relaxed
+                )
+            );
+
+        if (state == adaptive_runtime_state::waiting) {
+            ::SetDlgItemTextW(
+                m_hWnd,
+                IDC_ADAPTIVE_STATUS,
+                localized(
+                    language_,
+                    L"自動補正：待機中...",
+                    L"Auto: Waiting..."
+                )
+            );
+            return;
+        }
+
+        if (state == adaptive_runtime_state::analyzing) {
+            ::SetDlgItemTextW(
+                m_hWnd,
+                IDC_ADAPTIVE_STATUS,
+                localized(
+                    language_,
+                    L"自動補正：解析中...",
+                    L"Auto: Analyzing..."
+                )
+            );
+            return;
+        }
+
+        if (state != adaptive_runtime_state::active) {
+            ::SetDlgItemTextW(
+                m_hWnd,
+                IDC_ADAPTIVE_STATUS,
+                localized(
+                    language_,
+                    L"自動補正：待機中...",
+                    L"Auto: Waiting..."
+                )
+            );
+            return;
+        }
+
+        const double depth_db = tenths_to_db(
+            g_adaptive_runtime_depth_tenths_db.load(
+                std::memory_order_relaxed
+            )
+        );
+        const double clarity_db = tenths_to_db(
+            g_adaptive_runtime_clarity_tenths_db.load(
+                std::memory_order_relaxed
+            )
+        );
+
+        pfc::string_formatter text;
+        text
+            << localized_utf8(
+                language_,
+                "自動補正：低域 +",
+                "Auto: Low +"
+            )
+            << pfc::format_float(depth_db, 0, 1)
+            << " dB / "
+            << localized_utf8(
+                language_,
+                "高域 +",
+                "High +"
+            )
+            << pfc::format_float(clarity_db, 0, 1)
+            << " dB";
+
+        uSetDlgItemText(
+            m_hWnd,
+            IDC_ADAPTIVE_STATUS,
+            text
+        );
+    }
+
     void refresh_labels() {
         const int depth =
             static_cast<int>(std::lround(settings_.depth));
@@ -3756,22 +7389,48 @@ private:
         );
 
         pfc::string_formatter depth_text;
-        depth_text
-            << depth
-            << localized_utf8(
-                language_,
-                "%  /  約 +",
-                "%  /  approx. +"
-            )
-            << pfc::format_float(
-                effective_depth_gain_db(
-                    settings_.depth,
+        depth_text << depth;
+
+        if (settings_.adaptive_tone_balance) {
+            const double adaptive_depth_limit =
+                (std::min)(
+                    depth_to_gain_db(settings_.depth),
+                    adaptive_depth_absolute_maximum_db
+                ) *
+                master_strength_factor(
                     settings_.master_strength
-                ),
-                0,
-                1
-            )
-            << " dB";
+                );
+
+            depth_text
+                << localized_utf8(
+                    language_,
+                    "%  /  自動上限 +",
+                    "%  /  Auto max +"
+                )
+                << pfc::format_float(
+                    adaptive_depth_limit,
+                    0,
+                    1
+                )
+                << " dB";
+        } else {
+            depth_text
+                << localized_utf8(
+                    language_,
+                    "%  /  約 +",
+                    "%  /  approx. +"
+                )
+                << pfc::format_float(
+                    effective_depth_gain_db(
+                        settings_.depth,
+                        settings_.master_strength
+                    ),
+                    0,
+                    1
+                )
+                << " dB";
+        }
+
         uSetDlgItemText(
             m_hWnd,
             IDC_DEPTH_VALUE,
@@ -3779,22 +7438,48 @@ private:
         );
 
         pfc::string_formatter clarity_text;
-        clarity_text
-            << clarity
-            << localized_utf8(
-                language_,
-                "%  /  約 +",
-                "%  /  approx. +"
-            )
-            << pfc::format_float(
-                effective_clarity_gain_db(
-                    settings_.clarity,
+        clarity_text << clarity;
+
+        if (settings_.adaptive_tone_balance) {
+            const double adaptive_clarity_limit =
+                (std::min)(
+                    clarity_to_gain_db(settings_.clarity),
+                    adaptive_clarity_absolute_maximum_db
+                ) *
+                master_strength_factor(
                     settings_.master_strength
-                ),
-                0,
-                1
-            )
-            << " dB";
+                );
+
+            clarity_text
+                << localized_utf8(
+                    language_,
+                    "%  /  自動上限 +",
+                    "%  /  Auto max +"
+                )
+                << pfc::format_float(
+                    adaptive_clarity_limit,
+                    0,
+                    1
+                )
+                << " dB";
+        } else {
+            clarity_text
+                << localized_utf8(
+                    language_,
+                    "%  /  約 +",
+                    "%  /  approx. +"
+                )
+                << pfc::format_float(
+                    effective_clarity_gain_db(
+                        settings_.clarity,
+                        settings_.master_strength
+                    ),
+                    0,
+                    1
+                )
+                << " dB";
+        }
+
         uSetDlgItemText(
             m_hWnd,
             IDC_CLARITY_VALUE,
@@ -3871,6 +7556,12 @@ private:
         GetDlgItem(IDC_OUTPUT_GAIN_VALUE).EnableWindow(enabled);
         GetDlgItem(IDC_AUTO_HEADROOM).EnableWindow(enabled);
         GetDlgItem(IDC_LEVEL_MATCH).EnableWindow(enabled);
+        GetDlgItem(IDC_ADAPTIVE_TONE_BALANCE)
+            .EnableWindow(enabled);
+        GetDlgItem(IDC_ADAPTIVE_STATUS)
+            .EnableWindow(enabled);
+
+        refresh_adaptive_runtime_status();
 
         const char* status_text = localized_utf8(
             language_,
@@ -3931,7 +7622,8 @@ private:
                 IDC_AB_STORE_B, IDC_AB_LISTEN_B, IDC_AB_END,
                 IDC_MASTER_STRENGTH_SLIDER, IDC_MASTER_STRENGTH_VALUE,
                 IDC_OUTPUT_GAIN_SLIDER, IDC_OUTPUT_GAIN_VALUE,
-                IDC_AUTO_HEADROOM, IDC_LEVEL_MATCH
+                IDC_AUTO_HEADROOM, IDC_LEVEL_MATCH,
+                IDC_ADAPTIVE_TONE_BALANCE, IDC_ADAPTIVE_STATUS
             };
 
             for (const int control_id : edit_control_ids) {
@@ -3967,6 +7659,7 @@ private:
     CButton enable_checkbox_;
     CButton auto_headroom_checkbox_;
     CButton level_match_checkbox_;
+    CButton adaptive_tone_balance_checkbox_;
     CComboBox built_in_preset_combo_;
     CComboBox preset_combo_;
     CComboBox language_combo_;

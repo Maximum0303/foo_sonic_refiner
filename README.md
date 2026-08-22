@@ -2,9 +2,59 @@
 
 **Adaptive Audio Enhancement DSP for foobar2000**
 
-Sonic Refiner adjusts tone and soundstage in real time. It combines low-frequency body, clarity, stereo width, short early reflections, Master Strength, output gain, lightweight headroom protection, and level-matched comparison in one DSP component.
+Sonic Refiner adjusts tone and soundstage in real time. It combines low-frequency body, clarity, stereo width, short early reflections, Master Strength, Adaptive Tone Balance, output gain, lightweight headroom protection, and level-matched comparison in one DSP component.
 
-> Current release: **v0.4.0**
+> Current stable release: **v0.5.0**
+
+## What is new in v0.5.0
+
+### Adaptive Tone Balance
+
+v0.5.0 adds optional **Adaptive Tone Balance (ATB)** while preserving the
+v0.4.0 fixed Depth/Clarity behavior whenever ATB is Off.
+
+- Adaptive Tone Balance is **Off by default**
+- Analysis uses the original signal before Sonic Refiner processing
+- **Auto Low** compares Bass **60–180 Hz** with Body **200–500 Hz**
+- Low decision target: Bass/Body **+6.5 dB**
+- Auto Low processing preserves the dry signal and adds a parallel filtered **60–180 Hz** Bass component
+- **Auto High** uses High/Mid balance (**3.5–10 kHz** vs **300 Hz–2.0 kHz**) together with Treble/Presence balance (**5–10 kHz** vs **2–5 kHz**) to choose correction strength
+- High/Mid shortage reference remains **-6 dB** with a **1.5 dB** tolerance
+- Automatic correction is **boost-only**; ATB does not perform automatic cuts
+- Auto Low absolute maximum: **+10.0 dB**
+- Auto High absolute maximum: **+10.0 dB**
+- When ATB is On, **Depth and Clarity become maximum permissions** for automatic correction rather than fixed boost amounts
+- Master Strength continues to scale the resulting Depth/Clarity effect
+- Slow rolling analysis and gain movement are used to reduce audible pumping
+- Very low input below approximately **-55 dBFS** does not update analysis
+- Track changes, seeks, Stop, and ATB Off→On transitions restart analysis; Pause/Resume preserves it
+- Multichannel analysis uses the first L/R pair
+- The normal public UI shows current **Auto Low / Auto High** correction without development diagnostics
+
+### Presets, compatibility, and A/B
+
+- Existing 11 built-in presets remain unchanged and load **ATB Off**
+- Existing built-in presets can be used normally; enable ATB afterward when automatic correction is wanted
+- User presets store the ATB On/Off state
+- User-preset / `.srpbackup` write format: **SRP4**
+- foobar2000 DSP preset write format: **preset_version 9**
+- SRP1 / SRP2 / SRP3 and DSP preset versions 1–8 remain readable
+- Legacy data that has no ATB field loads with **ATB Off**
+- A/B slots store ATB On/Off in addition to Depth, Clarity, Width, Ambience, and Master Strength
+- A/B analyzer state and live automatic-gain state are runtime-only and are not persisted
+- Ending A/B comparison restores the full settings that were active when comparison began
+
+### Final release validation
+
+The formal v0.5.0 build was checked for:
+- Light and Dark mode
+- continuous playback
+- restart persistence
+- Cancel behavior
+- ATB On/Off user presets and SRP4 backup restore
+- SRP3 legacy import behavior
+- A/B ATB switching and pre-comparison restoration
+- fresh ATB analysis after restart and after Off→On
 
 ## What is new in v0.4.0
 
@@ -41,6 +91,7 @@ The DSP processing algorithm is unchanged from v0.2.0.
 
 - **Depth:** low-shelf enhancement around 120 Hz, up to approximately +16 dB
 - **Clarity:** high-shelf enhancement above approximately 3.5 kHz, up to approximately +14 dB
+- **Adaptive Tone Balance:** source-dependent boost-only Low/High correction using Bass/Body plus H/M + T/P analysis
 - **Width:** Mid/Side widening with protection below approximately 180 Hz, up to Side 600%
 - **Ambience:** short early reflections around 11 ms and 19 ms, up to 85% Wet Mix
 - **Master Strength:** scales Depth, Clarity, Width, and Ambience together from 0% to 100%
@@ -74,8 +125,9 @@ Only the displayed names change with the UI language. Preset values and internal
 ## Processing order
 
 ```text
-Depth
-→ Clarity
+Adaptive Tone Balance analysis (original input, when enabled)
+→ Depth / adaptive low correction
+→ Clarity / adaptive high correction
 → Width
 → Ambience
 → effective amount controlled by Master Strength
@@ -107,7 +159,7 @@ Sonic Refiner handles tone and soundstage. The downstream **R128 Real-time Loudn
 
 ## Installation
 
-1. Double-click `foo_sonic_refiner_v0.4.0.fb2k-component`.
+1. Double-click `foo_sonic_refiner_v0.5.0.fb2k-component`.
 2. Apply the component installation in foobar2000.
 3. Restart foobar2000.
 4. Add `Sonic Refiner` from DSP Manager.
@@ -117,9 +169,10 @@ Sonic Refiner handles tone and soundstage. The downstream **R128 Real-time Loudn
 
 1. Load the **Standard** built-in preset.
 2. Adjust Depth, Clarity, Width, and Ambience.
-3. Use Master Strength to adjust the overall amount while preserving the balance.
-4. Adjust Output Gain when necessary.
-5. Save the result as a user preset.
+3. Optionally enable **Adaptive Tone Balance**. When enabled, Depth and Clarity become automatic-correction limits.
+4. Use Master Strength to adjust the overall amount while preserving the balance.
+5. Adjust Output Gain when necessary.
+6. Save the result as a user preset.
 
 ### Suggested ranges
 
@@ -133,13 +186,14 @@ Sonic Refiner handles tone and soundstage. The downstream **R128 Real-time Loudn
 - Visual Studio 2022
 - foobar2000 SDK 2025-03-07
 - C++17
-- DSP `preset_version 8` remains unchanged
-- User-preset format remains `SRP3`
-- Reads `SRP1`, `SRP2`, and `SRP3`
+- DSP write format is `preset_version 9`
+- User-preset write format is `SRP4`
+- Reads `SRP1`, `SRP2`, `SRP3`, and `SRP4`
+- Reads legacy DSP preset versions 1–8; Adaptive Tone Balance defaults to Off for legacy data
 - Legacy settings without Master Strength load at 100%
 - Legacy settings without Output Gain load at 0.0 dB
 - Existing UTF-8 user-preset names are preserved and are not translated
-- `.srpbackup` format is unchanged
+- `.srpbackup` remains the backup extension; v0.5.0 imports older backups and new backups carry SRP4 user-preset data
 
 ## Building from source
 
@@ -171,11 +225,11 @@ build_and_package.cmd
 Output:
 
 ```text
-dist\foo_sonic_refiner_v0.4.0.fb2k-component
+dist\foo_sonic_refiner_v0.5.0.fb2k-component
 dist\SHA256SUMS.txt
 ```
 
-See `README_FIRST.txt` for detailed build steps and `TESTING_v0.4.0.md` for the release test record.
+See `README_FIRST.txt` for detailed build steps and `TESTING_v0.5.0.md` for the final release validation checklist.
 
 ## Safety notes
 
@@ -207,7 +261,56 @@ This project is an independent clean-room implementation. It does not include or
 
 Sonic Refinerは、音色と音場をリアルタイムで調整するfoobar2000用DSPコンポーネントです。低域の厚み、明瞭感、ステレオの広がり、短い初期反射による空間・奥行き感、Master Strength、出力ゲイン、軽量な保護、レベルを合わせた比較を1つの設定画面にまとめています。
 
-> 現在の正式公開版：**v0.4.0**
+> 現在の正式公開版：**v0.5.0**
+
+## v0.5.0の変更点
+
+### 適応型音色補正 (Adaptive Tone Balance)
+
+v0.5.0では任意で有効にできる**適応型音色補正（ATB）**を追加しました。
+ATBがオフのときは、v0.4.0までの固定Depth／Clarity動作をそのまま維持します。
+
+- 適応型音色補正の初期値は**オフ**
+- Sonic Refiner処理前の原音を解析
+- **Auto Low**はBass **60～180 Hz** とBody **200～500 Hz** を比較
+- Low判定目標：Bass/Body **+6.5 dB**
+- Auto Lowは原音を残したまま、フィルターした **60～180 Hz** のBass成分を並列加算
+- **Auto High**はHigh/Mid（**3.5～10 kHz** 対 **300 Hz～2.0 kHz**）に加え、Treble/Presence（**5～10 kHz** 対 **2～5 kHz**）も使って補正量を決定
+- High/Mid不足判定の基準は **-6 dB**、許容範囲は **1.5 dB**
+- 自動補正は**不足分のブーストのみ**で、自動カットは行わない
+- Auto Low絶対上限：**+10.0 dB**
+- Auto High絶対上限：**+10.0 dB**
+- ATB ON時のDepth／Clarityは固定補正量ではなく、**自動補正に許可する上限**
+- Master Strengthは自動補正にも適用
+- ゆっくりしたローリング解析と追従で、不自然なポンピングを抑制
+- 約 **-55 dBFS** 未満の極小音では解析を更新しない
+- 曲変更・シーク・Stop・ATB OFF→ONで解析をやり直し、Pause/Resumeでは保持
+- マルチチャンネル解析は最初のL/Rを使用
+- 通常UIでは現在の**自動補正：低域 / 高域**だけを表示し、開発用診断値は表示しない
+
+### プリセット・互換性・A/B
+
+- 既存11種類の内蔵プリセットは変更せず、呼び出し時は**ATB OFF**
+- 既存プリセットをそのまま使い、必要なときだけATBをONにして使用可能
+- 任意プリセットにはATBのON/OFFも保存
+- 任意プリセット／`.srpbackup`書き込み形式：**SRP4**
+- foobar2000 DSP preset書き込み形式：**preset_version 9**
+- SRP1／SRP2／SRP3、旧DSP preset version 1～8を引き続き読み込み可能
+- ATB項目を持たない旧データは**ATB OFF**として読み込む
+- A/BにはDepth／Clarity／Width／Ambience／Master Strengthに加えてATB ON/OFFも保存
+- A/Bの解析履歴や現在の自動補正量は保存しない
+- 「比較終了」で比較開始直前の全設定へ復元
+
+### リリース候補で確認した項目
+
+- Light / Dark表示
+- 連続再生
+- 再起動後の設定保持
+- キャンセル動作
+- ATB ON/OFFを含む任意プリセットとSRP4バックアップ
+- 旧SRP3読み込み
+- A/BでのATB切替と比較開始前状態への復元
+- 再起動後／ATB OFF→ON後の新規解析
 
 ## v0.4.0の変更点
 
@@ -244,6 +347,7 @@ DSP処理アルゴリズムはv0.2.0から変更していません。
 
 - **Depth**：約120 Hzを中心とするLow Shelf、最大約+16 dB
 - **Clarity**：約3.5 kHz以上のHigh Shelf、最大約+14 dB
+- **適応型音色補正**：Bass/BodyとH/M＋T/P解析による音源依存のブースト型Low／High自動補正
 - **Width**：約180 Hz以下を保護するMid/Side方式、Side最大600%
 - **Ambience**：約11 ms・19 msの短い初期反射、Wet Mix最大85%
 - **Master Strength**：4つの補正効果を0～100%で一括調整
@@ -267,6 +371,20 @@ DSP処理アルゴリズムはv0.2.0から変更していません。
 - 言語設定はDSP preset、任意プリセット、`.srpbackup`へ保存しない
 - キャンセル時は従来どおり音質設定を戻すが、言語変更は戻さない
 
+## 内部処理順序
+
+```text
+適応型音色補正の解析（ON時・処理前原音）
+→ Depth / 自動低域補正
+→ Clarity / 自動高域補正
+→ Width
+→ Ambience
+→ Master Strengthによる実効効果量
+→ Level Match
+→ Output Gain
+→ Automatic Headroom Protection
+```
+
 ## 推奨DSP順序
 
 ```text
@@ -277,13 +395,14 @@ Sonic Refiner
 
 ## 互換性
 
-- `preset_version 8`を維持
-- 任意プリセット形式は`SRP3`を維持
-- `SRP1`／`SRP2`／`SRP3`を読み込み可能
+- DSP書き込み形式は`preset_version 9`
+- 任意プリセット書き込み形式は`SRP4`
+- `SRP1`／`SRP2`／`SRP3`／`SRP4`を読み込み可能
+- 旧DSP preset version 1～8を読み込み可能。旧データでは適応型音色補正はオフ
 - Master Strengthを持たない旧設定は100%
 - Output Gainを持たない旧設定は0.0 dB
 - 既存の日本語名を含む任意プリセット名は翻訳せず維持
-- `.srpbackup`形式は変更なし
+- `.srpbackup`拡張子とバックアップヘッダーは維持し、旧バックアップを読み込み可能。新規バックアップの任意プリセット内容はSRP4
 
 ## ビルド
 
@@ -308,8 +427,8 @@ build_and_package.cmd
 出力：
 
 ```text
-dist\foo_sonic_refiner_v0.4.0.fb2k-component
+dist\foo_sonic_refiner_v0.5.0.fb2k-component
 dist\SHA256SUMS.txt
 ```
 
-詳しい手順は`README_FIRST.txt`、公開前確認記録は`TESTING_v0.4.0.md`を参照してください。
+詳しい手順は`README_FIRST.txt`、正式版の最終確認項目は`TESTING_v0.5.0.md`を参照してください。

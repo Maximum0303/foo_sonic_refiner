@@ -67,3 +67,6 @@
 #define IDC_AB_STATUS_B                 1059
 #define IDC_AB_CURRENT                  1060
 #define IDC_AB_END                      1061
+
+#define IDC_ADAPTIVE_TONE_BALANCE       1062
+#define IDC_ADAPTIVE_STATUS             1063

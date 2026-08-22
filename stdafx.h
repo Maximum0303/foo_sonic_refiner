@@ -6,6 +6,8 @@
 #include <cmath>
 #include <cstdint>
 #include <vector>
+#include <array>
+#include <atomic>
 #include <cstdlib>
 #include <cwctype>
 #include <sstream>

@@ -1,4 +1,4 @@
-Sonic Refiner v0.4.0 — Build and Package / ビルドと梱包
+Sonic Refiner v0.5.0 — Build and Package / ビルドと梱包
 
 ENGLISH
 
@@ -27,7 +27,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 Package:
-dist\foo_sonic_refiner_v0.4.0.fb2k-component
+dist\foo_sonic_refiner_v0.5.0.fb2k-component
 
 Checksum:
 dist\SHA256SUMS.txt
@@ -37,7 +37,7 @@ Manual build:
 2. Select Release and x64.
 3. Run Build -> Rebuild Solution.
 
-This source builds the Sonic Refiner v0.4.0 release package.
+This source builds the formal Sonic Refiner v0.5.0 package.
 
 ------------------------------------------------------------
 
@@ -69,7 +69,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 配布パッケージ:
-dist\foo_sonic_refiner_v0.4.0.fb2k-component
+dist\foo_sonic_refiner_v0.5.0.fb2k-component
 
 チェックサム:
 dist\SHA256SUMS.txt
@@ -79,4 +79,4 @@ dist\SHA256SUMS.txt
 2. 構成をRelease、プラットフォームをx64にします。
 3. ビルド→ソリューションのリビルドを実行します。
 
-このソースからSonic Refiner v0.4.0正式版パッケージを作成できます。
+このソースからSonic Refiner v0.5.0正式版パッケージを作成できます。

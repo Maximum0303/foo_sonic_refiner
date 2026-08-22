@@ -1,6 +1,6 @@
-# Sonic Refiner v0.4.0 Quick Start
+# Sonic Refiner v0.5.0 Quick Start
 
-> v0.4.0 adds temporary A/B comparison slots and direct settings access from the Playback menu.
+> Adaptive Tone Balance is OFF by default. Existing built-in presets can be used as before; enable ATB afterward when automatic tonal correction is wanted.
 
 # Sonic Refiner Quick Start
 
@@ -30,8 +30,9 @@ The display changes immediately. Audio settings and playback processing are not 
 1. Load the built-in **Standard** preset.
 2. Keep **Auto Headroom Protection** enabled.
 3. Keep **Level-Matched Bypass** enabled.
-4. Set **Master Strength** to 100%.
-5. Set **Output Gain** to 0.0 dB.
+4. Keep **Adaptive Tone Balance** off for the original fixed mode, or enable it for source-dependent correction.
+5. Set **Master Strength** to 100%.
+6. Set **Output Gain** to 0.0 dB.
 
 ### 4. Adjust
 
@@ -39,14 +40,16 @@ The display changes immediately. Audio settings and playback processing are not 
 - More vocal/instrument definition: Clarity
 - Wider stereo image: Width
 - More space/depth: Ambience
+- Automatic source-dependent low/high correction: Adaptive Tone Balance
+- When Adaptive Tone Balance is ON, Depth and Clarity set the maximum automatic correction
 - Reduce all four while preserving balance: Master Strength
 
 Use 0–60% for normal adjustment. Values above 80% are for extreme effects and testing.
 
 ### 5. Save and back up
 
-- `Save...`: save the current settings as a user preset
-- `Export...`: save all user presets to `.srpbackup`
+- `Save...`: save the current settings as a user preset, including Adaptive Tone Balance On/Off
+- `Export...`: save all user presets to `.srpbackup`, including each preset's Adaptive Tone Balance On/Off state
 - `Import...`: replace the current user preset list with a backup
 
 Auto Headroom Protection is lightweight protection, not a True Peak limiter.
@@ -79,8 +82,9 @@ English
 1. 内蔵プリセット「標準」を呼び出す
 2. 自動ヘッドルーム保護をオン
 3. レベルマッチ・バイパスをオン
-4. Master Strengthを100%
-5. Output Gainを0.0 dB
+4. 従来の固定補正なら適応型音色補正をオフ、音源別の自動補正ならオン
+5. Master Strengthを100%
+6. Output Gainを0.0 dB
 
 ### 4. 調整
 
@@ -88,14 +92,16 @@ English
 - ボーカルや楽器の輪郭：Clarity
 - 左右の広がり：Width
 - 空間・奥行き：Ambience
+- 音源ごとの低域／高域自動補正：適応型音色補正
+- 適応型音色補正ON時はDepth／Clarityが自動補正の上限
 - 4項目のバランスを保って全体を弱める：Master Strength
 
 通常は0～60%を中心に調整し、80%以上は強い効果や動作確認に使用します。
 
 ### 5. 保存とバックアップ
 
-- `保存...`：現在の設定を任意プリセットとして保存
-- `書出...`：任意プリセット全件を`.srpbackup`へ保存
+- `保存...`：現在の設定を、適応型音色補正のON/OFFを含めて任意プリセットとして保存
+- `書出...`：各プリセットの適応型音色補正ON/OFFを含め、任意プリセット全件を`.srpbackup`へ保存
 - `読込...`：現在の任意プリセット一覧をバックアップ内容で置換
 
 自動ヘッドルーム保護は軽量な保護であり、True Peakリミッターではありません。

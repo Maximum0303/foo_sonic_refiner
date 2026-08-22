@@ -1,5 +1,43 @@
 # Changelog
 
+All notable public changes to Sonic Refiner are documented here.
+
+## [0.5.0] - 2026-08-23
+
+### Added
+
+- Added optional Adaptive Tone Balance (ATB), disabled by default.
+- Added source-dependent boost-only automatic Low and High tonal correction.
+- Added current Auto Low / Auto High status to the normal settings UI.
+- Added ATB On/Off to A/B slots, user presets, DSP presets, and `.srpbackup` data.
+
+### Adaptive Tone Balance
+
+- Auto Low uses Bass 60–180 Hz vs Body 200–500 Hz with a +6.5 dB Bass/Body target.
+- Auto Low preserves the dry signal and adds a parallel filtered 60–180 Hz Bass component.
+- Auto High combines High/Mid and Treble/Presence balance.
+- Auto Low absolute maximum is +10.0 dB.
+- Auto High absolute maximum is +10.0 dB.
+- Depth and Clarity become automatic-correction limits while ATB is On.
+- ATB Off preserves the v0.4.0 fixed Depth / Clarity behavior.
+- Slow rolling analysis, startup protection, confidence gating, and asymmetric gain movement reduce abrupt tonal changes.
+- Track changes, seeks, Stop, and ATB Off→On restart analysis; Pause/Resume preserves it.
+
+### Presets and compatibility
+
+- DSP preset write format advanced to `preset_version 9`.
+- User-preset / `.srpbackup` write format advanced to `SRP4`.
+- SRP1, SRP2, SRP3, SRP4 and DSP preset versions 1–8 remain readable.
+- Legacy data without ATB state loads ATB Off.
+- Existing 11 built-in presets remain unchanged and load ATB Off.
+- Runtime analyzer history and current automatic-gain state are not persisted.
+
+### A/B and UI
+
+- A/B slots store ATB On/Off and restore the complete pre-comparison settings when comparison ends.
+- Development-only diagnostic readouts were removed from the formal UI.
+- Light/Dark mode, continuous playback, restart persistence, Cancel behavior, preset backup/restore, legacy SRP3 import, and A/B ATB switching were validated for the formal v0.5.0 release.
+
 ## [0.4.0] - 2026-08-22
 
 ### Added
@@ -15,58 +53,6 @@
 ### Compatibility
 - DSP processing remains unchanged from v0.3.0.
 - SRP3, `preset_version 8`, `.srpbackup`, and existing preset compatibility are unchanged.
-
-## [0.4.0-dev.5] - 2026-08-22
-
-### Fixed
-- Fixed the Visual Studio C3246 build failure in the direct-settings main-menu command registration.
-- Removed the invalid `final` qualifier from `mainmenu_commands_sonic_refiner_settings`; foobar2000 SDK service registration wraps and derives from this command class.
-
-### Compatibility
-- Direct-settings behavior is otherwise unchanged from v0.4.0-dev.4.
-- DSP processing, A/B comparison, SRP3, `preset_version 8`, and `.srpbackup` are unchanged.
-
-## [0.4.0-dev.4] - 2026-08-22
-
-### Added
-- Playback menu command for direct Sonic Refiner settings access.
-- Modeless owned settings window so foobar2000 remains usable while editing.
-- Keyboard Shortcuts integration through the main-menu command.
-- Safety checks for missing or multiple Sonic Refiner instances in the active DSP chain.
-- Runtime detection if the target Sonic Refiner is removed or duplicated while direct editing is open.
-
-### Compatibility
-- DSP processing is unchanged from v0.4.0-dev.3.
-- SRP3, preset_version 8 and .srpbackup remain unchanged.
-- The conventional DSP Manager configuration path remains available.
-
-All notable public changes to Sonic Refiner are documented here.
-
-## [0.4.0-dev.3] - 2026-08-22
-
-### Fixed
-- Prevented the lower-left border of the Master/Output/Protection group from being erased by the extreme-range notice control.
-- Kept the settings window at 560 x 320 with no A/B or DSP behavior changes.
-
-## [0.4.0-dev.2] - 2026-08-22
-
-### Fixed
-- Improved disabled End Comparison button readability in dark mode.
-- Adjusted A/B and Master/Output/Protection layout spacing while retaining the 560 x 320 settings window.
-
-## [0.4.0-dev.1] - 2026-08-22
-
-### Added
-- Temporary A/B comparison slots for Depth, Clarity, Width, Ambience, and Master Strength
-- Instant A/B listening with restoration of the settings present before comparison began
-- Japanese/English A/B comparison controls and status text
-
-### Compatibility
-- DSP processing algorithm is unchanged from v0.3.0
-- `preset_version 8` remains unchanged
-- User-preset write format remains `SRP3`
-- `.srpbackup` format remains unchanged
-- A/B slots are held only in memory and are cleared when foobar2000 exits
 
 ## [0.3.0] - 2026-08-06
 
