@@ -1,6 +1,6 @@
-# Sonic Refiner v0.5.0 Quick Start
+# Sonic Refiner v0.6.0 Quick Start
 
-> Adaptive Tone Balance is OFF by default. Existing built-in presets can be used as before; enable ATB afterward when automatic tonal correction is wanted.
+> Adaptive Tone Balance is OFF by default. Use **Adaptive Standard / 適応型標準** when you want ATB enabled with the full Low/High correction allowance while keeping Standard Width/Ambience values.
 
 # Sonic Refiner Quick Start
 
@@ -27,7 +27,7 @@ The display changes immediately. Audio settings and playback processing are not 
 
 ### 3. Initial settings
 
-1. Load the built-in **Standard** preset.
+1. Load **Standard** for the original fixed mode, or **Adaptive Standard** for ATB-enabled automatic tonal correction.
 2. Keep **Auto Headroom Protection** enabled.
 3. Keep **Level-Matched Bypass** enabled.
 4. Keep **Adaptive Tone Balance** off for the original fixed mode, or enable it for source-dependent correction.
@@ -79,7 +79,7 @@ English
 
 ### 3. 最初の設定
 
-1. 内蔵プリセット「標準」を呼び出す
+1. 従来の固定補正なら内蔵「標準」、ATBを最大限利用するなら「適応型標準」を呼び出す
 2. 自動ヘッドルーム保護をオン
 3. レベルマッチ・バイパスをオン
 4. 従来の固定補正なら適応型音色補正をオフ、音源別の自動補正ならオン

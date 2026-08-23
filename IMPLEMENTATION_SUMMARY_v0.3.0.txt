@@ -54,3 +54,6 @@ Validation completed:
 
 未搭載：
 - A/B比較スロット（後のバージョンへ延期）
+
+
+v0.4.0-dev.1 adds temporary in-memory A/B comparison slots. See RELEASE_NOTES_v0.4.0-dev.1.md.

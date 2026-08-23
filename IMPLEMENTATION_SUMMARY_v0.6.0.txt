@@ -1,0 +1,48 @@
+Sonic Refiner v0.6.0 implementation summary
+
+Base:
+- Sonic Refiner v0.6.0-dev.3 validated source
+
+Added:
+- 12th built-in preset: 適応型標準 / Adaptive Standard
+- Depth 100
+- Clarity 100
+- Width 50
+- Ambience 40
+- Master Strength 100%
+- Output Gain 0.0 dB
+- Auto Headroom Protection On
+- Level-Matched Bypass On
+- Sonic Refiner enabled
+- Adaptive Tone Balance On
+
+UI:
+- Depth / Clarity value fields widened so Japanese ATB limit text is fully visible
+- Settings window remains 560 x 320
+
+Unchanged:
+- Existing 11 built-in presets
+- DSP algorithm
+- Adaptive Tone Balance algorithm and Low / High targets
+- Auto Low absolute maximum +10.0 dB
+- Auto High absolute maximum +10.0 dB
+- preset_version 9
+- SRP4 write format
+- SRP1 / SRP2 / SRP3 / SRP4 read compatibility
+- legacy DSP preset reading
+- .srpbackup behavior
+- A/B behavior
+- Cancel behavior
+- runtime analyzer persistence rules
+- Japanese / English language behavior
+- direct settings access and Keyboard Shortcuts behavior
+
+Formal release markers:
+- Component version: 0.6.0
+- Settings window title: Sonic Refiner - 0.6.0
+- Package output: dist\foo_sonic_refiner_v0.6.0.fb2k-component
+
+Source package:
+- build_and_package.cmd
+- ビルドと梱包.cmd
+- no garbled duplicate Japanese build-helper filename

@@ -1,7 +1,5 @@
-Sonic Refiner 0.5.0
+Sonic Refiner 0.6.0
 Adaptive Audio Enhancement DSP for foobar2000
-Formal release / 正式版
-
 ENGLISH
 
 Sonic Refiner combines tone and soundstage enhancement with optional
@@ -28,8 +26,9 @@ ADAPTIVE TONE BALANCE
 - Multichannel analysis uses the first L/R pair
 
 PRESETS AND A/B
-- Existing 11 built-in presets remain unchanged and load ATB OFF
-- Existing built-in presets can be used normally; enable ATB afterward if desired
+- The existing 11 built-in presets remain unchanged and load ATB OFF
+- Added one Adaptive Standard built-in preset with Depth 100, Clarity 100, Width 50, Ambience 40 and ATB ON
+- Adaptive Standard gives Auto Low / Auto High the full permitted range while keeping standard Width / Ambience values
 - User presets save the ATB On/Off state
 - A/B stores the ATB On/Off state
 - A/B slots remain runtime-only and are cleared when foobar2000 exits
@@ -53,7 +52,7 @@ OTHER FEATURES
 - Output Gain from -12.0 dB to +6.0 dB in 0.5 dB steps
 - Auto Headroom Protection around -0.2 dBFS block/sample peak
 - Level-Matched Bypass
-- Eleven built-in presets
+- Twelve built-in presets
 - Up to 20 UTF-8 user presets
 - Direct settings access from the Playback menu
 - Keyboard Shortcuts support
@@ -78,9 +77,9 @@ component's License page.
 
 日本語
 
-Sonic Refiner 0.5.0では、従来の音色・音場補正に
-「適応型音色補正（Adaptive Tone Balance / ATB）」を追加しました。
-ATBの初期値はオフなので、有効にするまでは従来の固定Depth／Clarity動作です。
+Sonic Refiner 0.6.0では、v0.5.0の適応型音色補正（Adaptive Tone Balance / ATB）を
+最大限利用できる内蔵プリセット「適応型標準」を1種類追加しました。
+ATB自体の初期値は引き続きオフで、既存11種類の内蔵プリセットも変更していません。
 
 適応型音色補正
 - Sonic Refiner処理前の原音を解析
@@ -103,7 +102,8 @@ ATBの初期値はオフなので、有効にするまでは従来の固定Depth
 
 プリセットとA/B
 - 既存11種類の内蔵プリセットは変更せず、呼び出し時はATB OFF
-- 既存プリセットをそのまま使い、必要な場合だけATBをONにして使用可能
+- 「適応型標準」を追加：Depth 100 / Clarity 100 / Width 50 / Ambience 40 / Master Strength 100% / ATB ON
+- 「適応型標準」はAuto Low／Auto Highへ最大限の許容量を与えつつ、Width／Ambienceは標準値を維持
 - 任意プリセットにはATBのON/OFFも保存
 - A/BにもATBのON/OFFを保存
 - A/Bスロットはメモリ上のみで、foobar2000終了時に消去

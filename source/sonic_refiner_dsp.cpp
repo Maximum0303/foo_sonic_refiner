@@ -4246,6 +4246,10 @@ const built_in_preset g_built_in_presets[] = {
         L"フルブースト", L"Full Boost",
         { 100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 0.0f, true, true, true, false }
     },
+    {
+        L"適応型標準", L"Adaptive Standard",
+        { 100.0f, 100.0f, 50.0f, 40.0f, 100.0f, 0.0f, true, true, true, true }
+    },
 };
 
 const wchar_t* built_in_preset_name(
@@ -5881,7 +5885,7 @@ private:
 
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - 0.5.0"
+            L"Sonic Refiner - 0.6.0"
         );
         ::SetDlgItemTextW(
             m_hWnd,

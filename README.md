@@ -4,7 +4,44 @@
 
 Sonic Refiner adjusts tone and soundstage in real time. It combines low-frequency body, clarity, stereo width, short early reflections, Master Strength, Adaptive Tone Balance, output gain, lightweight headroom protection, and level-matched comparison in one DSP component.
 
-> Current stable release: **v0.5.0**
+> Current stable release: **v0.6.0**
+
+## What is new in v0.6.0
+
+### Adaptive Standard built-in preset
+
+v0.6.0 adds one built-in preset designed to make full practical use of
+**Adaptive Tone Balance (ATB)** without changing the validated v0.5.0 ATB algorithm.
+
+- Added **Adaptive Standard / 適応型標準** as the 12th built-in preset
+- Depth: **100**
+- Clarity: **100**
+- Width: **50**
+- Ambience: **40**
+- Master Strength: **100%**
+- Output Gain: **0.0 dB**
+- Auto Headroom Protection: **On**
+- Level-Matched Bypass: **On**
+- Sonic Refiner: **Enabled**
+- Adaptive Tone Balance: **On**
+- With ATB On, Depth and Clarity act as maximum permissions, so Auto Low / Auto High can use the full allowed range up to **+10.0 dB** each when the source analysis calls for it
+- Width and Ambience keep the existing Standard preset values, avoiding an unnecessarily extreme soundstage
+- The existing 11 built-in presets remain unchanged and still load **ATB Off**
+
+### UI refinement
+
+- Widened the Depth and Clarity value fields so Japanese ATB limit text such as
+  `100% / 自動上限 +10.0 dB` is fully visible
+- Settings window remains **560 × 320**
+
+### Compatibility
+
+- No DSP or Adaptive Tone Balance algorithm changes from v0.5.0
+- DSP write format remains **preset_version 9**
+- User preset / `.srpbackup` write format remains **SRP4**
+- SRP1 / SRP2 / SRP3 / SRP4 and legacy DSP preset reading remain supported
+- Runtime analyzer history, Auto Low / Auto High values, and confidence remain non-persistent
+- A/B, Cancel, direct settings access, Japanese/English UI, and existing protection behavior are unchanged
 
 ## What is new in v0.5.0
 
@@ -44,9 +81,9 @@ v0.4.0 fixed Depth/Clarity behavior whenever ATB is Off.
 - A/B analyzer state and live automatic-gain state are runtime-only and are not persisted
 - Ending A/B comparison restores the full settings that were active when comparison began
 
-### Final release validation
+### Release-candidate validation
 
-The formal v0.5.0 build was checked for:
+The v0.5.0 release candidate was checked for:
 - Light and Dark mode
 - continuous playback
 - restart persistence
@@ -98,7 +135,7 @@ The DSP processing algorithm is unchanged from v0.2.0.
 - **Output Gain:** -12.0 dB to +6.0 dB in 0.5 dB steps
 - **Auto Headroom Protection:** lightweight block/sample-peak protection around -0.2 dBFS
 - **Level-Matched Bypass:** reduces average level added by processing for fairer comparison
-- Eleven built-in presets
+- Twelve built-in presets
 - Up to 20 UTF-8 user presets
 - User-preset export and import with `.srpbackup` files
 - Integrated Help, Glossary, Important Notes, and MIT License pages
@@ -119,6 +156,7 @@ The DSP processing algorithm is unchanged from v0.2.0.
 | Extreme Wide | 超ワイド |
 | Large Hall | 大ホール |
 | Full Boost | フルブースト |
+| Adaptive Standard | 適応型標準 |
 
 Only the displayed names change with the UI language. Preset values and internal order remain unchanged.
 
@@ -159,7 +197,7 @@ Sonic Refiner handles tone and soundstage. The downstream **R128 Real-time Loudn
 
 ## Installation
 
-1. Double-click `foo_sonic_refiner_v0.5.0.fb2k-component`.
+1. Double-click `foo_sonic_refiner_v0.6.0.fb2k-component`.
 2. Apply the component installation in foobar2000.
 3. Restart foobar2000.
 4. Add `Sonic Refiner` from DSP Manager.
@@ -193,7 +231,7 @@ Sonic Refiner handles tone and soundstage. The downstream **R128 Real-time Loudn
 - Legacy settings without Master Strength load at 100%
 - Legacy settings without Output Gain load at 0.0 dB
 - Existing UTF-8 user-preset names are preserved and are not translated
-- `.srpbackup` remains the backup extension; v0.5.0 imports older backups and new backups carry SRP4 user-preset data
+- `.srpbackup` remains the backup extension; v0.6.0 imports older backups and new backups carry SRP4 user-preset data
 
 ## Building from source
 
@@ -225,11 +263,11 @@ build_and_package.cmd
 Output:
 
 ```text
-dist\foo_sonic_refiner_v0.5.0.fb2k-component
+dist\foo_sonic_refiner_v0.6.0.fb2k-component
 dist\SHA256SUMS.txt
 ```
 
-See `README_FIRST.txt` for detailed build steps and `TESTING_v0.5.0.md` for the final release validation checklist.
+See `README_FIRST.txt` for detailed build steps and `TESTING_v0.6.0.md` for the final release validation checklist.
 
 ## Safety notes
 
@@ -261,7 +299,43 @@ This project is an independent clean-room implementation. It does not include or
 
 Sonic Refinerは、音色と音場をリアルタイムで調整するfoobar2000用DSPコンポーネントです。低域の厚み、明瞭感、ステレオの広がり、短い初期反射による空間・奥行き感、Master Strength、出力ゲイン、軽量な保護、レベルを合わせた比較を1つの設定画面にまとめています。
 
-> 現在の正式公開版：**v0.5.0**
+> 現在の正式公開版：**v0.6.0**
+
+## v0.6.0の変更点
+
+### 「適応型標準」内蔵プリセット
+
+v0.6.0では、v0.5.0で確定した適応型音色補正（ATB）のアルゴリズムを変更せず、
+ATBを最大限利用するための内蔵プリセットを1種類追加しました。
+
+- 12個目の内蔵プリセットとして **「適応型標準 / Adaptive Standard」** を追加
+- Depth：**100**
+- Clarity：**100**
+- Width：**50**
+- Ambience：**40**
+- Master Strength：**100%**
+- Output Gain：**0.0 dB**
+- 自動ヘッドルーム保護：**オン**
+- レベルマッチ・バイパス：**オン**
+- Sonic Refiner：**有効**
+- 適応型音色補正：**オン**
+- ATB ON時はDepth／Clarityが自動補正の上限になるため、解析結果に応じてAuto Low／Auto Highがそれぞれ最大 **+10.0 dB** まで利用可能
+- Width／Ambienceは既存「標準」と同じ値を維持し、音場だけが極端にならない構成
+- 既存11種類の内蔵プリセットは変更せず、引き続き呼び出し時は **ATB OFF**
+
+### UI調整
+
+- `100% / 自動上限 +10.0 dB` など、日本語のATB上限表示が右端で切れないようDepth／Clarityの値表示欄を調整
+- 設定画面サイズは **560 × 320** のまま
+
+### 互換性
+
+- v0.5.0からDSP／ATBアルゴリズム変更なし
+- DSP書き込み形式は **preset_version 9** のまま
+- 任意プリセット／`.srpbackup`書き込み形式は **SRP4** のまま
+- SRP1／SRP2／SRP3／SRP4と旧DSP presetの読み込み互換性を維持
+- analyzer history／Auto Low／Auto High／confidenceは引き続き保存しない
+- A/B、Cancel、直接起動、日本語／English、既存の保護動作は変更なし
 
 ## v0.5.0の変更点
 
@@ -354,7 +428,7 @@ DSP処理アルゴリズムはv0.2.0から変更していません。
 - **Output Gain**：-12.0～+6.0 dB、0.5 dB刻み
 - **自動ヘッドルーム保護**：約-0.2 dBFS付近の軽量なブロック／サンプルピーク保護
 - **レベルマッチ・バイパス**：処理による平均音量増加分を抑えた比較
-- 内蔵プリセット11種類
+- 内蔵プリセット12種類
 - UTF-8任意プリセット最大20件
 - `.srpbackup`による書き出し・読み込み
 - ヘルプ・用語集・注意事項・MIT License
@@ -427,8 +501,8 @@ build_and_package.cmd
 出力：
 
 ```text
-dist\foo_sonic_refiner_v0.5.0.fb2k-component
+dist\foo_sonic_refiner_v0.6.0.fb2k-component
 dist\SHA256SUMS.txt
 ```
 
-詳しい手順は`README_FIRST.txt`、正式版の最終確認項目は`TESTING_v0.5.0.md`を参照してください。
+詳しい手順は`README_FIRST.txt`、正式版の最終確認項目は`TESTING_v0.6.0.md`を参照してください。
