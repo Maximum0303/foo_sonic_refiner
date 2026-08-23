@@ -128,6 +128,17 @@ std::atomic<int> g_adaptive_runtime_state{
 };
 std::atomic<int> g_adaptive_runtime_depth_tenths_db{0};
 std::atomic<int> g_adaptive_runtime_clarity_tenths_db{0};
+// UI-only guard for playback discontinuities.  The audio processor can retain
+// the previous gain very briefly for a click-free transition, but the settings
+// dialog must not present that previous-track value as a result for the new
+// track.  This flag is runtime-only and is never serialized.
+std::atomic<bool> g_adaptive_ui_analysis_pending{false};
+// Playback callbacks increment this generation on a new track or seek.
+// The audio processor consumes the generation and performs the same runtime
+// analysis reset even when foobar2000 does not deliver the discontinuity to
+// this DSP through the same path/timing as a normal end-of-track marker.
+// Runtime-only; never serialized.
+std::atomic<std::uint64_t> g_adaptive_playback_discontinuity_generation{0};
 
 // Development-only diagnostic snapshot. The entire diagnostic set is packed
 // into one 64-bit atomic value so that the settings UI can never combine
@@ -560,6 +571,81 @@ void publish_adaptive_runtime(
         std::memory_order_relaxed
     );
 }
+
+void mark_adaptive_playback_discontinuity() noexcept {
+    g_adaptive_playback_discontinuity_generation.fetch_add(
+        1,
+        std::memory_order_release
+    );
+
+    const adaptive_runtime_state state =
+        static_cast<adaptive_runtime_state>(
+            g_adaptive_runtime_state.load(
+                std::memory_order_relaxed
+            )
+        );
+
+    if (state != adaptive_runtime_state::off) {
+        g_adaptive_ui_analysis_pending.store(
+            true,
+            std::memory_order_release
+        );
+        g_adaptive_runtime_state.store(
+            static_cast<int>(adaptive_runtime_state::analyzing),
+            std::memory_order_relaxed
+        );
+    }
+}
+
+class adaptive_playback_discontinuity_callback
+    : public play_callback_static {
+public:
+    unsigned get_flags() override {
+        return flag_on_playback_new_track |
+            flag_on_playback_seek;
+    }
+
+    void on_playback_starting(
+        play_control::t_track_command,
+        bool
+    ) noexcept override {}
+
+    void on_playback_new_track(
+        metadb_handle_ptr
+    ) noexcept override {
+        mark_adaptive_playback_discontinuity();
+    }
+
+    void on_playback_stop(
+        play_control::t_stop_reason
+    ) noexcept override {}
+
+    void on_playback_seek(double) noexcept override {
+        mark_adaptive_playback_discontinuity();
+    }
+
+    void on_playback_pause(bool) noexcept override {}
+
+    void on_playback_edited(
+        metadb_handle_ptr
+    ) noexcept override {}
+
+    void on_playback_dynamic_info(
+        const file_info&
+    ) noexcept override {}
+
+    void on_playback_dynamic_info_track(
+        const file_info&
+    ) noexcept override {}
+
+    void on_playback_time(double) noexcept override {}
+
+    void on_volume_change(float) noexcept override {}
+};
+
+static play_callback_static_factory_t<
+    adaptive_playback_discontinuity_callback
+> g_adaptive_playback_discontinuity_callback_factory;
 
 void clear_adaptive_diagnostics() noexcept {
     g_adaptive_diagnostic_snapshot.store(
@@ -1169,6 +1255,10 @@ public:
         sample_rate_ = sample_rate;
         analysis_channels_ = (std::min)(channels, 2u);
         active_mode_ = settings.adaptive_tone_balance;
+        playback_discontinuity_generation_ =
+            g_adaptive_playback_discontinuity_generation.load(
+                std::memory_order_acquire
+            );
         master_factor_ = master_strength_factor(
             settings.master_strength
         );
@@ -1214,6 +1304,27 @@ public:
             g_adaptive_warm_valid.load(
                 std::memory_order_relaxed
             );
+
+        // A processor reconfiguration may happen after a track change or seek
+        // (for example when the audio format also changes).  Preserve the
+        // UI-only "analysis pending" state across that reconfiguration so a
+        // stale previous-track Auto Low / Auto High value cannot reappear.
+        if (!active_mode_) {
+            analysis_pending_after_discontinuity_ = false;
+            g_adaptive_ui_analysis_pending.store(
+                false,
+                std::memory_order_relaxed
+            );
+        } else if (warm_available) {
+            analysis_pending_after_discontinuity_ = false;
+            g_adaptive_ui_analysis_pending.store(
+                false,
+                std::memory_order_relaxed
+            );
+        } else if (g_adaptive_ui_analysis_pending.load(
+                       std::memory_order_relaxed)) {
+            analysis_pending_after_discontinuity_ = true;
+        }
 
         if (warm_available) {
             required_depth_db_ = std::clamp(
@@ -1288,6 +1399,21 @@ public:
             return;
         }
 
+        const std::uint64_t discontinuity_generation =
+            g_adaptive_playback_discontinuity_generation.load(
+                std::memory_order_acquire
+            );
+
+        if (discontinuity_generation !=
+            playback_discontinuity_generation_) {
+            playback_discontinuity_generation_ =
+                discontinuity_generation;
+
+            if (active_mode_) {
+                reset_for_discontinuity();
+            }
+        }
+
         const double elapsed =
             static_cast<double>(frames) / sample_rate_;
         elapsed_since_reset_seconds_ += elapsed;
@@ -1308,6 +1434,16 @@ public:
                 state = adaptive_runtime_state::active;
             }
 
+            if (analysis_pending_after_discontinuity_ &&
+                history_count_ >=
+                    adaptive_minimum_valid_windows) {
+                analysis_pending_after_discontinuity_ = false;
+                g_adaptive_ui_analysis_pending.store(
+                    false,
+                    std::memory_order_relaxed
+                );
+            }
+
             publish_adaptive_runtime(
                 state,
                 current_depth_db_,
@@ -1325,6 +1461,10 @@ public:
     }
 
     void reset_for_discontinuity() noexcept {
+        playback_discontinuity_generation_ =
+            g_adaptive_playback_discontinuity_generation.load(
+                std::memory_order_acquire
+            );
         clear_history_and_window();
         clear_adaptive_diagnostics();
         latest_window_signal_present_ = false;
@@ -1343,12 +1483,22 @@ public:
         clear_adaptive_warm_state();
 
         if (active_mode_) {
+            analysis_pending_after_discontinuity_ = true;
+            g_adaptive_ui_analysis_pending.store(
+                true,
+                std::memory_order_relaxed
+            );
             publish_adaptive_runtime(
                 adaptive_runtime_state::analyzing,
                 current_depth_db_,
                 current_clarity_db_
             );
         } else {
+            analysis_pending_after_discontinuity_ = false;
+            g_adaptive_ui_analysis_pending.store(
+                false,
+                std::memory_order_relaxed
+            );
             publish_adaptive_runtime(
                 adaptive_runtime_state::off,
                 0.0,
@@ -1358,6 +1508,10 @@ public:
     }
 
     void stop() noexcept {
+        playback_discontinuity_generation_ =
+            g_adaptive_playback_discontinuity_generation.load(
+                std::memory_order_acquire
+            );
         clear_history_and_window();
         clear_adaptive_diagnostics();
         latest_window_signal_present_ = false;
@@ -1375,7 +1529,12 @@ public:
         elapsed_since_reset_seconds_ = 0.0;
         fast_reset_seconds_remaining_ = 0.0;
         warm_started_ = false;
+        analysis_pending_after_discontinuity_ = false;
         clear_adaptive_warm_state();
+        g_adaptive_ui_analysis_pending.store(
+            false,
+            std::memory_order_relaxed
+        );
 
         publish_adaptive_runtime(
             active_mode_
@@ -1997,7 +2156,9 @@ private:
     bool active_mode_ = false;
     bool high_enabled_ = false;
     bool warm_started_ = false;
+    bool analysis_pending_after_discontinuity_ = false;
     bool latest_window_signal_present_ = false;
+    std::uint64_t playback_discontinuity_generation_ = 0;
 
     double high_upper_hz_ = adaptive_high_maximum_hz;
     double master_factor_ = 1.0;
@@ -5885,7 +6046,7 @@ private:
 
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - 0.6.0"
+            L"Sonic Refiner - 0.6.1"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -7277,6 +7438,25 @@ private:
                     language_,
                     L"自動補正：オフ",
                     L"Auto: Off"
+                )
+            );
+            return;
+        }
+
+        // A track change / seek invalidates the previous track's displayed
+        // correction immediately.  Keep the status at "Analyzing" until the
+        // new track has accumulated the normal minimum stable history, even if
+        // a retained transition gain is still being used internally for audio
+        // continuity.
+        if (g_adaptive_ui_analysis_pending.load(
+                std::memory_order_relaxed)) {
+            ::SetDlgItemTextW(
+                m_hWnd,
+                IDC_ADAPTIVE_STATUS,
+                localized(
+                    language_,
+                    L"自動補正：解析中...",
+                    L"Auto: Analyzing..."
                 )
             );
             return;

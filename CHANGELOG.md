@@ -1,5 +1,57 @@
 # Changelog
 
+## [0.6.1] - 2026-08-23
+
+### Fixed
+
+- Added a clear ATB analysis-pending status so stale Auto Low / Auto High values from the previous playback position are not shown as if they belonged to the new one.
+- Playback start, Next, Previous, direct track jumps, natural track changes, seeks, Stop -> playback, and ATB Off -> On now show `自動補正：解析中...` / `Auto: Analyzing...` while fresh analysis is being accumulated.
+- New-track and seek notifications use a runtime-only playback discontinuity generation consumed by the ATB processor so fresh analysis begins reliably on the new playback position.
+- Pause / Resume continues to preserve the current ATB analysis state.
+
+### Compatibility
+
+- No audible DSP or Adaptive Tone Balance decision-algorithm changes from v0.6.0.
+- Auto Low / Auto High mapping, smoothing, startup protection, and +10.0 dB absolute limits are unchanged.
+- SRP4 and `preset_version 9` are unchanged.
+- All 12 built-in presets are unchanged.
+- Legacy DSP presets and SRP1 / SRP2 / SRP3 / SRP4 backup/preset compatibility are unchanged.
+- Runtime analyzer state remains non-persistent.
+
+### Validation
+
+- Verified playback start, Next, Previous, direct track jump, seek, natural track advance, Stop -> playback, and ATB Off -> On all enter the analyzing state.
+- Verified Pause -> Resume preserves analysis and does not restart it.
+- Verified the analyzing state returns to numeric Auto Low / Auto High status after sufficient fresh analysis.
+- Verified Japanese / English, Light / Dark, and full-track playback without dropout, click noise, abrupt unnatural tonal change, or crash.
+
+## [0.6.1-dev.2] - 2026-08-23
+
+### Fixed
+
+- Track changes triggered by Next / Previous / direct track jumps now immediately enter the ATB `Analyzing...` UI state.
+- Added a runtime-only playback discontinuity generation so the ATB analyzer is reset for new-track and seek notifications even when the DSP discontinuity callback arrives through a different path or timing.
+- Pause / Resume continues to preserve ATB analysis history.
+
+### Compatibility
+
+- No change to the ATB Low / High decision algorithm, boost mapping, smoothing rates, or absolute limits.
+- No change to SRP4, `preset_version 9`, user presets, `.srpbackup`, or the 12 built-in presets.
+
+## [0.6.1-dev.1] - 2026-08-23
+
+### Fixed
+
+- Track changes and seeks now invalidate the previous track's displayed Auto Low / Auto High values immediately while Adaptive Tone Balance is enabled.
+- The normal ATB status line shows `自動補正：解析中...` / `Auto: Analyzing...` until the new playback segment has accumulated the normal minimum stable analysis history.
+- Added a runtime-only UI analysis-pending guard so a retained transition gain cannot be mistaken for the new track's completed analysis result.
+
+### Unchanged
+
+- No audible DSP or Adaptive Tone Balance algorithm changes.
+- ATB targets, filters, smoothing, startup protection, gain limits and click-free transition behavior are unchanged from v0.6.0.
+- Pause / Resume history behavior, built-in presets, `preset_version 9`, SRP4, legacy compatibility, `.srpbackup`, A/B, Cancel and persistence behavior are unchanged.
+
 ## [0.6.0] - 2026-08-23
 
 ### Added

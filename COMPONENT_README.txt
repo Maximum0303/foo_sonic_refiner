@@ -1,4 +1,4 @@
-Sonic Refiner 0.6.0
+Sonic Refiner 0.6.1
 Adaptive Audio Enhancement DSP for foobar2000
 ENGLISH
 
@@ -22,6 +22,7 @@ ADAPTIVE TONE BALANCE
 - Slow rolling analysis and gain movement reduce pumping
 - Input below approximately -55 dBFS does not update analysis
 - Track changes, seeks, Stop and ATB Off->On restart analysis
+- During fresh analysis the status shows `Auto: Analyzing...`; numeric Auto Low / Auto High returns after sufficient analysis
 - Pause/Resume preserves analysis
 - Multichannel analysis uses the first L/R pair
 
@@ -77,7 +78,7 @@ component's License page.
 
 日本語
 
-Sonic Refiner 0.6.0では、v0.5.0の適応型音色補正（Adaptive Tone Balance / ATB）を
+Sonic Refiner 0.6.1では、v0.6.0の適応型音色補正（Adaptive Tone Balance / ATB）を
 最大限利用できる内蔵プリセット「適応型標準」を1種類追加しました。
 ATB自体の初期値は引き続きオフで、既存11種類の内蔵プリセットも変更していません。
 
@@ -97,6 +98,7 @@ ATB自体の初期値は引き続きオフで、既存11種類の内蔵プリセ
 - ゆっくりした解析と追従でポンピングを抑制
 - 約-55 dBFS未満では解析を更新しない
 - 曲変更・シーク・Stop・ATB OFF->ONで解析をやり直す
+- 新しい解析中は「自動補正：解析中...」と表示し、十分な解析後にAuto Low／Auto High数値へ戻る
 - Pause/Resumeでは解析を保持
 - マルチチャンネル解析は最初のL/Rを使用
 

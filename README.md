@@ -4,7 +4,32 @@
 
 Sonic Refiner adjusts tone and soundstage in real time. It combines low-frequency body, clarity, stereo width, short early reflections, Master Strength, Adaptive Tone Balance, output gain, lightweight headroom protection, and level-matched comparison in one DSP component.
 
-> Current stable release: **v0.6.0**
+> Current stable release: **v0.6.1**
+
+## What is new in v0.6.1
+
+### Clear ATB analysis status on playback changes
+
+v0.6.1 improves the Adaptive Tone Balance status display so values from the
+previous playback position are not mistaken for fresh analysis results.
+
+- Playback start, Next, Previous, direct track jumps, natural track changes, seeks,
+  Stop -> playback, and ATB Off -> On show
+  `自動補正：解析中...` / `Auto: Analyzing...`
+  while fresh analysis is being accumulated
+- After sufficient fresh analysis, the normal Auto Low / Auto High numeric status returns
+- Pause / Resume preserves the current analysis state and does not restart analysis
+- A runtime-only playback discontinuity generation makes new-track and seek resets reliable
+
+### Compatibility
+
+- No DSP or Adaptive Tone Balance decision-algorithm changes from v0.6.0
+- Auto Low / Auto High limits remain **+10.0 dB**
+- **SRP4** remains the user-preset / `.srpbackup` format
+- **preset_version 9** remains the DSP preset format
+- All **12 built-in presets** remain unchanged
+- Legacy preset / backup compatibility is unchanged
+- Runtime analyzer history and live Auto Low / Auto High values remain non-persistent
 
 ## What is new in v0.6.0
 
