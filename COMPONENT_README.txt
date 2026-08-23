@@ -1,4 +1,4 @@
-Sonic Refiner 0.6.1
+Sonic Refiner 0.6.2
 Adaptive Audio Enhancement DSP for foobar2000
 ENGLISH
 

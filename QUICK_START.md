@@ -1,4 +1,4 @@
-# Sonic Refiner v0.6.1 Quick Start
+# Sonic Refiner v0.6.2 Quick Start
 
 > Adaptive Tone Balance is OFF by default. Use **Adaptive Standard / 適応型標準** when you want ATB enabled with the full Low/High correction allowance while keeping Standard Width/Ambience values.
 

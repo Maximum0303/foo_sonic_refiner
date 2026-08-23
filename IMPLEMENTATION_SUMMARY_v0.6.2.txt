@@ -1,0 +1,23 @@
+Sonic Refiner v0.6.2 implementation summary
+
+Purpose
+- Fix Built-in Presets combo display so it reflects the built-in preset that
+  exactly matches the current restored DSP settings.
+
+Implementation
+- Added persisted-settings matching against all 12 built-in presets.
+- On settings dialog initialization, the matching built-in preset is selected.
+- If no built-in preset exactly matches, the combo is left unselected.
+- Slider / checkbox changes, user-preset loads, and A/B listening resynchronize
+  the combo with the current settings.
+- Selecting an item in the combo still requires Load before settings change.
+- Japanese / English names continue to share the same internal preset index.
+
+Compatibility
+- No DSP processing changes.
+- No ATB algorithm changes.
+- No built-in preset value changes.
+- SRP4 unchanged.
+- preset_version 9 unchanged.
+- Legacy DSP preset / SRP1 / SRP2 / SRP3 / SRP4 compatibility unchanged.
+- Runtime ATB state behavior unchanged.

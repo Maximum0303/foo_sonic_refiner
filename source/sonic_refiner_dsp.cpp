@@ -4426,6 +4426,51 @@ constexpr t_size built_in_preset_count =
     sizeof(g_built_in_presets) /
     sizeof(g_built_in_presets[0]);
 
+bool built_in_preset_settings_match(
+    const sonic_refiner::settings& left,
+    const sonic_refiner::settings& right
+) noexcept {
+    constexpr float tolerance = 0.001f;
+
+    const auto same_float = [tolerance](float a, float b) noexcept {
+        return std::abs(a - b) <= tolerance;
+    };
+
+    return
+        same_float(left.depth, right.depth) &&
+        same_float(left.clarity, right.clarity) &&
+        same_float(left.width, right.width) &&
+        same_float(left.ambience, right.ambience) &&
+        same_float(left.master_strength, right.master_strength) &&
+        same_float(left.output_gain_db, right.output_gain_db) &&
+        left.auto_headroom == right.auto_headroom &&
+        left.level_matched_bypass == right.level_matched_bypass &&
+        left.enabled == right.enabled &&
+        left.adaptive_tone_balance == right.adaptive_tone_balance;
+}
+
+int find_matching_builtin_preset_index(
+    const sonic_refiner::settings& current
+) noexcept {
+    const sonic_refiner::settings safe =
+        sonic_refiner::sanitize(current);
+
+    for (t_size index = 0;
+         index < built_in_preset_count;
+         ++index) {
+        const sonic_refiner::settings preset =
+            sonic_refiner::sanitize(
+                g_built_in_presets[index].value
+            );
+
+        if (built_in_preset_settings_match(safe, preset)) {
+            return static_cast<int>(index);
+        }
+    }
+
+    return -1;
+}
+
 int hex_value(char value) noexcept {
     if (value >= '0' && value <= '9') {
         return value - '0';
@@ -5968,6 +6013,10 @@ private:
             user_presets_.empty() ? -1 : 0
         );
 
+        refresh_builtin_preset_combo(
+            find_matching_builtin_preset_index(settings_)
+        );
+
         apply_language();
         refresh_labels();
         SetTimer(1, 250);
@@ -6046,7 +6095,7 @@ private:
 
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - 0.6.1"
+            L"Sonic Refiner - 0.6.2"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -6370,12 +6419,8 @@ private:
     }
 
     void refresh_builtin_preset_combo(
-        int selected_index = -1
+        int selected_index
     ) {
-        if (selected_index < 0) {
-            selected_index = selected_builtin_preset_index();
-        }
-
         built_in_preset_combo_.ResetContent();
 
         for (t_size index = 0;
@@ -6397,10 +6442,17 @@ private:
         if (selected_index < 0 ||
             static_cast<t_size>(selected_index) >=
                 built_in_preset_count) {
-            selected_index = 0;
+            selected_index = -1;
         }
 
         built_in_preset_combo_.SetCurSel(selected_index);
+        refresh_builtin_preset_button();
+    }
+
+    void sync_builtin_preset_selection_to_settings() {
+        built_in_preset_combo_.SetCurSel(
+            find_matching_builtin_preset_index(settings_)
+        );
         refresh_builtin_preset_button();
     }
 
@@ -6496,6 +6548,7 @@ private:
         apply_ab_comparison_value(slot.value, settings_);
         comparison_state_ = state;
         apply_settings_to_controls();
+        sync_builtin_preset_selection_to_settings();
         notify_changed();
         refresh_labels();
     }
@@ -6526,6 +6579,7 @@ private:
         comparison_state_ = comparison_state::none;
         comparison_start_valid_ = false;
         apply_settings_to_controls();
+        sync_builtin_preset_selection_to_settings();
         notify_changed();
         refresh_labels();
     }
@@ -6643,6 +6697,7 @@ private:
                 output_gain_slider_.GetPos()
             );
 
+        sync_builtin_preset_selection_to_settings();
         notify_changed();
         refresh_labels();
     }
@@ -6650,6 +6705,7 @@ private:
     void on_enable_changed(UINT, int, CWindow) {
         settings_.enabled =
             enable_checkbox_.GetCheck() == BST_CHECKED;
+        sync_builtin_preset_selection_to_settings();
         notify_changed();
         refresh_labels();
     }
@@ -6658,6 +6714,7 @@ private:
         settings_.auto_headroom =
             auto_headroom_checkbox_.GetCheck() ==
                 BST_CHECKED;
+        sync_builtin_preset_selection_to_settings();
         notify_changed();
         refresh_labels();
     }
@@ -6666,6 +6723,7 @@ private:
         settings_.level_matched_bypass =
             level_match_checkbox_.GetCheck() ==
                 BST_CHECKED;
+        sync_builtin_preset_selection_to_settings();
         notify_changed();
         refresh_labels();
     }
@@ -6678,6 +6736,7 @@ private:
         settings_.adaptive_tone_balance =
             adaptive_tone_balance_checkbox_.GetCheck() ==
                 BST_CHECKED;
+        sync_builtin_preset_selection_to_settings();
         notify_changed();
         refresh_labels();
     }
@@ -6876,6 +6935,7 @@ private:
         settings_ = sonic_refiner::sanitize(settings_);
 
         apply_settings_to_controls();
+        sync_builtin_preset_selection_to_settings();
         notify_changed();
         refresh_labels();
     }

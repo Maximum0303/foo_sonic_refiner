@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.6.2] - 2026-08-23
+
+### Fixed
+
+- The Built-in Presets combo now reflects the built-in preset that exactly matches the currently restored DSP settings when the settings dialog opens.
+- Restarting foobar2000 after using a built-in preset no longer causes the combo to visually fall back to `Standard` while another preset's settings remain active.
+- When the current settings do not exactly match any built-in preset, the built-in combo is left unselected instead of showing a misleading preset name.
+- Slider / option changes, user-preset loads, and A/B listening resynchronize the displayed built-in preset selection.
+- Selecting a combo item still requires `Load` before the DSP settings are changed.
+
+### Compatibility
+
+- No DSP / ATB algorithm changes.
+- All 12 built-in preset values are unchanged.
+- SRP4 and `preset_version 9` are unchanged.
+- Legacy preset and backup compatibility is unchanged.
+
 ## [0.6.1] - 2026-08-23
 
 ### Fixed

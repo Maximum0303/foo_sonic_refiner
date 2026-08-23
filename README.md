@@ -4,7 +4,17 @@
 
 Sonic Refiner adjusts tone and soundstage in real time. It combines low-frequency body, clarity, stereo width, short early reflections, Master Strength, Adaptive Tone Balance, output gain, lightweight headroom protection, and level-matched comparison in one DSP component.
 
-> Current stable release: **v0.6.1**
+> Current stable release: **v0.6.2**
+
+## What is new in v0.6.2
+
+This development build fixes the Built-in Presets combo display so it reflects
+the built-in preset that exactly matches the currently restored DSP settings.
+If the current settings do not exactly match any built-in preset, the combo is
+left unselected rather than incorrectly showing `Standard`.
+
+This does not change DSP processing, ATB behavior, built-in preset values,
+SRP4, or `preset_version 9`.
 
 ## What is new in v0.6.1
 
