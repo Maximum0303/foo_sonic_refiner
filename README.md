@@ -234,7 +234,7 @@ The DSP processing algorithm is unchanged from v0.2.0.
 - **Auto Headroom Protection:** lightweight block/sample-peak protection around -0.2 dBFS
 - **Level-Matched Bypass:** reduces average level added by processing for fairer comparison
 - Twelve built-in presets
-- Up to 20 UTF-8 user presets
+- Up to 20 UTF-8 user presets with rename support
 - User-preset export and import with `.srpbackup` files
 - Integrated Help, Glossary, Important Notes, and MIT License pages
 - foobar2000 light and dark mode support
@@ -295,7 +295,7 @@ Sonic Refiner handles tone and soundstage. The downstream **R128 Real-time Loudn
 
 ## Installation
 
-1. Double-click `foo_sonic_refiner_v0.6.0.fb2k-component`.
+1. Double-click `foo_sonic_refiner_v0.6.4.fb2k-component`.
 2. Apply the component installation in foobar2000.
 3. Restart foobar2000.
 4. Add `Sonic Refiner` from DSP Manager.
@@ -329,7 +329,7 @@ Sonic Refiner handles tone and soundstage. The downstream **R128 Real-time Loudn
 - Legacy settings without Master Strength load at 100%
 - Legacy settings without Output Gain load at 0.0 dB
 - Existing UTF-8 user-preset names are preserved and are not translated
-- `.srpbackup` remains the backup extension; v0.6.0 imports older backups and new backups carry SRP4 user-preset data
+- `.srpbackup` remains the backup extension; older backups remain readable and new backups carry SRP4 user-preset data
 
 ## Building from source
 
@@ -361,11 +361,11 @@ build_and_package.cmd
 Output:
 
 ```text
-dist\foo_sonic_refiner_v0.6.0.fb2k-component
+dist\foo_sonic_refiner_v0.6.4.fb2k-component
 dist\SHA256SUMS.txt
 ```
 
-See `README_FIRST.txt` for detailed build steps and `TESTING_v0.6.0.md` for the final release validation checklist.
+See `README_FIRST.txt` for detailed build steps and `TESTING_v0.6.4.md` for the final release validation checklist.
 
 ## Safety notes
 
@@ -397,7 +397,93 @@ This project is an independent clean-room implementation. It does not include or
 
 Sonic Refinerは、音色と音場をリアルタイムで調整するfoobar2000用DSPコンポーネントです。低域の厚み、明瞭感、ステレオの広がり、短い初期反射による空間・奥行き感、Master Strength、出力ゲイン、軽量な保護、レベルを合わせた比較を1つの設定画面にまとめています。
 
-> 現在の正式公開版：**v0.6.0**
+> 現在の正式公開版：**v0.6.4**
+
+## v0.6.4の変更点
+
+v0.6.4では、既存の任意プリセットに **「名前変更... / Rename...」** を追加しました。変更されるのはプリセット名だけで、保存済みのDSP設定値はそのまま維持されます。
+
+- 既存の任意プリセットを選択して `名前変更... / Rename...` を実行可能
+- 名前変更画面では現在名を入力済み・全選択状態で編集開始
+- 名前は従来どおりUTF-8、最大40文字
+- 他の任意プリセットと同じ名前への変更は拒否
+- 現在名と同じ名前への変更は安全なno-op
+- 任意プリセット未選択時は名前変更ボタンを無効化
+- 内蔵プリセットは名前変更不可
+- SRP4、`.srpbackup`、`preset_version 9`は変更なし
+- DSP／Adaptive Tone Balanceアルゴリズム、12種類の内蔵プリセット値は変更なし
+
+## v0.6.3の変更点
+
+v0.6.3は、DSP／Adaptive Tone Balanceの処理を変更せず、現在状態とATBの動作を分かりやすくするUI・文書改善版です。
+
+### カスタム状態
+
+- 現在のDSP設定が12種類のどの内蔵プリセットとも完全一致しない場合、内蔵プリセット欄に `カスタム / Custom` を表示
+- `カスタム / Custom` は表示専用で、13番目の内蔵プリセットではない
+- Custom表示中は内蔵プリセットの「呼出 / Load」を無効化
+- 実在する内蔵プリセットを選択しただけでは適用せず、従来どおり「呼出 / Load」で適用
+- 日本語／English切り替えでは表示名だけを切り替え
+
+### ATB ON時のDepth／Clarity表示を明確化
+
+適応型音色補正がONのとき：
+
+- Depthを **低域自動補正上限 (Depth) / Depth (Auto Low Limit)** として表示
+- Clarityを **高域自動補正上限 (Clarity) / Clarity (Auto High Limit)** として表示
+- 100%は常時+10 dBを加える意味ではなく、自動補正へ与える最大許容量であることを明記
+- 既存のAuto Low／Auto High補正量表示は維持
+
+ATB OFF時は従来の固定式Depth／Clarity表示へ戻ります。
+
+### Help／Glossary
+
+- ATBが不足分だけを補うboost-only方式であることを明記
+- ATB ON時のDepth／Clarityが自動補正上限であることを説明
+- Width／AmbienceはATB ONでも手動であることを説明
+- 新規解析条件とPause／Resume時の解析履歴保持を説明
+- GlossaryでAdaptive Tone Balance、Auto Low、Auto High、ATB Analysis Stateを個別に整理
+
+### 互換性
+
+- DSP処理変更なし
+- Adaptive Tone Balance判定アルゴリズム変更なし
+- 12種類の内蔵プリセット値変更なし
+- SRP4変更なし
+- `preset_version 9`変更なし
+- 旧DSP presetおよびSRP1／SRP2／SRP3／SRP4の読み込み互換性を維持
+
+## v0.6.2の変更点
+
+v0.6.2では、foobar2000再起動後などに内蔵プリセット欄が実際の保存済みDSP設定と一致しない表示になる問題を修正しました。
+
+- 現在のDSP設定を12種類の内蔵プリセットと照合し、完全一致するプリセット名を表示
+- どの内蔵プリセットとも一致しない設定では、v0.6.2時点では未選択表示
+- スライダー／チェックボックス変更、任意プリセット読込、A/B試聴・比較終了でも現在設定に合わせて表示を再同期
+- 日本語／English切り替えでも同じ内部プリセット番号を維持
+- コンボ項目を選択しただけではDSP設定を変更せず、「呼出 / Load」で適用
+- DSP／ATBアルゴリズム、12種類の内蔵プリセット値、SRP4、`preset_version 9`は変更なし
+
+## v0.6.1の変更点
+
+### 再生位置変更時のATB解析状態を明確化
+
+v0.6.1では、前の再生位置のAuto Low／Auto High値が新しい解析結果のように見えないよう、Adaptive Tone Balanceの状態表示を改善しました。
+
+- 再生開始、Next、Previous、別曲への直接移動、自然な曲送り、シーク、Stop後の再生、ATB OFF→ONでは、新しい解析が十分に蓄積されるまで `自動補正：解析中... / Auto: Analyzing...` を表示
+- 十分な新規解析後は通常のAuto Low／Auto High数値表示へ戻る
+- Pause／Resumeでは現在の解析状態を保持し、解析をやり直さない
+- 再生トラック変更／シークをruntime ATBへ確実に通知する仕組みを追加
+
+### 互換性
+
+- v0.6.0からDSP／Adaptive Tone Balance判定アルゴリズム変更なし
+- Auto Low／Auto High上限は各 **+10.0 dB** のまま
+- 任意プリセット／`.srpbackup`形式は **SRP4** のまま
+- DSP preset形式は **preset_version 9** のまま
+- 12種類の内蔵プリセットは変更なし
+- 旧プリセット／バックアップ互換性は変更なし
+- analyzer historyや現在のAuto Low／Auto High値は引き続き保存しない
 
 ## v0.6.0の変更点
 
@@ -527,7 +613,7 @@ DSP処理アルゴリズムはv0.2.0から変更していません。
 - **自動ヘッドルーム保護**：約-0.2 dBFS付近の軽量なブロック／サンプルピーク保護
 - **レベルマッチ・バイパス**：処理による平均音量増加分を抑えた比較
 - 内蔵プリセット12種類
-- UTF-8任意プリセット最大20件
+- UTF-8任意プリセット最大20件（名前変更対応）
 - `.srpbackup`による書き出し・読み込み
 - ヘルプ・用語集・注意事項・MIT License
 - ライト／ダークモード対応
@@ -593,14 +679,14 @@ F:\foobar2000-dev\WTL\Include\atlapp.h
 次を実行します。
 
 ```text
-build_and_package.cmd
+ビルドと梱包.cmd
 ```
 
 出力：
 
 ```text
-dist\foo_sonic_refiner_v0.6.0.fb2k-component
+dist\foo_sonic_refiner_v0.6.4.fb2k-component
 dist\SHA256SUMS.txt
 ```
 
-詳しい手順は`README_FIRST.txt`、正式版の最終確認項目は`TESTING_v0.6.0.md`を参照してください。
+詳しい手順は`README_FIRST.txt`、正式版の最終確認項目は`TESTING_v0.6.4.md`を参照してください。
