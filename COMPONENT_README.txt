@@ -1,6 +1,18 @@
-Sonic Refiner 0.6.2
+Sonic Refiner 0.6.3
+
+v0.6.3 HELP / GLOSSARY CLARITY
+- Reorganized ATB explanations for practical user understanding.
+- Added distinct Auto Low / Auto High / ATB Analysis State glossary entries.
+- No DSP / ATB algorithm changes.
 Adaptive Audio Enhancement DSP for foobar2000
 ENGLISH
+
+v0.6.3 UI CLARITY
+- With ATB ON, Depth is labeled as the Auto Low correction limit.
+- With ATB ON, Clarity is labeled as the Auto High correction limit.
+- 100% means maximum permission only; it does not force a constant +10 dB boost.
+- With ATB OFF, the original fixed-mode labels are shown.
+- The Custom / カスタム state is included as a UI-only status.
 
 Sonic Refiner combines tone and soundstage enhancement with optional
 Adaptive Tone Balance (ATB). ATB is OFF by default, so the existing fixed

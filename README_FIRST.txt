@@ -1,4 +1,4 @@
-Sonic Refiner v0.6.2 — Build and Package / ビルドと梱包
+Sonic Refiner v0.6.3 — Build and Package / ビルドと梱包
 
 ENGLISH
 
@@ -27,7 +27,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 Package:
-dist\foo_sonic_refiner_v0.6.2.fb2k-component
+dist\foo_sonic_refiner_v0.6.3.fb2k-component
 
 Checksum:
 dist\SHA256SUMS.txt
@@ -37,7 +37,7 @@ Manual build:
 2. Select Release and x64.
 3. Run Build -> Rebuild Solution.
 
-This source builds the Sonic Refiner v0.6.2 development package.
+This source builds the Sonic Refiner v0.6.3 release package. Custom display, clearer ATB labels, and reorganized Help / Glossary explanations are included; DSP processing is unchanged.
 
 ------------------------------------------------------------
 
@@ -69,7 +69,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 配布パッケージ:
-dist\foo_sonic_refiner_v0.6.2.fb2k-component
+dist\foo_sonic_refiner_v0.6.3.fb2k-component
 
 チェックサム:
 dist\SHA256SUMS.txt
@@ -79,4 +79,4 @@ dist\SHA256SUMS.txt
 2. 構成をRelease、プラットフォームをx64にします。
 3. ビルド→ソリューションのリビルドを実行します。
 
-このソースからSonic Refiner v0.6.2開発版パッケージを作成できます。
+このソースからSonic Refiner v0.6.3正式版パッケージを作成できます。カスタム表示、ATB上限ラベルの明確化、Help／用語集のATB説明整理を含み、DSP処理は変更していません。

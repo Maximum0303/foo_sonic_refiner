@@ -4,11 +4,60 @@
 
 Sonic Refiner adjusts tone and soundstage in real time. It combines low-frequency body, clarity, stereo width, short early reflections, Master Strength, Adaptive Tone Balance, output gain, lightweight headroom protection, and level-matched comparison in one DSP component.
 
-> Current stable release: **v0.6.2**
+> Current stable release: **v0.6.3**
+
+## What is new in v0.6.3
+
+v0.6.3 is a UI and documentation refinement release. It keeps the validated
+DSP / Adaptive Tone Balance processing unchanged while making current state and
+ATB behavior easier to understand.
+
+### Custom / カスタム state
+
+- When the current DSP settings do not exactly match any of the 12 built-in
+  presets, the Built-in Presets combo displays `Custom / カスタム`.
+- `Custom / カスタム` is a UI-only state, not a 13th built-in preset.
+- The built-in preset Load button is disabled while Custom is displayed.
+- Selecting an actual built-in preset still does not apply it until Load is
+  pressed.
+- Japanese / English switching changes only the displayed Custom label.
+
+### Clearer ATB Depth / Clarity labels
+
+When Adaptive Tone Balance is ON:
+
+- Depth is labeled as the **Auto Low correction limit**.
+- Clarity is labeled as the **Auto High correction limit**.
+- The descriptions explicitly state that 100% is an upper permission, not a
+  constant +10 dB boost.
+- Existing Auto Low / Auto High value displays are preserved.
+
+When Adaptive Tone Balance is OFF, the original fixed-mode Depth / Clarity
+labels and descriptions are shown.
+
+### Help / Glossary clarity
+
+- Help now explains ATB in practical user-oriented terms.
+- It explicitly states that ATB is boost-only.
+- It explains that Depth / Clarity are automatic correction limits when ATB is
+  ON.
+- It explains that Width / Ambience remain manual.
+- It explains fresh-analysis behavior and Pause / Resume history preservation.
+- Glossary entries separately define Adaptive Tone Balance, Auto Low, Auto High,
+  and ATB Analysis State using the current validated frequency ranges.
+
+### Compatibility
+
+- No DSP processing changes.
+- No Adaptive Tone Balance decision-algorithm changes.
+- All 12 built-in preset values are unchanged.
+- SRP4 remains unchanged.
+- `preset_version 9` remains unchanged.
+- Legacy DSP preset and SRP1 / SRP2 / SRP3 / SRP4 compatibility is preserved.
 
 ## What is new in v0.6.2
 
-This development build fixes the Built-in Presets combo display so it reflects
+v0.6.2 fixed the Built-in Presets combo display so it reflects
 the built-in preset that exactly matches the currently restored DSP settings.
 If the current settings do not exactly match any built-in preset, the combo is
 left unselected rather than incorrectly showing `Standard`.

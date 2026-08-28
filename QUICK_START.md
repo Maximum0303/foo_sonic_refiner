@@ -1,4 +1,8 @@
-# Sonic Refiner v0.6.2 Quick Start
+# Sonic Refiner v0.6.3 Quick Start
+
+> v0.6.3 documentation note: Help / Glossary now explain ATB in user-oriented terms and distinguish Auto Low, Auto High, and analysis state. Audio processing is unchanged.
+
+> v0.6.3 UI note: with Adaptive Tone Balance ON, Depth is shown as the Auto Low limit and Clarity as the Auto High limit. 100% is an upper permission, not a constant +10 dB boost.
 
 > Adaptive Tone Balance is OFF by default. Use **Adaptive Standard / 適応型標準** when you want ATB enabled with the full Low/High correction allowance while keeping Standard Width/Ambience values.
 

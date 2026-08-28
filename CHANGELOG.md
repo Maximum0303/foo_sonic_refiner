@@ -1,5 +1,83 @@
 # Changelog
 
+## [0.6.3] - 2026-08-28
+
+### Changed
+
+- When current DSP settings do not match any of the 12 built-in presets, the
+  Built-in Presets combo displays `Custom / カスタム` instead of appearing blank.
+- `Custom / カスタム` is a UI-only state and is not loadable as a built-in preset.
+- With Adaptive Tone Balance ON, Depth and Clarity labels explicitly identify
+  them as the Auto Low / Auto High correction limits.
+- ATB-mode descriptions clarify that 100% is an upper permission and does not
+  force a constant +10 dB boost.
+- Help / Glossary ATB explanations were reorganized for practical user
+  understanding.
+- Glossary entries separately define Adaptive Tone Balance, Auto Low, Auto High,
+  and ATB Analysis State.
+
+### Compatibility
+
+- No DSP / ATB algorithm changes.
+- All 12 built-in preset values are unchanged.
+- SRP4 and `preset_version 9` are unchanged.
+- Legacy preset / backup compatibility is unchanged.
+
+### Validation
+
+- Custom display: matching, non-matching, restart, language switching, user
+  presets, A/B, Cancel, Light / Dark all verified.
+- ATB labels: ON / OFF, Japanese / English, restart, Cancel, Light / Dark all
+  verified.
+- Help / Glossary: Japanese / English and Light / Dark verified.
+- Full-track Adaptive Standard smoke playback completed without dropout,
+  click / pop noise, abrupt unnatural tonal change, or crash.
+
+## [0.6.3-dev.3] - 2026-08-28
+
+### Help / Glossary clarity
+- Reorganized Adaptive Tone Balance Help around practical user behavior.
+- Clarified that ATB is boost-only and that Depth / Clarity are correction limits while ATB is On.
+- Clarified that 100% permits up to +10.0 dB but does not force a constant +10 dB boost.
+- Clarified that Width / Ambience remain manual and Master Strength also scales adaptive correction.
+- Added separate Glossary entries for Auto Low, Auto High, and ATB Analysis State using the current validated frequency ranges.
+- Clarified fresh-analysis conditions and Pause→Resume history preservation.
+- No DSP / ATB algorithm, preset value, or serialization changes.
+
+## [0.6.3-dev.2] - 2026-08-28
+
+### Changed
+
+- When Adaptive Tone Balance is ON, the Depth and Clarity labels now explicitly identify them as the Auto Low / Auto High correction limits.
+- The ATB-mode descriptions now state that 100% is only a maximum permission and does not mean a constant +10 dB boost.
+- When Adaptive Tone Balance is OFF, the original fixed-mode Depth / Clarity labels and descriptions are shown.
+- The Depth / Clarity label fields were widened inside the existing 560 x 320 layout to avoid text clipping in Japanese and English.
+- The `Custom / カスタム` state added in v0.6.3-dev.1 is retained unchanged.
+
+### Compatibility
+
+- No DSP / ATB algorithm changes.
+- All 12 built-in preset values are unchanged.
+- SRP4 and `preset_version 9` are unchanged.
+- Legacy preset and backup compatibility is unchanged.
+
+## [0.6.3-dev.1] - 2026-08-28
+
+### Changed
+
+- When current DSP settings do not match any of the 12 built-in presets, the Built-in Presets combo now displays `Custom / カスタム` instead of appearing blank.
+- `Custom / カスタム` is a UI-only state, not an additional built-in preset.
+- The built-in preset Load button remains disabled while the Custom state is displayed.
+- Japanese / English switching updates the Custom label while preserving the current DSP settings.
+- Loading or otherwise reaching an exact built-in preset match returns the combo to that built-in preset name.
+
+### Compatibility
+
+- No DSP / ATB algorithm changes.
+- All 12 built-in preset values are unchanged.
+- SRP4 and `preset_version 9` are unchanged.
+- Legacy preset and backup compatibility is unchanged.
+
 ## [0.6.2] - 2026-08-23
 
 ### Fixed

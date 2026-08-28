@@ -5261,12 +5261,18 @@ R128 Real-time Loudness Normalizerは、ラウドネス、True Peak、
 5. 調整結果を任意プリセットとして保存します。
 
 ■ 適応型音色補正 (Adaptive Tone Balance)
-オンにすると、処理前の原音を低域60～250 Hz、中域300 Hz～2.0 kHz、
-高域3.5～10 kHzの3帯域で解析します。低域・高域が基準より不足する
-音源だけをゆっくり補正します。自動カットは行いません。
-このモードではDepthとClarityは固定補正量ではなく自動補正の上限です。
-自動Depthは最大+10 dB、自動Clarityは最大+10 dBです。
-初期値はオフなので、オフ時は従来と同じ固定補正になります。
+オンにすると、処理前の原音を解析し、足りない低域・高域だけを
+ゆっくり補います。自動カットは行いません。
+
+ATBオン時のDepthは「低域自動補正の上限」、Clarityは
+「高域自動補正の上限」です。100%にしても常時+10 dBになるわけではなく、
+必要な場合だけ0～最大+10.0 dBの範囲で自動補正します。
+WidthとAmbienceはATBオン時も手動です。Master Strengthは自動補正を含む
+4つの効果全体に反映されます。
+
+再生開始、曲変更、シーク、Stop後の再生、ATB OFF→ONでは新しく解析し、
+その間は「自動補正：解析中...」と表示します。Pause→Resumeでは解析履歴を
+保持します。ATBをオフにすると従来の固定Depth／Clarity処理へ戻ります。
 
 ■ スライダーの範囲
 0～60%：通常の調整域
@@ -5331,12 +5337,21 @@ including loudness control, True Peak protection, and limiting.
 5. Save the result as a user preset.
 
 ■ Adaptive Tone Balance
-When enabled, Sonic Refiner analyzes the original pre-processing signal in
-three bands: Low 60–250 Hz, Mid 300 Hz–2.0 kHz, and High 3.5–10 kHz.
-Only missing low/high energy is raised slowly; automatic cutting is not used.
-In this mode, Depth and Clarity become maximum permissions for the automatic
-boost instead of fixed boost amounts. Auto Depth and Auto Clarity are
-both capped at +10 dB. The default is Off, preserving the previous fixed mode.
+When enabled, Sonic Refiner analyzes the original pre-processing signal and
+slowly raises only low/high energy that appears deficient. It never applies
+automatic cuts.
+
+With ATB On, Depth is the Auto Low correction limit and Clarity is the
+Auto High correction limit. Setting either to 100% does not force a constant
++10 dB boost; the actual correction can range from 0 to the existing +10.0 dB
+maximum only when the source needs it. Width and Ambience remain manual.
+Master Strength also scales the adaptive correction together with the other
+effects.
+
+Playback start, track change, seek, playback after Stop, and ATB Off→On start
+a fresh analysis, during which the UI shows "Auto: Analyzing...". Pause→Resume
+keeps the current analysis history. Turning ATB Off restores the original fixed
+Depth / Clarity processing.
 
 ■ Slider Ranges
 0–60%: Normal adjustment range
@@ -5401,11 +5416,28 @@ Depth、Clarity、Width、Ambienceのバランスを保ったまま、
 Output Gain、自動ヘッドルーム保護、レベルマッチは対象外です。
 
 ■ 適応型音色補正 (Adaptive Tone Balance)
-処理前の音源をLow 60～250 Hz、Mid 300 Hz～2.0 kHz、
-High 3.5～10 kHzで解析し、中域との相対バランスから不足した
-低域・高域だけを自動で持ち上げます。自動カットは行いません。
-オン時はDepth／Clarityが自動補正量の上限として働きます。
-解析結果そのものはプリセットやバックアップへ保存されません。
+処理前の原音を解析して、不足した低域・高域だけを補うブースト専用の
+自動音色補正です。自動カットは行いません。
+オン時はDepthがAuto Lowの上限、ClarityがAuto Highの上限として働き、
+100%は「最大+10.0 dBまで許可する」という意味です。実際の補正量は
+音源に応じて0 dBから上限まで変化します。Width／Ambienceは手動です。
+
+■ Auto Low（低域自動補正）
+Bass 60～180 HzとBody 200～500 Hzの相対バランスを見て、Bassが不足する
+場合だけ補正します。60～180 HzのBass帯域を原音へ並列加算し、Dryは
+削りません。絶対上限は+10.0 dBで、DepthとMaster Strengthの制約も受けます。
+
+■ Auto High（高域自動補正）
+主にHigh 3.5～10 kHzとMid 300 Hz～2.0 kHzのバランスを見て、
+Treble 5～10 kHzとPresence 2～5 kHzも補助判定に使います。高域不足時だけ
+補正し、自動カットは行いません。絶対上限は+10.0 dBで、Clarityと
+Master Strengthの制約も受けます。
+
+■ ATBの解析状態
+新しい再生、曲変更、シーク、Stop後の再生、ATB OFF→ONでは解析を
+やり直します。十分な解析が集まるまでは「自動補正：解析中...」と表示します。
+Pause→Resumeでは履歴を保持します。Auto Low／Auto Highの現在値や解析履歴は
+プリセット、バックアップ、A/Bスロットへ保存されません。
 
 ■ Output Gain（出力ゲイン）
 すべての音質・音場補正とレベルマッチの後で音量を調整します。
@@ -5472,11 +5504,31 @@ configured value. Output Gain, Auto Headroom Protection, and Level
 Match are not affected.
 
 ■ Adaptive Tone Balance
-Analyzes the original source in Low 60–250 Hz, Mid 300 Hz–2.0 kHz, and
-High 3.5–10 kHz bands, then raises only low/high energy that is deficient
-relative to the mid reference. It never applies automatic cuts. When enabled,
-Depth and Clarity act as maximum permissions for the automatic correction.
-Runtime analysis results are never stored in presets or backups.
+A boost-only automatic tone correction that analyzes the original source and
+raises only low/high energy that appears deficient. It never applies automatic
+cuts. With ATB On, Depth is the Auto Low limit and Clarity is the Auto High
+limit. 100% means "allow up to +10.0 dB"; the actual correction varies from
+0 dB to the allowed maximum according to the source. Width and Ambience remain
+manual.
+
+■ Auto Low
+Compares Bass 60–180 Hz with Body 200–500 Hz and corrects only when Bass is
+deficient. The 60–180 Hz Bass band is added in parallel while the Dry signal is
+preserved. The absolute maximum is +10.0 dB, also constrained by Depth and
+Master Strength.
+
+■ Auto High
+Primarily compares High 3.5–10 kHz with Mid 300 Hz–2.0 kHz, with Treble
+5–10 kHz versus Presence 2–5 kHz used as an additional cue. It boosts only
+when high-frequency energy is deficient and never applies automatic cuts. The
+absolute maximum is +10.0 dB, also constrained by Clarity and Master Strength.
+
+■ ATB Analysis State
+Playback start, track change, seek, playback after Stop, and ATB Off→On start
+a fresh analysis. Until enough new analysis is available, the UI shows
+"Auto: Analyzing...". Pause→Resume preserves the current history. Current
+Auto Low / Auto High values and runtime analysis history are not stored in
+presets, backups, or A/B slots.
 
 ■ Output Gain
 Adjusts level after all tone, soundstage, and level-match processing.
@@ -6095,7 +6147,7 @@ private:
 
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - 0.6.2"
+            L"Sonic Refiner - 0.6.3"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -6442,7 +6494,21 @@ private:
         if (selected_index < 0 ||
             static_cast<t_size>(selected_index) >=
                 built_in_preset_count) {
-            selected_index = -1;
+            ::SendMessageW(
+                built_in_preset_combo_,
+                CB_ADDSTRING,
+                0,
+                reinterpret_cast<LPARAM>(
+                    localized(
+                        language_,
+                        L"カスタム",
+                        L"Custom"
+                    )
+                )
+            );
+            selected_index = static_cast<int>(
+                built_in_preset_count
+            );
         }
 
         built_in_preset_combo_.SetCurSel(selected_index);
@@ -6450,10 +6516,9 @@ private:
     }
 
     void sync_builtin_preset_selection_to_settings() {
-        built_in_preset_combo_.SetCurSel(
+        refresh_builtin_preset_combo(
             find_matching_builtin_preset_index(settings_)
         );
-        refresh_builtin_preset_button();
     }
 
     void refresh_builtin_preset_button() {
@@ -6835,6 +6900,7 @@ private:
         settings_ = sonic_refiner::sanitize(settings_);
 
         apply_settings_to_controls();
+        sync_builtin_preset_selection_to_settings();
         notify_changed();
         refresh_labels();
     }
@@ -7604,6 +7670,74 @@ private:
     }
 
     void refresh_labels() {
+        if (settings_.adaptive_tone_balance) {
+            ::SetDlgItemTextW(
+                m_hWnd,
+                IDC_DEPTH_LABEL,
+                localized(
+                    language_,
+                    L"低域自動補正上限 (Depth)",
+                    L"Depth (Auto Low Limit)"
+                )
+            );
+            ::SetDlgItemTextW(
+                m_hWnd,
+                IDC_DEPTH_DESCRIPTION,
+                localized(
+                    language_,
+                    L"Auto Lowの最大補正量。100%でも常時+10 dBではありません。",
+                    L"Sets the Auto Low limit; 100% does not mean constant +10 dB."
+                )
+            );
+            ::SetDlgItemTextW(
+                m_hWnd,
+                IDC_CLARITY_LABEL,
+                localized(
+                    language_,
+                    L"高域自動補正上限 (Clarity)",
+                    L"Clarity (Auto High Limit)"
+                )
+            );
+            ::SetDlgItemTextW(
+                m_hWnd,
+                IDC_CLARITY_DESCRIPTION,
+                localized(
+                    language_,
+                    L"Auto Highの最大補正量。100%でも常時+10 dBではありません。",
+                    L"Sets the Auto High limit; 100% does not mean constant +10 dB."
+                )
+            );
+        } else {
+            ::SetDlgItemTextW(
+                m_hWnd,
+                IDC_DEPTH_LABEL,
+                localized(language_, L"音の厚み (Depth)", L"Depth")
+            );
+            ::SetDlgItemTextW(
+                m_hWnd,
+                IDC_DEPTH_DESCRIPTION,
+                localized(
+                    language_,
+                    L"120 Hz付近を中心に、最大約+16 dBまで厚みを加えます。",
+                    L"Adds body around 120 Hz, up to approximately +16 dB."
+                )
+            );
+            ::SetDlgItemTextW(
+                m_hWnd,
+                IDC_CLARITY_LABEL,
+                localized(language_, L"明瞭感 (Clarity)", L"Clarity")
+            );
+            ::SetDlgItemTextW(
+                m_hWnd,
+                IDC_CLARITY_DESCRIPTION,
+                localized(
+                    language_,
+                    L"3.5 kHz付近から最大約+14 dBまで輪郭を強調します。",
+                    L"Enhances definition above approximately 3.5 kHz, up to +14 dB."
+                )
+            );
+        }
+
         const int depth =
             static_cast<int>(std::lround(settings_.depth));
         const int clarity =
