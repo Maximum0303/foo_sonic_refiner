@@ -1,0 +1,35 @@
+Sonic Refiner v0.6.3 implementation summary
+
+Purpose
+- Improve UI clarity and built-in documentation without changing audio
+  processing.
+
+Changes
+1. Custom / カスタム state
+- Displays Custom when current DSP settings match none of the 12 built-in
+  presets.
+- Custom is UI-only and not loadable.
+- Exact built-in matches continue to display the corresponding preset name.
+
+2. Clearer ATB Depth / Clarity labels
+- ATB ON identifies Depth as the Auto Low correction limit.
+- ATB ON identifies Clarity as the Auto High correction limit.
+- Descriptions state that 100% is an upper permission, not a constant +10 dB
+  boost.
+- ATB OFF restores the original fixed-mode labels.
+
+3. Help / Glossary clarity
+- Reorganized Help around practical ATB behavior.
+- Added distinct Glossary entries for Adaptive Tone Balance, Auto Low,
+  Auto High, and ATB Analysis State.
+- Documentation uses the current validated ATB frequency ranges and reset
+  behavior.
+
+Compatibility
+- No DSP processing changes.
+- No ATB decision-algorithm changes.
+- No built-in preset value changes.
+- SRP4 unchanged.
+- preset_version 9 unchanged.
+- Legacy DSP preset / SRP1 / SRP2 / SRP3 / SRP4 compatibility unchanged.
+- Runtime analyzer persistence behavior unchanged.

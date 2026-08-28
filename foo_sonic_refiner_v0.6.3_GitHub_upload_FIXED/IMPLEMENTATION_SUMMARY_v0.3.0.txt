@@ -1,0 +1,59 @@
+Sonic Refiner v0.3.0
+Japanese / English UI release
+
+Implemented:
+- Japanese / English language selector in the 560 x 320 settings dialog
+- First-run default based on the Windows display language
+- Persistent language preference stored separately from DSP presets
+- Immediate UI switching without notifying or rebuilding the DSP
+- Localized labels, buttons, built-in preset names and status display
+- Localized user-preset dialog, confirmations, errors and completion messages
+- Localized export/import file dialogs
+- Localized Help, Glossary, Important Notes and License pages
+- English-first README and package documentation
+
+Compatibility retained:
+- DSP processing implementation unchanged from v0.2.0
+- preset_version 8
+- SRP3 write format
+- SRP1 / SRP2 / SRP3 read compatibility
+- .srpbackup format
+- Existing UTF-8 user-preset names
+- Built-in preset values and order
+- Settings dialog size 560 x 320
+
+Not included:
+- A/B comparison slots (deferred to a later version)
+
+Validation completed:
+- Visual Studio 2022, Release / x64 build and packaging confirmed
+- Runtime checks recorded in TESTING_v0.3.0.md
+
+------------------------------------------------------------
+
+実装内容：
+- 560 x 320の設定画面に日本語／英語選択欄を追加
+- 初回はWindowsの表示言語から初期言語を決定
+- 言語設定をDSP presetとは別に保存
+- DSPへ変更通知を送らず、設定画面だけを即時切り替え
+- 項目名、ボタン、内蔵プリセット名、状態表示を英語化
+- 任意プリセット保存画面、確認、エラー、完了表示を英語化
+- 書き出し／読み込みのファイル選択画面を英語化
+- ヘルプ、用語集、注意事項、ライセンスを英語化
+- READMEとパッケージ文書を英語先・日本語後へ変更
+
+維持事項：
+- v0.2.0のDSP処理実装
+- preset_version 8
+- SRP3書き込み形式
+- SRP1／SRP2／SRP3読み込み互換性
+- .srpbackup形式
+- 既存のUTF-8任意プリセット名
+- 内蔵プリセットの設定値と順序
+- 設定画面560 x 320
+
+未搭載：
+- A/B比較スロット（後のバージョンへ延期）
+
+
+v0.4.0-dev.1 adds temporary in-memory A/B comparison slots. See RELEASE_NOTES_v0.4.0-dev.1.md.

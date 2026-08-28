@@ -1,0 +1,72 @@
+#pragma once
+
+#define IDD_SONIC_REFINER              101
+#define IDD_PRESET_NAME                102
+#define IDD_INFORMATION                103
+
+#define IDC_ENABLE                     1001
+#define IDC_DEPTH_SLIDER               1002
+#define IDC_DEPTH_VALUE                1003
+#define IDC_STATUS                     1004
+#define IDC_CLARITY_SLIDER             1005
+#define IDC_CLARITY_VALUE              1006
+#define IDC_WIDTH_SLIDER               1007
+#define IDC_WIDTH_VALUE                1008
+#define IDC_AMBIENCE_SLIDER            1009
+#define IDC_AMBIENCE_VALUE             1010
+#define IDC_AUTO_HEADROOM              1011
+#define IDC_HEADROOM_INFO              1012
+#define IDC_LEVEL_MATCH                1013
+#define IDC_LEVEL_MATCH_INFO           1014
+#define IDC_PRESET_COMBO               1015
+#define IDC_PRESET_SAVE                1016
+#define IDC_PRESET_LOAD                1017
+#define IDC_PRESET_DELETE              1018
+#define IDC_PRESET_NAME_EDIT           1019
+#define IDC_BUILTIN_PRESET_COMBO       1020
+#define IDC_BUILTIN_PRESET_LOAD        1021
+#define IDC_OUTPUT_GAIN_SLIDER          1022
+#define IDC_OUTPUT_GAIN_VALUE           1023
+#define IDC_PRESET_EXPORT              1024
+#define IDC_PRESET_IMPORT              1025
+#define IDC_INFORMATION_TEXT          1026
+#define IDC_HELP_BUTTON               1027
+#define IDC_GLOSSARY_BUTTON           1028
+#define IDC_NOTICE_BUTTON             1029
+#define IDC_LICENSE_BUTTON            1030
+
+#define IDC_MASTER_STRENGTH_SLIDER     1031
+#define IDC_MASTER_STRENGTH_VALUE      1032
+#define IDC_LANGUAGE_LABEL              1033
+#define IDC_LANGUAGE_COMBO              1034
+#define IDC_GROUP_TONE                  1035
+#define IDC_DEPTH_LABEL                 1036
+#define IDC_DEPTH_DESCRIPTION           1037
+#define IDC_CLARITY_LABEL               1038
+#define IDC_CLARITY_DESCRIPTION         1039
+#define IDC_WIDTH_LABEL                 1040
+#define IDC_WIDTH_DESCRIPTION           1041
+#define IDC_AMBIENCE_LABEL              1042
+#define IDC_AMBIENCE_DESCRIPTION        1043
+#define IDC_GROUP_BUILTIN               1044
+#define IDC_BUILTIN_DESCRIPTION         1045
+#define IDC_GROUP_USER                  1046
+#define IDC_USER_DESCRIPTION            1047
+#define IDC_GROUP_MASTER                1048
+#define IDC_MASTER_STRENGTH_LABEL       1049
+#define IDC_OUTPUT_GAIN_LABEL           1050
+#define IDC_EXTREME_NOTICE              1051
+#define IDC_PRESET_NAME_LABEL           1052
+
+#define IDC_GROUP_AB                    1053
+#define IDC_AB_STORE_A                  1054
+#define IDC_AB_LISTEN_A                 1055
+#define IDC_AB_STATUS_A                 1056
+#define IDC_AB_STORE_B                  1057
+#define IDC_AB_LISTEN_B                 1058
+#define IDC_AB_STATUS_B                 1059
+#define IDC_AB_CURRENT                  1060
+#define IDC_AB_END                      1061
+
+#define IDC_ADAPTIVE_TONE_BALANCE       1062
+#define IDC_ADAPTIVE_STATUS             1063

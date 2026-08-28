@@ -1,0 +1,12 @@
+foobar2000 SDK
+
+This project is designed to be built with the official foobar2000 SDK.
+The SDK is not included in this archive.
+
+foobar2000 SDK copyright and license terms apply to the SDK files and
+libraries used during compilation.
+
+Clean-room statement
+
+No code, artwork, presets, configuration data or binary files from
+Winamp Enhancer 017 are included or used by this project.
