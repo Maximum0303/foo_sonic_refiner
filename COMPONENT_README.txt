@@ -1,4 +1,4 @@
-Sonic Refiner 0.6.3
+Sonic Refiner 0.6.4
 
 v0.6.3 HELP / GLOSSARY CLARITY
 - Reorganized ATB explanations for practical user understanding.
@@ -6,6 +6,13 @@ v0.6.3 HELP / GLOSSARY CLARITY
 - No DSP / ATB algorithm changes.
 Adaptive Audio Enhancement DSP for foobar2000
 ENGLISH
+
+V0.6.4 USER PRESET RENAME
+- Existing user presets can be renamed without changing stored DSP settings
+- Duplicate names used by another user preset are rejected
+- Built-in presets remain fixed
+- SRP4, .srpbackup and preset_version 9 are unchanged
+- No DSP / ATB algorithm changes
 
 v0.6.3 UI CLARITY
 - With ATB ON, Depth is labeled as the Auto Low correction limit.
@@ -90,9 +97,9 @@ component's License page.
 
 日本語
 
-Sonic Refiner 0.6.1では、v0.6.0の適応型音色補正（Adaptive Tone Balance / ATB）を
-最大限利用できる内蔵プリセット「適応型標準」を1種類追加しました。
-ATB自体の初期値は引き続きオフで、既存11種類の内蔵プリセットも変更していません。
+Sonic Refiner 0.6.4では、既存の任意プリセットについて、保存済みのDSP設定値を
+変えずに名前だけを変更できる「名前変更...」機能を追加しました。
+SRP4、.srpbackup、preset_version 9、DSP／ATBアルゴリズム、12種類の内蔵プリセット値は変更していません。
 
 適応型音色補正
 - Sonic Refiner処理前の原音を解析

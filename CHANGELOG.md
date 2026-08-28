@@ -1,5 +1,52 @@
 # Changelog
 
+## [0.6.4] - 2026-08-28
+
+### Added
+
+- Added `名前変更... / Rename...` for existing user presets.
+- The rename dialog pre-fills and selects the current user-preset name.
+- Renaming changes only the user-preset name; all stored DSP settings remain unchanged.
+- Exact duplicate names belonging to another user preset are rejected.
+- Rename is disabled when no user preset is selected.
+- Built-in presets remain fixed and cannot be renamed.
+
+### Compatibility
+
+- SRP4 is unchanged.
+- `.srpbackup` wrapper and format are unchanged.
+- `preset_version 9` is unchanged.
+- No DSP / Adaptive Tone Balance algorithm changes.
+- All 12 built-in preset values are unchanged.
+- Legacy DSP presets and SRP1 / SRP2 / SRP3 / SRP4 compatibility are preserved.
+
+### Validation
+
+- Release / x64 build of v0.6.4-dev.1 passed.
+- Rename enable/disable state, prefilled selection, rename content preservation, duplicate rejection, and same-name no-op were verified.
+- Japanese / English and Light / Dark display were verified.
+- `.srpbackup` export/remove/import restored renamed names and stored settings correctly.
+- Built-in presets, full-track playback, Cancel / OK, and A/B behavior were verified unchanged.
+
+## [0.6.4-dev.1] - 2026-08-28
+
+### Added
+
+- Added `名前変更... / Rename...` for existing user presets.
+- The rename dialog pre-fills the current user-preset name and edits only the name.
+- The Rename button is disabled when no user preset is selected.
+- Renaming to a name already used by another user preset is rejected.
+- Built-in presets remain fixed and cannot be renamed.
+
+### Compatibility
+
+- Renaming does not change Depth, Clarity, Width, Ambience, Master Strength, Output Gain, protection flags, enabled state, or Adaptive Tone Balance state.
+- SRP4 is unchanged.
+- `.srpbackup` format is unchanged.
+- `preset_version 9` is unchanged.
+- No DSP / Adaptive Tone Balance algorithm changes.
+- All 12 built-in preset values are unchanged.
+
 ## [0.6.3] - 2026-08-28
 
 ### Changed

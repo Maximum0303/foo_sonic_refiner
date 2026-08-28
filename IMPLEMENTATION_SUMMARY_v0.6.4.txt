@@ -1,0 +1,35 @@
+Sonic Refiner v0.6.4 implementation summary
+
+Release basis
+- Promoted from the fully validated v0.6.4-dev.1 implementation.
+- No Rename feature code changes were made during formalization.
+
+Purpose
+- Add user-preset rename without changing preset content or serialization.
+
+Implementation
+- Added IDC_PRESET_RENAME.
+- Added Japanese/English button text: 名前変更... / Rename...
+- Reused preset_name_dialog with a rename mode and localized rename title.
+- Added on_preset_rename handler.
+- Rename operates on the selected user_preset.name only.
+- Duplicate exact names belonging to a different user preset are rejected.
+- Same-name rename is a no-op.
+- Rename is enabled only when a user preset is selected.
+- User Presets group layout was adjusted within the existing 560 x 320 dialog.
+- Help / Glossary mention that user presets can be renamed without changing settings.
+
+Validation
+- All 16 required v0.6.4-dev.1 tests passed before promotion.
+- Rename, preset-content preservation, duplicate handling, JP/EN, Light/Dark, .srpbackup, built-in presets, full-track playback, Cancel/OK and A/B were verified.
+
+Unchanged
+- DSP / ATB algorithm
+- 12 built-in preset values
+- SRP4 serialization
+- .srpbackup wrapper and format
+- preset_version 9
+- Legacy DSP preset and SRP1/SRP2/SRP3/SRP4 compatibility
+- A/B semantics
+- direct settings access
+- JP/EN and Light/Dark support

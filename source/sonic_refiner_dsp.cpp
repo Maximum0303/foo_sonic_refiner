@@ -5098,12 +5098,14 @@ class preset_name_dialog final :
 public:
     preset_name_dialog(
         const char* initial_name,
-        ui_language language
+        ui_language language,
+        bool rename_mode = false
     )
         : initial_name_(
             initial_name != nullptr ? initial_name : ""
         ),
-          language_(language) {
+          language_(language),
+          rename_mode_(rename_mode) {
     }
 
     enum { IDD = IDD_PRESET_NAME };
@@ -5124,11 +5126,17 @@ private:
 
         ::SetWindowTextW(
             m_hWnd,
-            localized(
-                language_,
-                L"任意プリセットを保存",
-                L"Save User Preset"
-            )
+            rename_mode_
+                ? localized(
+                    language_,
+                    L"任意プリセット名を変更",
+                    L"Rename User Preset"
+                )
+                : localized(
+                    language_,
+                    L"任意プリセットを保存",
+                    L"Save User Preset"
+                )
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -5231,6 +5239,7 @@ private:
     pfc::string8 initial_name_;
     pfc::string8 result_;
     ui_language language_ = ui_language::english;
+    bool rename_mode_ = false;
     fb2k::CDarkModeHooks dark_mode_;
 };
 
@@ -5282,7 +5291,8 @@ WidthとAmbienceはATBオン時も手動です。Master Strengthは自動補正�
 ■ プリセット
 内蔵プリセットは変更・削除できません。
 内蔵プリセットを呼び出して調整した後、任意プリセットとして
-別名保存できます。任意プリセットは最大20件です。
+別名保存できます。任意プリセットは最大20件です。保存済みの任意
+プリセットは「名前変更...」で設定値を変えずに名前だけ変更できます。
 
 ■ バックアップ
 「書出...」で任意プリセット全件を.srpbackupファイルへ保存します。
@@ -5361,7 +5371,8 @@ Depth / Clarity processing.
 ■ Presets
 Built-in presets cannot be changed or deleted.
 After loading and adjusting one, you can save the result under a new
-name as a user preset. Up to 20 user presets can be stored.
+name as a user preset. Up to 20 user presets can be stored. Use Rename...
+to change only the name of an existing user preset without changing its values.
 
 ■ Backup
 "Export..." saves all user presets to an .srpbackup file.
@@ -5461,6 +5472,7 @@ Sonic Refinerに固定で収録された設定です。
 ユーザーが名前を付けて保存する設定です。
 補正値、Master Strength、出力ゲイン、保護、レベル一致、
 本体の有効状態、適応型音色補正のオン／オフを保存します。
+保存後に名前だけ変更でき、設定値はそのまま維持されます。
 
 ■ A/B比較
 Depth、Clarity、Width、Ambience、Master Strengthと適応型音色補正の
@@ -5552,7 +5564,8 @@ They cannot be overwritten or deleted.
 Settings saved under a user-defined name.
 They store the enhancement values, Master Strength, Output Gain,
 protection, level match, the enabled state, and the Adaptive Tone Balance
-On/Off state.
+On/Off state. An existing user preset can be renamed without changing its
+stored settings.
 
 ■ A/B Comparison
 Temporarily stores Depth, Clarity, Width, Ambience, Master Strength, and
@@ -5929,6 +5942,11 @@ public:
             on_preset_load
         )
         COMMAND_HANDLER_EX(
+            IDC_PRESET_RENAME,
+            BN_CLICKED,
+            on_preset_rename
+        )
+        COMMAND_HANDLER_EX(
             IDC_PRESET_DELETE,
             BN_CLICKED,
             on_preset_delete
@@ -6147,7 +6165,7 @@ private:
 
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - 0.6.3"
+            L"Sonic Refiner - 0.6.4"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -6297,6 +6315,11 @@ private:
         );
         ::SetDlgItemTextW(
             m_hWnd,
+            IDC_PRESET_RENAME,
+            localized(language_, L"名前変更...", L"Rename...")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
             IDC_PRESET_DELETE,
             localized(language_, L"削除", L"Delete")
         );
@@ -6315,8 +6338,8 @@ private:
             IDC_USER_DESCRIPTION,
             localized(
                 language_,
-                L"全件をバックアップし、読み込み時は現在の一覧を置換します。",
-                L"Exports all. Import replaces the current list."
+                L"全件をバックアップ・復元します。",
+                L"Back up / restore all presets."
             )
         );
         ::SetDlgItemTextW(
@@ -6574,6 +6597,7 @@ private:
             selected_preset_index() >= 0 ? TRUE : FALSE;
 
         GetDlgItem(IDC_PRESET_LOAD).EnableWindow(selected);
+        GetDlgItem(IDC_PRESET_RENAME).EnableWindow(selected);
         GetDlgItem(IDC_PRESET_DELETE).EnableWindow(selected);
         GetDlgItem(IDC_PRESET_EXPORT).EnableWindow(
             user_presets_.empty() ? FALSE : TRUE
@@ -7004,6 +7028,57 @@ private:
         sync_builtin_preset_selection_to_settings();
         notify_changed();
         refresh_labels();
+    }
+
+    void on_preset_rename(UINT, int, CWindow) {
+        const int selected = selected_preset_index();
+
+        if (selected < 0) {
+            return;
+        }
+
+        const std::size_t selected_index =
+            static_cast<std::size_t>(selected);
+        const char* current_name =
+            user_presets_[selected_index].name.get_ptr();
+
+        preset_name_dialog dialog(
+            current_name,
+            language_,
+            true
+        );
+
+        if (dialog.DoModal(m_hWnd) != IDOK) {
+            return;
+        }
+
+        const pfc::string8 name = dialog.result();
+        const int existing = find_user_preset(
+            user_presets_,
+            name.get_ptr()
+        );
+
+        if (existing >= 0 && existing != selected) {
+            ::MessageBoxW(
+                m_hWnd,
+                localized(
+                    language_,
+                    L"同じ名前の任意プリセットが既にあります。",
+                    L"A user preset with that name already exists."
+                ),
+                L"Sonic Refiner",
+                MB_OK | MB_ICONINFORMATION
+            );
+            return;
+        }
+
+        if (std::strcmp(current_name, name.get_ptr()) == 0) {
+            return;
+        }
+
+        user_presets_[selected_index].name = name;
+        save_user_presets(user_presets_);
+        refresh_preset_combo(selected);
     }
 
     void on_preset_delete(UINT, int, CWindow) {

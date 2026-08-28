@@ -1,4 +1,4 @@
-# Sonic Refiner v0.6.3 Quick Start
+# Sonic Refiner v0.6.4 Quick Start
 
 > v0.6.3 documentation note: Help / Glossary now explain ATB in user-oriented terms and distinguish Auto Low, Auto High, and analysis state. Audio processing is unchanged.
 
@@ -53,6 +53,7 @@ Use 0–60% for normal adjustment. Values above 80% are for extreme effects and 
 ### 5. Save and back up
 
 - `Save...`: save the current settings as a user preset, including Adaptive Tone Balance On/Off
+- `Rename...`: rename the selected user preset without changing its stored settings
 - `Export...`: save all user presets to `.srpbackup`, including each preset's Adaptive Tone Balance On/Off state
 - `Import...`: replace the current user preset list with a backup
 

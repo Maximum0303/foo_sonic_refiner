@@ -4,7 +4,21 @@
 
 Sonic Refiner adjusts tone and soundstage in real time. It combines low-frequency body, clarity, stereo width, short early reflections, Master Strength, Adaptive Tone Balance, output gain, lightweight headroom protection, and level-matched comparison in one DSP component.
 
-> Current stable release: **v0.6.3**
+> Current stable release: **v0.6.4**
+
+## What is new in v0.6.4
+
+v0.6.4 adds **Rename... / 名前変更...** for existing user presets. It
+changes only the preset name and keeps all stored DSP values unchanged.
+
+- Select an existing user preset and press `Rename... / 名前変更...`.
+- The current name is prefilled and selected for editing.
+- Names remain UTF-8 and limited to 40 characters.
+- Renaming to a name already used by another user preset is rejected.
+- The Rename button is disabled when no user preset is selected.
+- Built-in presets remain fixed and cannot be renamed.
+- SRP4, `.srpbackup`, and `preset_version 9` are unchanged.
+- No DSP / Adaptive Tone Balance algorithm or built-in preset value changes.
 
 ## What is new in v0.6.3
 
