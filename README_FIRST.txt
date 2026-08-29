@@ -1,4 +1,4 @@
-Sonic Refiner v0.6.4 — Build and Package / ビルドと梱包
+Sonic Refiner v0.6.5 — Build and Package / ビルドと梱包
 
 ENGLISH
 
@@ -27,20 +27,20 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 Package:
-dist\foo_sonic_refiner_v0.6.4.fb2k-component
+dist\foo_sonic_refiner_v0.6.5.fb2k-component
 
 Checksum:
 dist\SHA256SUMS.txt
 
-v0.6.4 feature:
-Rename existing user presets without changing their stored settings.
+v0.6.5 feature:
+Reorder existing user presets with Up / Down buttons without changing their stored settings.
 
 Manual build:
 1. Open foo_sonic_refiner.sln in Visual Studio 2022.
 2. Select Release and x64.
 3. Run Build -> Rebuild Solution.
 
-This source builds the Sonic Refiner v0.6.4 release package. User-preset Rename, Custom display, clearer ATB labels, and reorganized Help / Glossary explanations are included; DSP / ATB processing is unchanged.
+This source builds the Sonic Refiner v0.6.5 formal package. User-preset Up / Down reordering is added on top of the v0.6.4 baseline; DSP / ATB processing, SRP4, preset_version 9, and built-in preset values are unchanged.
 
 ------------------------------------------------------------
 
@@ -72,7 +72,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 配布パッケージ:
-dist\foo_sonic_refiner_v0.6.4.fb2k-component
+dist\foo_sonic_refiner_v0.6.5.fb2k-component
 
 チェックサム:
 dist\SHA256SUMS.txt
@@ -82,4 +82,4 @@ dist\SHA256SUMS.txt
 2. 構成をRelease、プラットフォームをx64にします。
 3. ビルド→ソリューションのリビルドを実行します。
 
-このソースからSonic Refiner v0.6.4正式版パッケージを作成できます。任意プリセットの名前変更、カスタム表示、ATB上限ラベルの明確化、Help／用語集のATB説明整理を含み、DSP／ATB処理は変更していません。
+このソースからSonic Refiner v0.6.5正式版パッケージを作成できます。v0.6.4を基準に任意プリセットの「↑／↓」並べ替えだけを追加し、DSP／ATB処理、SRP4、preset_version 9、内蔵プリセット値は変更していません。

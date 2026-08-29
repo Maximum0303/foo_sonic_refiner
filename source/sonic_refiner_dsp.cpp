@@ -5293,6 +5293,8 @@ WidthとAmbienceはATBオン時も手動です。Master Strengthは自動補正�
 内蔵プリセットを呼び出して調整した後、任意プリセットとして
 別名保存できます。任意プリセットは最大20件です。保存済みの任意
 プリセットは「名前変更...」で設定値を変えずに名前だけ変更できます。
+「↑」「↓」で選択中の任意プリセットを1件ずつ並べ替えられます。
+並べ替えた順序は再起動後や.srpbackupの書出／読込でも維持されます。
 
 ■ バックアップ
 「書出...」で任意プリセット全件を.srpbackupファイルへ保存します。
@@ -5373,6 +5375,8 @@ Built-in presets cannot be changed or deleted.
 After loading and adjusting one, you can save the result under a new
 name as a user preset. Up to 20 user presets can be stored. Use Rename...
 to change only the name of an existing user preset without changing its values.
+Use the Up / Down arrow buttons to move the selected user preset one position.
+The reordered list is preserved after restart and through .srpbackup export/import.
 
 ■ Backup
 "Export..." saves all user presets to an .srpbackup file.
@@ -5947,6 +5951,16 @@ public:
             on_preset_rename
         )
         COMMAND_HANDLER_EX(
+            IDC_PRESET_MOVE_UP,
+            BN_CLICKED,
+            on_preset_move_up
+        )
+        COMMAND_HANDLER_EX(
+            IDC_PRESET_MOVE_DOWN,
+            BN_CLICKED,
+            on_preset_move_down
+        )
+        COMMAND_HANDLER_EX(
             IDC_PRESET_DELETE,
             BN_CLICKED,
             on_preset_delete
@@ -6165,7 +6179,7 @@ private:
 
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - 0.6.4"
+            L"Sonic Refiner - 0.6.5"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -6332,15 +6346,6 @@ private:
             m_hWnd,
             IDC_PRESET_IMPORT,
             localized(language_, L"読込...", L"Import...")
-        );
-        ::SetDlgItemTextW(
-            m_hWnd,
-            IDC_USER_DESCRIPTION,
-            localized(
-                language_,
-                L"全件をバックアップ・復元します。",
-                L"Back up / restore all presets."
-            )
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -6593,12 +6598,21 @@ private:
     }
 
     void refresh_preset_buttons() {
-        const BOOL selected =
-            selected_preset_index() >= 0 ? TRUE : FALSE;
+        const int selected_index = selected_preset_index();
+        const BOOL selected = selected_index >= 0 ? TRUE : FALSE;
+        const BOOL can_move_up = selected_index > 0 ? TRUE : FALSE;
+        const BOOL can_move_down =
+            selected_index >= 0 &&
+            static_cast<std::size_t>(selected_index + 1) <
+                user_presets_.size()
+                ? TRUE
+                : FALSE;
 
         GetDlgItem(IDC_PRESET_LOAD).EnableWindow(selected);
         GetDlgItem(IDC_PRESET_RENAME).EnableWindow(selected);
         GetDlgItem(IDC_PRESET_DELETE).EnableWindow(selected);
+        GetDlgItem(IDC_PRESET_MOVE_UP).EnableWindow(can_move_up);
+        GetDlgItem(IDC_PRESET_MOVE_DOWN).EnableWindow(can_move_down);
         GetDlgItem(IDC_PRESET_EXPORT).EnableWindow(
             user_presets_.empty() ? FALSE : TRUE
         );
@@ -7079,6 +7093,37 @@ private:
         user_presets_[selected_index].name = name;
         save_user_presets(user_presets_);
         refresh_preset_combo(selected);
+    }
+
+    void move_selected_preset(int direction) {
+        const int selected = selected_preset_index();
+
+        if (selected < 0) {
+            return;
+        }
+
+        const int target = selected + direction;
+
+        if (target < 0 ||
+            static_cast<std::size_t>(target) >=
+                user_presets_.size()) {
+            return;
+        }
+
+        std::swap(
+            user_presets_[static_cast<std::size_t>(selected)],
+            user_presets_[static_cast<std::size_t>(target)]
+        );
+        save_user_presets(user_presets_);
+        refresh_preset_combo(target);
+    }
+
+    void on_preset_move_up(UINT, int, CWindow) {
+        move_selected_preset(-1);
+    }
+
+    void on_preset_move_down(UINT, int, CWindow) {
+        move_selected_preset(1);
     }
 
     void on_preset_delete(UINT, int, CWindow) {
@@ -8071,6 +8116,7 @@ private:
                 IDC_BUILTIN_PRESET_COMBO, IDC_BUILTIN_PRESET_LOAD,
                 IDC_PRESET_COMBO, IDC_PRESET_SAVE, IDC_PRESET_LOAD,
                 IDC_PRESET_DELETE, IDC_PRESET_EXPORT, IDC_PRESET_IMPORT,
+                IDC_PRESET_MOVE_UP, IDC_PRESET_MOVE_DOWN,
                 IDC_AB_STORE_A, IDC_AB_LISTEN_A,
                 IDC_AB_STORE_B, IDC_AB_LISTEN_B, IDC_AB_END,
                 IDC_MASTER_STRENGTH_SLIDER, IDC_MASTER_STRENGTH_VALUE,

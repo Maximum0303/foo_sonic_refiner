@@ -4,7 +4,18 @@
 
 Sonic Refiner adjusts tone and soundstage in real time. It combines low-frequency body, clarity, stereo width, short early reflections, Master Strength, Adaptive Tone Balance, output gain, lightweight headroom protection, and level-matched comparison in one DSP component.
 
-> Current stable release: **v0.6.4**
+> Current stable release: **v0.6.5**
+
+## What is new in v0.6.5
+
+v0.6.5 adds manual reordering for user presets without changing preset content or serialization. The validated v0.6.5-dev.1 implementation is used unchanged for the feature itself.
+
+- Use `↑` / `↓` to move the selected user preset one position.
+- The selected preset remains selected after moving.
+- `↑` is disabled at the first item; `↓` is disabled at the last item.
+- Both are disabled when no user preset is selected.
+- Reordered user presets are persisted in the existing SRP4 list order.
+- `.srpbackup`, `preset_version 9`, DSP / ATB processing, and all 12 built-in preset values are unchanged.
 
 ## What is new in v0.6.4
 
@@ -295,7 +306,7 @@ Sonic Refiner handles tone and soundstage. The downstream **R128 Real-time Loudn
 
 ## Installation
 
-1. Double-click `foo_sonic_refiner_v0.6.4.fb2k-component`.
+1. Double-click `foo_sonic_refiner_v0.6.5.fb2k-component`.
 2. Apply the component installation in foobar2000.
 3. Restart foobar2000.
 4. Add `Sonic Refiner` from DSP Manager.
@@ -361,11 +372,11 @@ build_and_package.cmd
 Output:
 
 ```text
-dist\foo_sonic_refiner_v0.6.4.fb2k-component
+dist\foo_sonic_refiner_v0.6.5.fb2k-component
 dist\SHA256SUMS.txt
 ```
 
-See `README_FIRST.txt` for detailed build steps and `TESTING_v0.6.4.md` for the final release validation checklist.
+See `README_FIRST.txt` for detailed build steps and `TESTING_v0.6.5.md` for the final release validation checklist.
 
 ## Safety notes
 
@@ -397,7 +408,20 @@ This project is an independent clean-room implementation. It does not include or
 
 Sonic Refinerは、音色と音場をリアルタイムで調整するfoobar2000用DSPコンポーネントです。低域の厚み、明瞭感、ステレオの広がり、短い初期反射による空間・奥行き感、Master Strength、出力ゲイン、軽量な保護、レベルを合わせた比較を1つの設定画面にまとめています。
 
-> 現在の正式公開版：**v0.6.4**
+> 現在の正式公開版：**v0.6.5**
+
+## v0.6.5の変更点
+
+v0.6.5では、既存の任意プリセットを **`↑` / `↓`** で手動並べ替えできる機能を追加しました。並べ替えで変更されるのは一覧の順序だけで、名前や保存済みDSP設定値は変更されません。
+
+- 選択中の任意プリセットを1件ずつ上／下へ移動
+- 移動後も対象プリセットを選択した状態を維持
+- 先頭では `↑`、末尾では `↓` を無効化
+- 未選択時や1件だけの場合は移動できないボタンを無効化
+- 並べ替え後の順序を再起動後も維持
+- `.srpbackup`書出／読込でも並び順を維持
+- SRP4、`.srpbackup`、`preset_version 9`は変更なし
+- DSP／Adaptive Tone Balanceアルゴリズム、12種類の内蔵プリセット値は変更なし
 
 ## v0.6.4の変更点
 
@@ -685,8 +709,8 @@ F:\foobar2000-dev\WTL\Include\atlapp.h
 出力：
 
 ```text
-dist\foo_sonic_refiner_v0.6.4.fb2k-component
+dist\foo_sonic_refiner_v0.6.5.fb2k-component
 dist\SHA256SUMS.txt
 ```
 
-詳しい手順は`README_FIRST.txt`、正式版の最終確認項目は`TESTING_v0.6.4.md`を参照してください。
+詳しい手順は`README_FIRST.txt`、正式版の最終確認項目は`TESTING_v0.6.5.md`を参照してください。

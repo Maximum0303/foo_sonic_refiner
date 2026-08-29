@@ -1,5 +1,6 @@
-# Sonic Refiner v0.6.4 Quick Start
+# Sonic Refiner v0.6.5 Quick Start
 
+> v0.6.5 note: select a user preset and use `↑` / `↓` to move it one position. The order is preserved with the existing SRP4 / `.srpbackup` format; DSP / ATB processing is unchanged.
 > v0.6.3 documentation note: Help / Glossary now explain ATB in user-oriented terms and distinguish Auto Low, Auto High, and analysis state. Audio processing is unchanged.
 
 > v0.6.3 UI note: with Adaptive Tone Balance ON, Depth is shown as the Auto Low limit and Clarity as the Auto High limit. 100% is an upper permission, not a constant +10 dB boost.
@@ -54,6 +55,7 @@ Use 0–60% for normal adjustment. Values above 80% are for extreme effects and 
 
 - `Save...`: save the current settings as a user preset, including Adaptive Tone Balance On/Off
 - `Rename...`: rename the selected user preset without changing its stored settings
+- `↑` / `↓`: move the selected user preset one position; the order persists across restart and `.srpbackup` export/import
 - `Export...`: save all user presets to `.srpbackup`, including each preset's Adaptive Tone Balance On/Off state
 - `Import...`: replace the current user preset list with a backup
 
@@ -106,6 +108,8 @@ English
 ### 5. 保存とバックアップ
 
 - `保存...`：現在の設定を、適応型音色補正のON/OFFを含めて任意プリセットとして保存
+- `名前変更...`：保存済み設定値を変えずに選択中の任意プリセット名だけを変更
+- `↑` / `↓`：選択中の任意プリセットを1件ずつ並べ替え。順序は再起動後や`.srpbackup`でも維持
 - `書出...`：各プリセットの適応型音色補正ON/OFFを含め、任意プリセット全件を`.srpbackup`へ保存
 - `読込...`：現在の任意プリセット一覧をバックアップ内容で置換
 

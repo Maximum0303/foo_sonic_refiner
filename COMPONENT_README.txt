@@ -1,4 +1,4 @@
-Sonic Refiner 0.6.4
+Sonic Refiner 0.6.5
 
 v0.6.3 HELP / GLOSSARY CLARITY
 - Reorganized ATB explanations for practical user understanding.
@@ -6,6 +6,15 @@ v0.6.3 HELP / GLOSSARY CLARITY
 - No DSP / ATB algorithm changes.
 Adaptive Audio Enhancement DSP for foobar2000
 ENGLISH
+
+V0.6.5 USER PRESET REORDERING
+
+- Adds Up / Down buttons for the selected user preset.
+- Moving changes only the order of user_preset entries.
+- The selected preset remains selected after moving.
+- Boundary / no-selection states disable the unavailable move buttons.
+- Existing SRP4 list order preserves the new order across restart and .srpbackup export/import.
+- DSP / ATB processing, preset_version 9, and built-in preset values are unchanged.
 
 V0.6.4 USER PRESET RENAME
 - Existing user presets can be renamed without changing stored DSP settings
@@ -96,6 +105,14 @@ component's License page.
 ------------------------------------------------------------
 
 日本語
+
+V0.6.5 任意プリセット並べ替え
+- 選択中の任意プリセットを「↑」「↓」で1件ずつ移動できます。
+- 移動後も対象プリセットを選択した状態を維持します。
+- 先頭／末尾／未選択など、移動できない方向のボタンは無効になります。
+- 変更されるのは任意プリセット一覧の順序だけで、名前や保存済みDSP設定値は変わりません。
+- 既存SRP4のリスト順をそのまま使うため、再起動後や.srpbackup書出／読込でも順序を維持します。
+- SRP4、.srpbackup、preset_version 9、DSP／ATB処理、12種類の内蔵プリセット値は変更していません。
 
 Sonic Refiner 0.6.4では、既存の任意プリセットについて、保存済みのDSP設定値を
 変えずに名前だけを変更できる「名前変更...」機能を追加しました。

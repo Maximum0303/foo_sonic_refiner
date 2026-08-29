@@ -71,3 +71,5 @@
 #define IDC_ADAPTIVE_TONE_BALANCE       1062
 #define IDC_ADAPTIVE_STATUS             1063
 #define IDC_PRESET_RENAME                1064
+#define IDC_PRESET_MOVE_UP               1065
+#define IDC_PRESET_MOVE_DOWN             1066

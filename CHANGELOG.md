@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.6.5] - 2026-08-29
+
+### Added
+
+- Added `↑` / `↓` buttons to reorder the selected user preset one position at a time.
+- The selected preset follows the moved item.
+- Move buttons are disabled when no movement is possible.
+
+### Compatibility
+
+- Reordering changes only the order of existing `user_preset` entries.
+- SRP4 serialization is unchanged and naturally preserves vector order.
+- `.srpbackup` wrapper / format is unchanged.
+- `preset_version 9` is unchanged.
+- No DSP / Adaptive Tone Balance algorithm changes.
+- All 12 built-in preset values are unchanged.
+
+### Validation
+
+- v0.6.5-dev.1 passed the required reordering, persistence, backup/restore, rename/delete/new-save coexistence, JP/EN, Light/Dark, A/B, built-in preset, ATB analysis-state, and full-track playback checks before promotion.
+
+## [0.6.5-dev.1] - 2026-08-29
+
+### Added
+
+- Added `↑` / `↓` buttons to reorder the selected user preset one position at a time.
+- The selected preset follows the moved item.
+- Move buttons are disabled when no movement is possible.
+
+### Compatibility
+
+- Reordering changes only the order of existing `user_preset` entries.
+- SRP4 serialization is unchanged and naturally preserves vector order.
+- `.srpbackup` wrapper / format is unchanged.
+- `preset_version 9` is unchanged.
+- No DSP / Adaptive Tone Balance algorithm changes.
+- All 12 built-in preset values are unchanged.
+
 ## [0.6.4] - 2026-08-28
 
 ### Added

@@ -1,0 +1,34 @@
+Sonic Refiner v0.6.5 implementation summary
+
+Release basis
+- Promoted from the fully validated v0.6.5-dev.1 implementation.
+- No user-preset reordering feature code changes were made during formalization.
+
+Purpose
+- Allow existing user presets to be reordered manually without changing preset content or serialization formats.
+
+Implementation
+- Added Up / Down controls to the User Presets area within the existing 560 x 320 dialog.
+- The selected user preset swaps with the adjacent vector entry and remains selected after moving.
+- Up is disabled at the first item; Down is disabled at the last item.
+- Move controls are disabled when no movement is possible.
+- Reordering is persisted immediately through the existing user-preset save path.
+- Existing SRP4 serialization already writes user presets in vector order, so no format extension is required.
+- Existing `.srpbackup` export/import naturally preserves that same list order.
+- Help text documents the reordering behavior.
+
+Validation
+- The complete v0.6.5-dev.1 regression sequence passed before promotion.
+- Reordering, selection retention, restart persistence, `.srpbackup` restore, preset-content preservation, Rename/Delete/new Save coexistence, JP/EN, Light/Dark, A/B, built-in presets, Adaptive Standard, ATB analysis state, and full-track playback were verified.
+
+Unchanged
+- DSP / ATB algorithm
+- 12 built-in preset values
+- SRP4 serialization
+- .srpbackup wrapper and format
+- preset_version 9
+- Legacy DSP preset and SRP1/SRP2/SRP3/SRP4 compatibility
+- User-preset stored names and DSP values during move
+- A/B semantics
+- direct settings access
+- JP/EN and Light/Dark support
