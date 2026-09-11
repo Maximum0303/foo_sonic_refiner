@@ -1,4 +1,4 @@
-Sonic Refiner 0.6.5
+Sonic Refiner 0.7.0
 
 v0.6.3 HELP / GLOSSARY CLARITY
 - Reorganized ATB explanations for practical user understanding.
@@ -6,6 +6,16 @@ v0.6.3 HELP / GLOSSARY CLARITY
 - No DSP / ATB algorithm changes.
 Adaptive Audio Enhancement DSP for foobar2000
 ENGLISH
+
+V0.7.0-DEV.1 PRESET MANAGER FOUNDATION
+
+- Adds a new read-only Preset Manager opened from the Sonic Refiner settings dialog.
+- Shows user presets in their existing saved order.
+- Shows stored settings in a read-only preview without changing playback settings.
+- Marks every preset whose stored settings match the current Sonic Refiner settings with `●`.
+- Supports resizing, Japanese/English UI, and foobar2000 Light/Dark mode.
+- Existing v0.6.5 user-preset management controls remain available in this first development build.
+- DSP / ATB processing, SRP4, .srpbackup, preset_version 9, and all 12 built-in preset values are unchanged.
 
 V0.6.5 USER PRESET REORDERING
 
@@ -105,6 +115,15 @@ component's License page.
 ------------------------------------------------------------
 
 日本語
+
+V0.7.0-DEV.1 PRESET MANAGER 基礎実装
+- Sonic Refiner設定画面から開く読み取り専用Preset Managerを追加しました。
+- 任意プリセットを既存の保存順で一覧表示します。
+- 保存済み設定値を読み取り専用で表示し、選択しただけでは現在の音質設定を変更しません。
+- 現在のSonic Refiner設定と保存内容が一致する任意プリセットすべてに「●」を表示します。
+- サイズ変更、日本語／English、foobar2000 Light／Darkモードに対応します。
+- 最初の開発版ではv0.6.5の既存任意プリセット管理操作もそのまま残します。
+- DSP／ATB処理、SRP4、.srpbackup、preset_version 9、12種類の内蔵プリセット値は変更していません。
 
 V0.6.5 任意プリセット並べ替え
 - 選択中の任意プリセットを「↑」「↓」で1件ずつ移動できます。

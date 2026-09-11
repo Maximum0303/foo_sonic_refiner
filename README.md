@@ -6,6 +6,9 @@ Sonic Refiner adjusts tone and soundstage in real time. It combines low-frequenc
 
 > Current stable release: **v0.6.5**
 
+> Development build in this source package: **v0.7.0**  
+> Adds the read-only Preset Manager foundation for staged v0.7.0 development. The public stable release remains v0.6.5.
+
 ## What is new in v0.6.5
 
 v0.6.5 adds manual reordering for user presets without changing preset content or serialization. The validated v0.6.5-dev.1 implementation is used unchanged for the feature itself.

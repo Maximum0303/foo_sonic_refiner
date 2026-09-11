@@ -1,0 +1,20 @@
+Sonic Refiner v0.7.0 formalization summary
+
+Baseline
+- Directly based on v0.7.0-dev.33, which completed the final regression checks.
+
+Formalization-only changes
+- Version: 0.7.0-dev.33 -> 0.7.0
+- Formal release documentation.
+- Formal package naming.
+
+No behavior changes
+- DSP / Adaptive Tone Balance processing unchanged.
+- SRP4 unchanged.
+- .srpbackup unchanged.
+- preset_version 9 unchanged.
+- A/B behavior unchanged.
+- 12 built-in preset values unchanged.
+
+Primary v0.7.0 theme
+- Dedicated Preset Manager for user presets.

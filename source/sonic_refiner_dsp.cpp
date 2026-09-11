@@ -1,6 +1,10 @@
 #include "../stdafx.h"
 #include "sonic_refiner_dsp.h"
 #include "biquad.h"
+#include <iomanip>
+#include <functional>
+#include <utility>
+#include <cstdio>
 
 #ifdef _WIN32
 #include <helpers/DarkMode.h>
@@ -4254,11 +4258,130 @@ enum class ui_language : t_int32 {
 
 cfg_string g_ui_language(guid_ui_language, "");
 
+constexpr GUID guid_preset_manager_window_size = {
+    0x9f6b2c8d, 0x2c64, 0x4742,
+    { 0x84, 0x14, 0xee, 0xe9, 0xe5, 0xde, 0x84, 0x55 }
+};
+
+cfg_string g_preset_manager_window_size(
+    guid_preset_manager_window_size,
+    ""
+);
+
+bool load_preset_manager_window_size(
+    int& width,
+    int& height
+) noexcept {
+    const char* saved =
+        g_preset_manager_window_size.get_ptr();
+
+    if (saved == nullptr || saved[0] == '\0') {
+        return false;
+    }
+
+    int parsed_width = 0;
+    int parsed_height = 0;
+
+    if (
+        std::sscanf(
+            saved,
+            "%d,%d",
+            &parsed_width,
+            &parsed_height
+        ) != 2 ||
+        parsed_width <= 0 ||
+        parsed_height <= 0
+    ) {
+        return false;
+    }
+
+    width = parsed_width;
+    height = parsed_height;
+    return true;
+}
+
+void save_preset_manager_window_size(
+    int width,
+    int height
+) {
+    if (width <= 0 || height <= 0) {
+        return;
+    }
+
+    char serialized[64] = {};
+    std::snprintf(
+        serialized,
+        sizeof(serialized),
+        "%d,%d",
+        width,
+        height
+    );
+    g_preset_manager_window_size = serialized;
+}
+
+constexpr GUID guid_preset_manager_split_ratio = {
+    0x1f82989e, 0xee7b, 0x42fa,
+    { 0x83, 0x63, 0x48, 0x64, 0x3b, 0xd1, 0x99, 0xdf }
+};
+
+cfg_string g_preset_manager_split_ratio(
+    guid_preset_manager_split_ratio,
+    ""
+);
+
+bool load_preset_manager_split_ratio(
+    int& ratio_basis_points
+) noexcept {
+    const char* saved =
+        g_preset_manager_split_ratio.get_ptr();
+
+    if (saved == nullptr || saved[0] == '\0') {
+        return false;
+    }
+
+    int parsed_ratio = 0;
+    if (
+        std::sscanf(
+            saved,
+            "%d",
+            &parsed_ratio
+        ) != 1 ||
+        parsed_ratio <= 0 ||
+        parsed_ratio >= 10000
+    ) {
+        return false;
+    }
+
+    ratio_basis_points = parsed_ratio;
+    return true;
+}
+
+void save_preset_manager_split_ratio(
+    int ratio_basis_points
+) {
+    if (
+        ratio_basis_points <= 0 ||
+        ratio_basis_points >= 10000
+    ) {
+        return;
+    }
+
+    char serialized[32] = {};
+    std::snprintf(
+        serialized,
+        sizeof(serialized),
+        "%d",
+        ratio_basis_points
+    );
+    g_preset_manager_split_ratio = serialized;
+}
+
 // v0.4.0: modeless direct settings window opened from Playback.
 // These HWNDs are runtime-only and are never serialized.
 HWND g_direct_sonic_refiner_settings_window = nullptr;
 HWND g_standard_sonic_refiner_settings_window = nullptr;
 constexpr UINT wm_sonic_refiner_direct_chain_invalidated = WM_APP + 0x04A1;
+constexpr UINT wm_sonic_refiner_preset_manager_drag_reorder = WM_APP + 0x04A2;
 
 bool is_english(ui_language language) noexcept {
     return language == ui_language::english;
@@ -4920,6 +5043,99 @@ bool choose_preset_export_path(
         OFN_NOCHANGEDIR;
 
     if (!::GetSaveFileNameW(&dialog)) {
+        return false;
+    }
+
+    path = file_name;
+    return true;
+}
+
+bool choose_preset_backup_path(
+    HWND parent,
+    ui_language language,
+    std::wstring& path
+) {
+    wchar_t file_name[32768] =
+        L"Sonic_Refiner_User_Presets.srpbackup";
+
+    constexpr wchar_t japanese_filter[] =
+        L"Sonic Refiner プリセット (*.srpbackup)\0"
+        L"*.srpbackup\0"
+        L"すべてのファイル (*.*)\0"
+        L"*.*\0\0";
+    constexpr wchar_t english_filter[] =
+        L"Sonic Refiner Presets (*.srpbackup)\0"
+        L"*.srpbackup\0"
+        L"All Files (*.*)\0"
+        L"*.*\0\0";
+
+    OPENFILENAMEW dialog = {};
+    dialog.lStructSize = sizeof(dialog);
+    dialog.hwndOwner = parent;
+    dialog.lpstrFilter = is_english(language)
+        ? english_filter
+        : japanese_filter;
+    dialog.lpstrFile = file_name;
+    dialog.nMaxFile = static_cast<DWORD>(_countof(file_name));
+    dialog.lpstrDefExt = L"srpbackup";
+    dialog.lpstrTitle = localized(
+        language,
+        L"任意プリセットをバックアップ",
+        L"Backup User Presets"
+    );
+    dialog.Flags =
+        OFN_OVERWRITEPROMPT |
+        OFN_PATHMUSTEXIST |
+        OFN_HIDEREADONLY |
+        OFN_NOCHANGEDIR;
+
+    if (!::GetSaveFileNameW(&dialog)) {
+        return false;
+    }
+
+    path = file_name;
+    return true;
+}
+
+bool choose_preset_restore_path(
+    HWND parent,
+    ui_language language,
+    std::wstring& path
+) {
+    wchar_t file_name[32768] = L"";
+
+    constexpr wchar_t japanese_filter[] =
+        L"Sonic Refiner プリセット (*.srpbackup)\0"
+        L"*.srpbackup\0"
+        L"すべてのファイル (*.*)\0"
+        L"*.*\0\0";
+    constexpr wchar_t english_filter[] =
+        L"Sonic Refiner Presets (*.srpbackup)\0"
+        L"*.srpbackup\0"
+        L"All Files (*.*)\0"
+        L"*.*\0\0";
+
+    OPENFILENAMEW dialog = {};
+    dialog.lStructSize = sizeof(dialog);
+    dialog.hwndOwner = parent;
+    dialog.lpstrFilter = is_english(language)
+        ? english_filter
+        : japanese_filter;
+    dialog.lpstrFile = file_name;
+    dialog.nMaxFile = static_cast<DWORD>(_countof(file_name));
+    dialog.lpstrDefExt = L"srpbackup";
+    dialog.lpstrTitle = localized(
+        language,
+        L"任意プリセットを復元",
+        L"Restore User Presets"
+    );
+    dialog.Flags =
+        OFN_FILEMUSTEXIST |
+        OFN_PATHMUSTEXIST |
+        OFN_HIDEREADONLY |
+        OFN_NOCHANGEDIR;
+
+    if (!::GetOpenFileNameW(&dialog)) {
         return false;
     }
 
@@ -5848,6 +6064,2920 @@ private:
     fb2k::CDarkModeHooks dark_mode_;
 };
 
+class sonic_refiner_preset_manager_dialog final :
+    public CDialogImpl<sonic_refiner_preset_manager_dialog> {
+public:
+    sonic_refiner_preset_manager_dialog(
+        const std::vector<user_preset>& presets,
+        const sonic_refiner::settings& current_settings,
+        ui_language language,
+        int initial_selected_preset_index,
+        std::function<void(const sonic_refiner::settings&)> apply_callback,
+        std::function<void(
+            const std::vector<user_preset>&,
+            int
+        )> presets_changed_callback,
+        std::function<void(int)> session_selection_callback
+    )
+        : presets_(presets),
+          current_settings_(sonic_refiner::sanitize(current_settings)),
+          language_(language),
+          initial_selected_preset_index_(
+              initial_selected_preset_index
+          ),
+          apply_callback_(std::move(apply_callback)),
+          presets_changed_callback_(
+              std::move(presets_changed_callback)
+          ),
+          session_selection_callback_(
+              std::move(session_selection_callback)
+          ) {
+    }
+
+    enum { IDD = IDD_PRESET_MANAGER };
+
+    BEGIN_MSG_MAP_EX(sonic_refiner_preset_manager_dialog)
+        MSG_WM_INITDIALOG(on_init_dialog)
+        COMMAND_HANDLER_EX(
+            IDC_PM_LIST,
+            LBN_SELCHANGE,
+            on_selection_changed
+        )
+        COMMAND_HANDLER_EX(
+            IDC_PM_LIST,
+            LBN_DBLCLK,
+            on_list_double_click
+        )
+        COMMAND_HANDLER_EX(
+            IDC_PM_SEARCH,
+            EN_CHANGE,
+            on_search_changed
+        )
+        COMMAND_HANDLER_EX(
+            IDC_PM_NEW_CURRENT,
+            BN_CLICKED,
+            on_new_current_button
+        )
+        COMMAND_HANDLER_EX(
+            IDC_PM_UPDATE_CURRENT,
+            BN_CLICKED,
+            on_update_current_button
+        )
+        COMMAND_HANDLER_EX(
+            IDC_PM_DUPLICATE,
+            BN_CLICKED,
+            on_duplicate_button
+        )
+        COMMAND_HANDLER_EX(
+            IDC_PM_RENAME,
+            BN_CLICKED,
+            on_rename_button
+        )
+        COMMAND_HANDLER_EX(
+            IDC_PM_DELETE,
+            BN_CLICKED,
+            on_delete_button
+        )
+        COMMAND_HANDLER_EX(
+            IDC_PM_MOVE_UP,
+            BN_CLICKED,
+            on_move_up_button
+        )
+        COMMAND_HANDLER_EX(
+            IDC_PM_MOVE_DOWN,
+            BN_CLICKED,
+            on_move_down_button
+        )
+        COMMAND_HANDLER_EX(
+            IDC_PM_BACKUP,
+            BN_CLICKED,
+            on_backup_button
+        )
+        COMMAND_HANDLER_EX(
+            IDC_PM_RESTORE,
+            BN_CLICKED,
+            on_restore_button
+        )
+        COMMAND_HANDLER_EX(IDOK, BN_CLICKED, on_apply_button)
+        COMMAND_HANDLER_EX(IDCANCEL, BN_CLICKED, on_close_button)
+        MESSAGE_HANDLER(WM_SIZE, on_size)
+        MESSAGE_HANDLER(WM_GETMINMAXINFO, on_get_min_max_info)
+        MESSAGE_HANDLER(WM_SETCURSOR, on_set_cursor)
+        MESSAGE_HANDLER(WM_LBUTTONDOWN, on_splitter_lbutton_down)
+        MESSAGE_HANDLER(WM_MOUSEMOVE, on_splitter_mouse_move)
+        MESSAGE_HANDLER(WM_LBUTTONUP, on_splitter_lbutton_up)
+        MESSAGE_HANDLER(WM_CAPTURECHANGED, on_capture_changed)
+        MESSAGE_HANDLER(WM_CLOSE, on_close_message)
+        MESSAGE_HANDLER(WM_CONTEXTMENU, on_context_menu)
+        MESSAGE_HANDLER(
+            wm_sonic_refiner_preset_manager_drag_reorder,
+            on_drag_reorder
+        )
+    END_MSG_MAP()
+
+private:
+    BOOL on_init_dialog(CWindow, LPARAM) {
+        dark_mode_.AddDialogWithControls(m_hWnd);
+        search_edit_ = GetDlgItem(IDC_PM_SEARCH);
+        preset_list_ = GetDlgItem(IDC_PM_LIST);
+        preview_edit_ = GetDlgItem(IDC_PM_PREVIEW);
+
+        apply_language();
+        refresh_list(initial_selected_preset_index_);
+        restore_saved_window_size();
+        restore_saved_split_ratio();
+        layout_controls();
+        configure_tab_navigation();
+        install_keyboard_shortcuts();
+
+        if (!presets_.empty()) {
+            preset_list_.SetFocus();
+        } else {
+            GetDlgItem(IDC_PM_NEW_CURRENT).SetFocus();
+        }
+
+        return FALSE;
+    }
+
+    void configure_tab_navigation() {
+        if (::IsWindow(preview_edit_.m_hWnd)) {
+            LONG_PTR style =
+                ::GetWindowLongPtrW(
+                    preview_edit_.m_hWnd,
+                    GWL_STYLE
+                );
+
+            style &=
+                ~static_cast<LONG_PTR>(
+                    WS_TABSTOP
+                );
+
+            ::SetWindowLongPtrW(
+                preview_edit_.m_hWnd,
+                GWL_STYLE,
+                style
+            );
+        }
+
+        const int tab_order[] = {
+            IDC_PM_SEARCH,
+            IDC_PM_LIST,
+            IDC_PM_MOVE_UP,
+            IDC_PM_MOVE_DOWN,
+            IDC_PM_NEW_CURRENT,
+            IDC_PM_UPDATE_CURRENT,
+            IDC_PM_DUPLICATE,
+            IDC_PM_RENAME,
+            IDC_PM_DELETE,
+            IDC_PM_BACKUP,
+            IDC_PM_RESTORE,
+            IDOK,
+            IDCANCEL
+        };
+
+        HWND insert_after = HWND_TOP;
+
+        for (const int control_id : tab_order) {
+            const HWND control =
+                GetDlgItem(control_id);
+
+            if (!::IsWindow(control)) {
+                continue;
+            }
+
+            LONG_PTR style =
+                ::GetWindowLongPtrW(
+                    control,
+                    GWL_STYLE
+                );
+
+            style |=
+                static_cast<LONG_PTR>(
+                    WS_TABSTOP
+                );
+
+            ::SetWindowLongPtrW(
+                control,
+                GWL_STYLE,
+                style
+            );
+
+            ::SetWindowPos(
+                control,
+                insert_after,
+                0,
+                0,
+                0,
+                0,
+                SWP_NOMOVE |
+                    SWP_NOSIZE |
+                    SWP_NOACTIVATE
+            );
+
+            insert_after = control;
+        }
+    }
+
+    static constexpr const wchar_t*
+        keyboard_original_proc_property() noexcept {
+        return L"SonicRefiner.PresetManager.KeyboardOriginalProc";
+    }
+
+    static constexpr const wchar_t*
+        drag_source_row_property() noexcept {
+        return L"SonicRefiner.PresetManager.DragSourceRow";
+    }
+
+    static constexpr const wchar_t*
+        drag_start_point_property() noexcept {
+        return L"SonicRefiner.PresetManager.DragStartPoint";
+    }
+
+    static constexpr const wchar_t*
+        drag_active_property() noexcept {
+        return L"SonicRefiner.PresetManager.DragActive";
+    }
+
+    static void clear_drag_properties(HWND window) noexcept {
+        ::RemovePropW(window, drag_source_row_property());
+        ::RemovePropW(window, drag_start_point_property());
+        ::RemovePropW(window, drag_active_property());
+    }
+
+    static LRESULT CALLBACK keyboard_subclass_proc(
+        HWND window,
+        UINT message,
+        WPARAM wparam,
+        LPARAM lparam
+    ) {
+        const auto original_proc =
+            reinterpret_cast<WNDPROC>(
+                ::GetPropW(
+                    window,
+                    keyboard_original_proc_property()
+                )
+            );
+
+        const bool is_preset_list =
+            ::GetDlgCtrlID(window) == IDC_PM_LIST;
+        const bool is_search_edit =
+            ::GetDlgCtrlID(window) == IDC_PM_SEARCH;
+
+        if (
+            is_preset_list &&
+            message == WM_CONTEXTMENU
+        ) {
+            const HWND dialog =
+                ::GetAncestor(window, GA_ROOT);
+
+            if (::IsWindow(dialog)) {
+                return ::SendMessageW(
+                    dialog,
+                    WM_CONTEXTMENU,
+                    reinterpret_cast<WPARAM>(window),
+                    lparam
+                );
+            }
+
+            return 0;
+        }
+
+        if (is_preset_list && message == WM_LBUTTONDOWN) {
+            clear_drag_properties(window);
+
+            const int x =
+                static_cast<int>(
+                    static_cast<short>(LOWORD(lparam))
+                );
+            const int y =
+                static_cast<int>(
+                    static_cast<short>(HIWORD(lparam))
+                );
+
+            const DWORD item_result =
+                static_cast<DWORD>(
+                    ::SendMessageW(
+                        window,
+                        LB_ITEMFROMPOINT,
+                        0,
+                        MAKELPARAM(x, y)
+                    )
+                );
+
+            const int row =
+                static_cast<int>(LOWORD(item_result));
+            const bool outside =
+                HIWORD(item_result) != 0;
+            const int count =
+                static_cast<int>(
+                    ::SendMessageW(
+                        window,
+                        LB_GETCOUNT,
+                        0,
+                        0
+                    )
+                );
+
+            if (
+                !outside &&
+                row >= 0 &&
+                row < count
+            ) {
+                ::SetPropW(
+                    window,
+                    drag_source_row_property(),
+                    reinterpret_cast<HANDLE>(
+                        static_cast<INT_PTR>(row + 1)
+                    )
+                );
+
+                const ULONG_PTR packed =
+                    static_cast<ULONG_PTR>(
+                        MAKELPARAM(x, y)
+                    ) + 1;
+
+                ::SetPropW(
+                    window,
+                    drag_start_point_property(),
+                    reinterpret_cast<HANDLE>(packed)
+                );
+            }
+        }
+
+        if (
+            is_preset_list &&
+            message == WM_MOUSEMOVE &&
+            (wparam & MK_LBUTTON) != 0
+        ) {
+            const auto source_value =
+                reinterpret_cast<INT_PTR>(
+                    ::GetPropW(
+                        window,
+                        drag_source_row_property()
+                    )
+                );
+            const auto point_value =
+                reinterpret_cast<ULONG_PTR>(
+                    ::GetPropW(
+                        window,
+                        drag_start_point_property()
+                    )
+                );
+
+            if (
+                source_value > 0 &&
+                point_value > 0
+            ) {
+                const ULONG_PTR packed =
+                    point_value - 1;
+
+                const int start_x =
+                    static_cast<int>(
+                        static_cast<short>(LOWORD(packed))
+                    );
+                const int start_y =
+                    static_cast<int>(
+                        static_cast<short>(HIWORD(packed))
+                    );
+                const int x =
+                    static_cast<int>(
+                        static_cast<short>(LOWORD(lparam))
+                    );
+                const int y =
+                    static_cast<int>(
+                        static_cast<short>(HIWORD(lparam))
+                    );
+
+                const int threshold_x =
+                    (std::max)(
+                        1,
+                        ::GetSystemMetrics(SM_CXDRAG) / 2
+                    );
+                const int threshold_y =
+                    (std::max)(
+                        1,
+                        ::GetSystemMetrics(SM_CYDRAG) / 2
+                    );
+
+                const int delta_x =
+                    x >= start_x
+                        ? x - start_x
+                        : start_x - x;
+                const int delta_y =
+                    y >= start_y
+                        ? y - start_y
+                        : start_y - y;
+
+                if (
+                    delta_x >= threshold_x ||
+                    delta_y >= threshold_y
+                ) {
+                    ::SetPropW(
+                        window,
+                        drag_active_property(),
+                        reinterpret_cast<HANDLE>(
+                            static_cast<INT_PTR>(1)
+                        )
+                    );
+                }
+            }
+        }
+
+        if (
+            is_search_edit &&
+            message == WM_CHAR &&
+            wparam == 0x7F
+        ) {
+            return 0;
+        }
+
+        if (
+            is_search_edit &&
+            message == WM_KEYDOWN &&
+            wparam == VK_BACK &&
+            (::GetKeyState(VK_CONTROL) & 0x8000) != 0 &&
+            (::GetKeyState(VK_MENU) & 0x8000) == 0
+        ) {
+            ::SetWindowTextW(
+                window,
+                L""
+            );
+            return 0;
+        }
+
+        if (
+            message == WM_KEYDOWN &&
+            wparam == static_cast<WPARAM>('F') &&
+            (::GetKeyState(VK_CONTROL) & 0x8000) != 0 &&
+            (::GetKeyState(VK_MENU) & 0x8000) == 0
+        ) {
+            const HWND dialog =
+                ::GetAncestor(window, GA_ROOT);
+
+            if (::IsWindow(dialog)) {
+                const HWND search_edit =
+                    ::GetDlgItem(
+                        dialog,
+                        IDC_PM_SEARCH
+                    );
+
+                if (
+                    search_edit != nullptr &&
+                    ::IsWindowEnabled(search_edit)
+                ) {
+                    ::SetFocus(search_edit);
+                }
+            }
+
+            return 0;
+        }
+
+        if (
+            is_preset_list &&
+            message == WM_KEYDOWN &&
+            wparam == VK_F2
+        ) {
+            const HWND dialog =
+                ::GetAncestor(window, GA_ROOT);
+
+            if (::IsWindow(dialog)) {
+                const HWND rename_button =
+                    ::GetDlgItem(
+                        dialog,
+                        IDC_PM_RENAME
+                    );
+
+                if (
+                    rename_button != nullptr &&
+                    ::IsWindowEnabled(rename_button)
+                ) {
+                    ::SendMessageW(
+                        dialog,
+                        WM_COMMAND,
+                        MAKEWPARAM(
+                            IDC_PM_RENAME,
+                            BN_CLICKED
+                        ),
+                        reinterpret_cast<LPARAM>(
+                            rename_button
+                        )
+                    );
+                }
+            }
+
+            return 0;
+        }
+
+        if (
+            is_preset_list &&
+            message == WM_KEYDOWN &&
+            wparam == VK_DELETE
+        ) {
+            const HWND dialog =
+                ::GetAncestor(window, GA_ROOT);
+
+            if (::IsWindow(dialog)) {
+                const HWND delete_button =
+                    ::GetDlgItem(
+                        dialog,
+                        IDC_PM_DELETE
+                    );
+
+                if (
+                    delete_button != nullptr &&
+                    ::IsWindowEnabled(delete_button)
+                ) {
+                    ::SendMessageW(
+                        dialog,
+                        WM_COMMAND,
+                        MAKEWPARAM(
+                            IDC_PM_DELETE,
+                            BN_CLICKED
+                        ),
+                        reinterpret_cast<LPARAM>(
+                            delete_button
+                        )
+                    );
+                }
+            }
+
+            return 0;
+        }
+
+        const bool alt_pressed =
+            (::GetKeyState(VK_MENU) & 0x8000) != 0;
+        const bool arrow_key =
+            wparam == VK_UP || wparam == VK_DOWN;
+        const bool keyboard_message =
+            message == WM_SYSKEYDOWN ||
+            message == WM_KEYDOWN;
+
+        if (
+            keyboard_message &&
+            alt_pressed &&
+            arrow_key
+        ) {
+            const HWND dialog =
+                ::GetAncestor(window, GA_ROOT);
+
+            if (::IsWindow(dialog)) {
+                const int command_id =
+                    wparam == VK_UP
+                        ? IDC_PM_MOVE_UP
+                        : IDC_PM_MOVE_DOWN;
+
+                ::SendMessageW(
+                    dialog,
+                    WM_COMMAND,
+                    MAKEWPARAM(command_id, BN_CLICKED),
+                    reinterpret_cast<LPARAM>(
+                        ::GetDlgItem(dialog, command_id)
+                    )
+                );
+            }
+
+            return 0;
+        }
+
+        if (original_proc == nullptr) {
+            return ::DefWindowProcW(
+                window,
+                message,
+                wparam,
+                lparam
+            );
+        }
+
+        if (is_preset_list && message == WM_LBUTTONUP) {
+            const auto source_value =
+                reinterpret_cast<INT_PTR>(
+                    ::GetPropW(
+                        window,
+                        drag_source_row_property()
+                    )
+                );
+            const bool drag_active =
+                ::GetPropW(
+                    window,
+                    drag_active_property()
+                ) != nullptr;
+
+            int target_row = -1;
+
+            if (
+                drag_active &&
+                source_value > 0
+            ) {
+                const int x =
+                    static_cast<int>(
+                        static_cast<short>(LOWORD(lparam))
+                    );
+                const int y =
+                    static_cast<int>(
+                        static_cast<short>(HIWORD(lparam))
+                    );
+
+                RECT client = {};
+                ::GetClientRect(window, &client);
+
+                if (
+                    x >= client.left &&
+                    x < client.right &&
+                    y >= client.top &&
+                    y < client.bottom
+                ) {
+                    const DWORD item_result =
+                        static_cast<DWORD>(
+                            ::SendMessageW(
+                                window,
+                                LB_ITEMFROMPOINT,
+                                0,
+                                MAKELPARAM(x, y)
+                            )
+                        );
+
+                    const int row =
+                        static_cast<int>(
+                            LOWORD(item_result)
+                        );
+                    const int count =
+                        static_cast<int>(
+                            ::SendMessageW(
+                                window,
+                                LB_GETCOUNT,
+                                0,
+                                0
+                            )
+                        );
+
+                    if (
+                        row >= 0 &&
+                        row < count
+                    ) {
+                        target_row = row;
+                    }
+                }
+            }
+
+            const LRESULT result =
+                ::CallWindowProcW(
+                    original_proc,
+                    window,
+                    message,
+                    wparam,
+                    lparam
+                );
+
+            if (
+                drag_active &&
+                source_value > 0 &&
+                target_row >= 0
+            ) {
+                const int source_row =
+                    static_cast<int>(
+                        source_value - 1
+                    );
+
+                if (source_row != target_row) {
+                    const HWND dialog =
+                        ::GetAncestor(window, GA_ROOT);
+
+                    if (::IsWindow(dialog)) {
+                        ::SendMessageW(
+                            dialog,
+                            wm_sonic_refiner_preset_manager_drag_reorder,
+                            static_cast<WPARAM>(source_row),
+                            static_cast<LPARAM>(target_row)
+                        );
+                    }
+                }
+            }
+
+            clear_drag_properties(window);
+            return result;
+        }
+
+        const LRESULT result =
+            ::CallWindowProcW(
+                original_proc,
+                window,
+                message,
+                wparam,
+                lparam
+            );
+
+        if (message == WM_NCDESTROY) {
+            clear_drag_properties(window);
+            ::RemovePropW(
+                window,
+                keyboard_original_proc_property()
+            );
+        }
+
+        return result;
+    }
+
+    static void install_keyboard_shortcut_on_control(
+        HWND control
+    ) {
+        if (
+            control == nullptr ||
+            ::GetPropW(
+                control,
+                keyboard_original_proc_property()
+            ) != nullptr
+        ) {
+            return;
+        }
+
+        const auto original_proc =
+            reinterpret_cast<WNDPROC>(
+                ::GetWindowLongPtrW(
+                    control,
+                    GWLP_WNDPROC
+                )
+            );
+
+        if (original_proc == nullptr) {
+            return;
+        }
+
+        if (!::SetPropW(
+                control,
+                keyboard_original_proc_property(),
+                reinterpret_cast<HANDLE>(original_proc)
+            )) {
+            return;
+        }
+
+        ::SetLastError(ERROR_SUCCESS);
+        const LONG_PTR previous =
+            ::SetWindowLongPtrW(
+                control,
+                GWLP_WNDPROC,
+                reinterpret_cast<LONG_PTR>(
+                    &keyboard_subclass_proc
+                )
+            );
+
+        if (
+            previous == 0 &&
+            ::GetLastError() != ERROR_SUCCESS
+        ) {
+            ::RemovePropW(
+                control,
+                keyboard_original_proc_property()
+            );
+        }
+    }
+
+    void install_keyboard_shortcuts() {
+        HWND child =
+            ::GetWindow(m_hWnd, GW_CHILD);
+
+        while (child != nullptr) {
+            install_keyboard_shortcut_on_control(child);
+            child =
+                ::GetWindow(child, GW_HWNDNEXT);
+        }
+    }
+
+    bool settings_match(
+        const sonic_refiner::settings& left,
+        const sonic_refiner::settings& right
+    ) const noexcept {
+        return built_in_preset_settings_match(
+            sonic_refiner::sanitize(left),
+            sonic_refiner::sanitize(right)
+        );
+    }
+
+    void apply_language() {
+        ::SetWindowTextW(
+            m_hWnd,
+            L"Sonic Refiner - Preset Manager - 0.7.0"
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_PM_GROUP_LIST,
+            localized(language_, L"任意プリセット", L"User Presets")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_PM_SEARCH_LABEL,
+            localized(language_, L"検索", L"Search")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_PM_GROUP_PREVIEW,
+            localized(
+                language_,
+                L"設定内容プレビュー",
+                L"Settings Preview"
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_PM_NEW_CURRENT,
+            localized(
+                language_,
+                L"新規作成...",
+                L"New from Current..."
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_PM_UPDATE_CURRENT,
+            localized(
+                language_,
+                L"現在の設定で上書き...",
+                L"Update from Current..."
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_PM_DUPLICATE,
+            localized(
+                language_,
+                L"複製...",
+                L"Duplicate..."
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_PM_RENAME,
+            localized(
+                language_,
+                L"名前変更...",
+                L"Rename..."
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_PM_DELETE,
+            localized(
+                language_,
+                L"削除...",
+                L"Delete..."
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_PM_MOVE_UP,
+            L"↑"
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_PM_MOVE_DOWN,
+            L"↓"
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_PM_BACKUP,
+            localized(
+                language_,
+                L"バックアップ...",
+                L"Backup..."
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_PM_RESTORE,
+            localized(
+                language_,
+                L"復元...",
+                L"Restore..."
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDOK,
+            localized(language_, L"適用", L"Apply")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDCANCEL,
+            localized(language_, L"閉じる", L"Close")
+        );
+    }
+
+    int selected_preset_index() const noexcept {
+        const int selected_row = preset_list_.GetCurSel();
+        if (selected_row < 0 ||
+            static_cast<std::size_t>(selected_row) >= visible_indices_.size()) {
+            return -1;
+        }
+
+        const std::size_t preset_index =
+            visible_indices_[static_cast<std::size_t>(selected_row)];
+        if (preset_index >= presets_.size()) {
+            return -1;
+        }
+        return static_cast<int>(preset_index);
+    }
+
+    std::wstring search_text() const {
+        const int length = search_edit_.GetWindowTextLengthW();
+        if (length <= 0) {
+            return {};
+        }
+
+        std::wstring text(
+            static_cast<std::size_t>(length) + 1,
+            L'\0'
+        );
+        search_edit_.GetWindowTextW(
+            text.data(),
+            length + 1
+        );
+        text.resize(static_cast<std::size_t>(length));
+        return text;
+    }
+
+    static wchar_t ascii_fold(wchar_t ch) noexcept {
+        if (ch >= L'A' && ch <= L'Z') {
+            return static_cast<wchar_t>(ch - L'A' + L'a');
+        }
+        return ch;
+    }
+
+    bool name_matches_search(
+        const user_preset& preset,
+        const std::wstring& query
+    ) const {
+        if (query.empty()) {
+            return true;
+        }
+
+        std::wstring folded_name =
+            preset_name_to_wide(preset.name.get_ptr());
+        std::wstring folded_query = query;
+
+        for (wchar_t& ch : folded_name) {
+            ch = ascii_fold(ch);
+        }
+        for (wchar_t& ch : folded_query) {
+            ch = ascii_fold(ch);
+        }
+
+        return folded_name.find(folded_query) != std::wstring::npos;
+    }
+
+    int row_for_preset_index(std::size_t preset_index) const noexcept {
+        for (std::size_t row = 0; row < visible_indices_.size(); ++row) {
+            if (visible_indices_[row] == preset_index) {
+                return static_cast<int>(row);
+            }
+        }
+        return -1;
+    }
+
+    void update_count_text(
+        std::size_t visible_count,
+        std::size_t total_count,
+        bool search_active
+    ) {
+        std::wstring count;
+        if (!search_active) {
+            count =
+                std::to_wstring(
+                    static_cast<unsigned long long>(total_count)
+                ) + L" / " +
+                std::to_wstring(
+                    static_cast<unsigned long long>(maximum_user_presets)
+                );
+        } else if (language_ == ui_language::japanese) {
+            count =
+                std::to_wstring(
+                    static_cast<unsigned long long>(visible_count)
+                ) + L"件表示 / 全" +
+                std::to_wstring(
+                    static_cast<unsigned long long>(total_count)
+                ) + L"件";
+        } else {
+            count =
+                std::to_wstring(
+                    static_cast<unsigned long long>(visible_count)
+                ) + L" shown / " +
+                std::to_wstring(
+                    static_cast<unsigned long long>(total_count)
+                ) + L" total";
+        }
+
+        ::SetDlgItemTextW(m_hWnd, IDC_PM_COUNT, count.c_str());
+    }
+
+    void refresh_new_button() {
+        GetDlgItem(IDC_PM_NEW_CURRENT).EnableWindow(
+            presets_.size() < maximum_user_presets
+                ? TRUE
+                : FALSE
+        );
+    }
+
+    void refresh_move_buttons() {
+        const bool search_active =
+            search_edit_.GetWindowTextLengthW() > 0;
+        const int selected = selected_preset_index();
+
+        const bool can_move_up =
+            !search_active &&
+            selected > 0;
+
+        const bool can_move_down =
+            !search_active &&
+            selected >= 0 &&
+            static_cast<std::size_t>(selected + 1) <
+                presets_.size();
+
+        GetDlgItem(IDC_PM_MOVE_UP).EnableWindow(
+            can_move_up ? TRUE : FALSE
+        );
+        GetDlgItem(IDC_PM_MOVE_DOWN).EnableWindow(
+            can_move_down ? TRUE : FALSE
+        );
+    }
+
+    void refresh_delete_button() {
+        GetDlgItem(IDC_PM_DELETE).EnableWindow(
+            selected_preset_index() >= 0 ? TRUE : FALSE
+        );
+    }
+
+    void refresh_rename_button() {
+        GetDlgItem(IDC_PM_RENAME).EnableWindow(
+            selected_preset_index() >= 0 ? TRUE : FALSE
+        );
+    }
+
+    void refresh_duplicate_button() {
+        const bool can_duplicate =
+            selected_preset_index() >= 0 &&
+            presets_.size() < maximum_user_presets;
+
+        GetDlgItem(IDC_PM_DUPLICATE).EnableWindow(
+            can_duplicate ? TRUE : FALSE
+        );
+    }
+
+    void refresh_update_button() {
+        GetDlgItem(IDC_PM_UPDATE_CURRENT).EnableWindow(
+            selected_preset_index() >= 0 ? TRUE : FALSE
+        );
+    }
+
+    void refresh_apply_button() {
+        const int selected = selected_preset_index();
+        bool enable_apply = false;
+
+        if (selected >= 0) {
+            const auto& preset =
+                presets_[static_cast<std::size_t>(selected)];
+            enable_apply = !settings_match(
+                current_settings_,
+                preset.value
+            );
+        }
+
+        GetDlgItem(IDOK).EnableWindow(
+            enable_apply ? TRUE : FALSE
+        );
+    }
+
+    void refresh_list(int preferred_preset_index = -1) {
+        preset_list_.ResetContent();
+        visible_indices_.clear();
+        refresh_new_button();
+        refresh_update_button();
+        refresh_duplicate_button();
+        refresh_rename_button();
+        refresh_delete_button();
+        refresh_move_buttons();
+
+        const std::wstring query = search_text();
+        const bool search_active = !query.empty();
+
+        if (presets_.empty()) {
+            ::SendMessageW(
+                preset_list_,
+                LB_ADDSTRING,
+                0,
+                reinterpret_cast<LPARAM>(
+                    localized(
+                        language_,
+                        L"任意プリセットはありません",
+                        L"No user presets"
+                    )
+                )
+            );
+            preset_list_.SetCurSel(-1);
+            preset_list_.EnableWindow(FALSE);
+            update_count_text(0, 0, search_active);
+            refresh_preview();
+            refresh_apply_button();
+            refresh_update_button();
+            refresh_duplicate_button();
+            refresh_rename_button();
+            refresh_delete_button();
+            refresh_move_buttons();
+            notify_session_selection();
+            return;
+        }
+
+        int first_matching_row = -1;
+
+        for (std::size_t index = 0; index < presets_.size(); ++index) {
+            const user_preset& preset = presets_[index];
+            if (!name_matches_search(preset, query)) {
+                continue;
+            }
+
+            const bool match = settings_match(
+                current_settings_,
+                preset.value
+            );
+
+            const int row =
+                static_cast<int>(visible_indices_.size());
+            visible_indices_.push_back(index);
+
+            if (match && first_matching_row < 0) {
+                first_matching_row = row;
+            }
+
+            std::wstring display = match ? L"● " : L"   ";
+            display += preset_name_to_wide(preset.name.get_ptr());
+
+            ::SendMessageW(
+                preset_list_,
+                LB_ADDSTRING,
+                0,
+                reinterpret_cast<LPARAM>(display.c_str())
+            );
+        }
+
+        update_count_text(
+            visible_indices_.size(),
+            presets_.size(),
+            search_active
+        );
+
+        if (visible_indices_.empty()) {
+            ::SendMessageW(
+                preset_list_,
+                LB_ADDSTRING,
+                0,
+                reinterpret_cast<LPARAM>(
+                    localized(
+                        language_,
+                        L"一致するプリセットはありません",
+                        L"No matching presets"
+                    )
+                )
+            );
+            preset_list_.SetCurSel(-1);
+            preset_list_.EnableWindow(FALSE);
+            refresh_preview();
+            refresh_apply_button();
+            refresh_update_button();
+            refresh_duplicate_button();
+            refresh_rename_button();
+            refresh_delete_button();
+            refresh_move_buttons();
+            notify_session_selection();
+            return;
+        }
+
+        preset_list_.EnableWindow(TRUE);
+
+        int selected_row = -1;
+        if (preferred_preset_index >= 0) {
+            selected_row = row_for_preset_index(
+                static_cast<std::size_t>(preferred_preset_index)
+            );
+        }
+
+        if (selected_row < 0) {
+            selected_row =
+                first_matching_row >= 0 ? first_matching_row : 0;
+        }
+
+        preset_list_.SetCurSel(selected_row);
+        refresh_preview();
+        refresh_apply_button();
+        refresh_update_button();
+        refresh_duplicate_button();
+        refresh_rename_button();
+        refresh_delete_button();
+        refresh_move_buttons();
+        notify_session_selection();
+    }
+
+    void refresh_preview() {
+        const int selected = selected_preset_index();
+        if (selected < 0) {
+            ::SetDlgItemTextW(
+                m_hWnd,
+                IDC_PM_PREVIEW,
+                localized(
+                    language_,
+                    L"表示する任意プリセットがありません。",
+                    L"There is no user preset to preview."
+                )
+            );
+            return;
+        }
+
+        const user_preset& preset =
+            presets_[static_cast<std::size_t>(selected)];
+        const sonic_refiner::settings value =
+            sonic_refiner::sanitize(preset.value);
+
+        const wchar_t* on_text =
+            localized(language_, L"オン", L"On");
+        const wchar_t* off_text =
+            localized(language_, L"オフ", L"Off");
+
+        std::wostringstream text;
+        text << localized(language_, L"【音質補正】", L"[Tone]")
+             << L"\r\n";
+        text << L"Depth: "
+             << static_cast<int>(std::lround(value.depth))
+             << L"%\r\n";
+        text << L"Clarity: "
+             << static_cast<int>(std::lround(value.clarity))
+             << L"%\r\n";
+        text << L"Width: "
+             << static_cast<int>(std::lround(value.width))
+             << L"%\r\n";
+        text << L"Ambience: "
+             << static_cast<int>(std::lround(value.ambience))
+             << L"%\r\n";
+        text << L"Master Strength: "
+             << static_cast<int>(std::lround(value.master_strength))
+             << L"%\r\n\r\n";
+
+        text << localized(
+                    language_,
+                    L"【出力・保護】",
+                    L"[Output & Protection]"
+                )
+             << L"\r\n";
+        text << L"Output Gain: "
+             << std::showpos << std::fixed << std::setprecision(1)
+             << value.output_gain_db
+             << std::noshowpos << L" dB\r\n";
+        text << localized(
+                    language_,
+                    L"自動ヘッドルーム保護",
+                    L"Auto Headroom Protection"
+                )
+             << L": "
+             << (value.auto_headroom ? on_text : off_text)
+             << L"\r\n";
+        text << localized(
+                    language_,
+                    L"レベルマッチ・バイパス",
+                    L"Level-Matched Bypass"
+                )
+             << L": "
+             << (value.level_matched_bypass ? on_text : off_text)
+             << L"\r\n\r\n";
+
+        text << localized(language_, L"【動作】", L"[Operation]")
+             << L"\r\n";
+        text << L"Sonic Refiner: "
+             << (value.enabled ? on_text : off_text)
+             << L"\r\n";
+        text << L"Adaptive Tone Balance: "
+             << (value.adaptive_tone_balance ? on_text : off_text)
+             << L"\r\n";
+
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_PM_PREVIEW,
+            text.str().c_str()
+        );
+        ::SendDlgItemMessageW(
+            m_hWnd,
+            IDC_PM_PREVIEW,
+            EM_SETSEL,
+            0,
+            0
+        );
+    }
+
+    void notify_session_selection() {
+        if (!session_selection_callback_) {
+            return;
+        }
+
+        const int selected = selected_preset_index();
+        if (selected >= 0) {
+            session_selection_callback_(selected);
+            return;
+        }
+
+        if (presets_.empty()) {
+            session_selection_callback_(-1);
+        }
+    }
+
+    void on_selection_changed(UINT, int, CWindow) {
+        refresh_preview();
+        refresh_apply_button();
+        refresh_update_button();
+        refresh_duplicate_button();
+        refresh_rename_button();
+        refresh_delete_button();
+        refresh_move_buttons();
+        notify_session_selection();
+    }
+
+    void on_list_double_click(UINT, int, CWindow) {
+        if (
+            !::IsWindowEnabled(
+                GetDlgItem(IDOK)
+            )
+        ) {
+            return;
+        }
+
+        on_apply_button(
+            0,
+            0,
+            CWindow()
+        );
+    }
+
+    void on_search_changed(UINT, int, CWindow) {
+        if (suppress_search_change_) {
+            return;
+        }
+
+        const int preferred_preset_index = selected_preset_index();
+        refresh_list(preferred_preset_index);
+    }
+
+    void on_new_current_button(UINT, int, CWindow) {
+        if (presets_.size() >= maximum_user_presets) {
+            return;
+        }
+
+        preset_name_dialog dialog("", language_);
+        if (dialog.DoModal(m_hWnd) != IDOK) {
+            return;
+        }
+
+        const pfc::string8 name = dialog.result();
+        if (find_user_preset(
+                presets_,
+                name.get_ptr()
+            ) >= 0) {
+            const std::wstring wide_name =
+                preset_name_to_wide(name.get_ptr());
+
+            const std::wstring message =
+                is_english(language_)
+                    ? L"A user preset named “" + wide_name +
+                        L"” already exists."
+                    : L"「" + wide_name +
+                        L"」という任意プリセットは既に存在します。";
+
+            ::MessageBoxW(
+                m_hWnd,
+                message.c_str(),
+                L"Sonic Refiner",
+                MB_OK | MB_ICONINFORMATION
+            );
+            return;
+        }
+
+        user_preset preset;
+        preset.name = name;
+        preset.value = current_settings_;
+        presets_.push_back(preset);
+
+        const int new_index = static_cast<int>(
+            presets_.size() - 1
+        );
+
+        if (presets_changed_callback_) {
+            presets_changed_callback_(
+                presets_,
+                new_index
+            );
+        }
+
+        if (search_edit_.GetWindowTextLengthW() > 0) {
+            suppress_search_change_ = true;
+            search_edit_.SetWindowTextW(L"");
+            suppress_search_change_ = false;
+        }
+
+        refresh_list(new_index);
+        preset_list_.SetFocus();
+    }
+
+    void on_restore_button(UINT, int, CWindow) {
+        std::wstring path;
+
+        if (!choose_preset_restore_path(
+                m_hWnd,
+                language_,
+                path
+            )) {
+            return;
+        }
+
+        std::string backup;
+        if (!read_preset_backup_file(path, backup)) {
+            ::MessageBoxW(
+                m_hWnd,
+                localized(
+                    language_,
+                    L"プリセットのバックアップファイルを読み込めませんでした。",
+                    L"Could not read the preset backup file."
+                ),
+                L"Sonic Refiner",
+                MB_OK | MB_ICONERROR
+            );
+            return;
+        }
+
+        std::vector<user_preset> restored_presets;
+        if (!parse_preset_backup(
+                backup,
+                restored_presets
+            )) {
+            ::MessageBoxW(
+                m_hWnd,
+                localized(
+                    language_,
+                    L"有効なSonic Refinerプリセットバックアップではありません。",
+                    L"This is not a valid Sonic Refiner preset backup."
+                ),
+                L"Sonic Refiner",
+                MB_OK | MB_ICONERROR
+            );
+            return;
+        }
+
+        if (restored_presets.size() > maximum_user_presets) {
+            ::MessageBoxW(
+                m_hWnd,
+                localized(
+                    language_,
+                    L"バックアップに含まれる任意プリセット数が上限を超えています。",
+                    L"The backup contains more user presets than the supported limit."
+                ),
+                L"Sonic Refiner",
+                MB_OK | MB_ICONERROR
+            );
+            return;
+        }
+
+        const int answer = ::MessageBoxW(
+            m_hWnd,
+            localized(
+                language_,
+                L"現在の任意プリセット一覧を、選択したバックアップの内容で置き換えます。\r\n"
+                L"よろしいですか？",
+                L"Replace the current user-preset list with the selected backup?"
+            ),
+            localized(
+                language_,
+                L"任意プリセットを復元",
+                L"Restore User Presets"
+            ),
+            MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2
+        );
+        if (answer != IDYES) {
+            return;
+        }
+
+        presets_ = std::move(restored_presets);
+
+        const int selected_index =
+            presets_.empty() ? -1 : 0;
+
+        if (presets_changed_callback_) {
+            presets_changed_callback_(
+                presets_,
+                selected_index
+            );
+        }
+
+        if (search_edit_.GetWindowTextLengthW() > 0) {
+            suppress_search_change_ = true;
+            search_edit_.SetWindowTextW(L"");
+            suppress_search_change_ = false;
+        }
+
+        refresh_list(selected_index);
+
+        if (selected_index >= 0) {
+            preset_list_.SetFocus();
+        } else {
+            GetDlgItem(IDC_PM_NEW_CURRENT).SetFocus();
+        }
+
+        std::wstring message;
+        const std::size_t count = presets_.size();
+
+        if (is_english(language_)) {
+            message =
+                L"Restored " +
+                std::to_wstring(count) +
+                (count == 1
+                    ? L" user preset."
+                    : L" user presets.");
+        } else {
+            message =
+                std::to_wstring(count) +
+                L"件の任意プリセットを復元しました。";
+        }
+
+        ::MessageBoxW(
+            m_hWnd,
+            message.c_str(),
+            L"Sonic Refiner",
+            MB_OK | MB_ICONINFORMATION
+        );
+    }
+
+    void on_backup_button(UINT, int, CWindow) {
+        std::wstring path;
+
+        if (!choose_preset_backup_path(
+                m_hWnd,
+                language_,
+                path
+            )) {
+            return;
+        }
+
+        const std::string backup =
+            make_preset_backup(presets_);
+
+        if (!write_preset_backup_file(path, backup)) {
+            ::MessageBoxW(
+                m_hWnd,
+                localized(
+                    language_,
+                    L"プリセットのバックアップに失敗しました。",
+                    L"Could not create the preset backup."
+                ),
+                L"Sonic Refiner",
+                MB_OK | MB_ICONERROR
+            );
+            return;
+        }
+
+        std::wstring message;
+        const std::size_t count = presets_.size();
+
+        if (is_english(language_)) {
+            message =
+                L"Backed up " +
+                std::to_wstring(count) +
+                (count == 1
+                    ? L" user preset."
+                    : L" user presets.");
+        } else {
+            message =
+                std::to_wstring(count) +
+                L"件の任意プリセットをバックアップしました。";
+        }
+
+        ::MessageBoxW(
+            m_hWnd,
+            message.c_str(),
+            L"Sonic Refiner",
+            MB_OK | MB_ICONINFORMATION
+        );
+    }
+
+    void on_move_up_button(UINT, int, CWindow) {
+        if (search_edit_.GetWindowTextLengthW() > 0) {
+            return;
+        }
+
+        const int selected = selected_preset_index();
+        if (selected <= 0) {
+            return;
+        }
+
+        const std::size_t selected_index =
+            static_cast<std::size_t>(selected);
+        const std::size_t new_index =
+            selected_index - 1;
+
+        std::swap(
+            presets_[selected_index],
+            presets_[new_index]
+        );
+
+        if (presets_changed_callback_) {
+            presets_changed_callback_(
+                presets_,
+                static_cast<int>(new_index)
+            );
+        }
+
+        refresh_list(static_cast<int>(new_index));
+        preset_list_.SetFocus();
+    }
+
+    void on_move_down_button(UINT, int, CWindow) {
+        if (search_edit_.GetWindowTextLengthW() > 0) {
+            return;
+        }
+
+        const int selected = selected_preset_index();
+        if (selected < 0) {
+            return;
+        }
+
+        const std::size_t selected_index =
+            static_cast<std::size_t>(selected);
+        const std::size_t new_index =
+            selected_index + 1;
+
+        if (new_index >= presets_.size()) {
+            return;
+        }
+
+        std::swap(
+            presets_[selected_index],
+            presets_[new_index]
+        );
+
+        if (presets_changed_callback_) {
+            presets_changed_callback_(
+                presets_,
+                static_cast<int>(new_index)
+            );
+        }
+
+        refresh_list(static_cast<int>(new_index));
+        preset_list_.SetFocus();
+    }
+
+    void on_delete_button(UINT, int, CWindow) {
+        const int selected = selected_preset_index();
+        if (selected < 0) {
+            return;
+        }
+
+        const std::size_t selected_index =
+            static_cast<std::size_t>(selected);
+        const std::wstring preset_name =
+            preset_name_to_wide(
+                presets_[selected_index].name.get_ptr()
+            );
+
+        const std::wstring message =
+            is_english(language_)
+                ? L"Delete user preset “" +
+                    preset_name +
+                    L"”?"
+                : L"任意プリセット「" +
+                    preset_name +
+                    L"」を削除します。\r\n"
+                    L"よろしいですか？";
+
+        const int answer = ::MessageBoxW(
+            m_hWnd,
+            message.c_str(),
+            localized(
+                language_,
+                L"任意プリセットを削除",
+                L"Delete User Preset"
+            ),
+            MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2
+        );
+        if (answer != IDYES) {
+            return;
+        }
+
+        presets_.erase(
+            presets_.begin() +
+                static_cast<std::ptrdiff_t>(selected_index)
+        );
+
+        int next_index = -1;
+        if (!presets_.empty()) {
+            if (selected_index < presets_.size()) {
+                next_index =
+                    static_cast<int>(selected_index);
+            } else {
+                next_index =
+                    static_cast<int>(presets_.size() - 1);
+            }
+        }
+
+        if (presets_changed_callback_) {
+            presets_changed_callback_(
+                presets_,
+                next_index
+            );
+        }
+
+        if (search_edit_.GetWindowTextLengthW() > 0) {
+            suppress_search_change_ = true;
+            search_edit_.SetWindowTextW(L"");
+            suppress_search_change_ = false;
+        }
+
+        refresh_list(next_index);
+        if (next_index >= 0) {
+            preset_list_.SetFocus();
+        } else {
+            GetDlgItem(IDC_PM_NEW_CURRENT).SetFocus();
+        }
+    }
+
+    void on_rename_button(UINT, int, CWindow) {
+        const int selected = selected_preset_index();
+        if (selected < 0) {
+            return;
+        }
+
+        const std::size_t selected_index =
+            static_cast<std::size_t>(selected);
+        const char* current_name =
+            presets_[selected_index].name.get_ptr();
+
+        preset_name_dialog dialog(
+            current_name,
+            language_,
+            true
+        );
+
+        if (dialog.DoModal(m_hWnd) != IDOK) {
+            return;
+        }
+
+        const pfc::string8 name = dialog.result();
+        const int existing = find_user_preset(
+            presets_,
+            name.get_ptr()
+        );
+
+        if (existing >= 0 && existing != selected) {
+            ::MessageBoxW(
+                m_hWnd,
+                localized(
+                    language_,
+                    L"同じ名前の任意プリセットが既にあります。",
+                    L"A user preset with that name already exists."
+                ),
+                L"Sonic Refiner",
+                MB_OK | MB_ICONINFORMATION
+            );
+            return;
+        }
+
+        if (std::strcmp(
+                current_name,
+                name.get_ptr()
+            ) == 0) {
+            return;
+        }
+
+        presets_[selected_index].name = name;
+
+        if (presets_changed_callback_) {
+            presets_changed_callback_(
+                presets_,
+                selected
+            );
+        }
+
+        if (search_edit_.GetWindowTextLengthW() > 0) {
+            suppress_search_change_ = true;
+            search_edit_.SetWindowTextW(L"");
+            suppress_search_change_ = false;
+        }
+
+        refresh_list(selected);
+        preset_list_.SetFocus();
+    }
+
+    void on_duplicate_button(UINT, int, CWindow) {
+        const int selected = selected_preset_index();
+        if (selected < 0 ||
+            presets_.size() >= maximum_user_presets) {
+            return;
+        }
+
+        preset_name_dialog dialog("", language_);
+        if (dialog.DoModal(m_hWnd) != IDOK) {
+            return;
+        }
+
+        const pfc::string8 name = dialog.result();
+        if (find_user_preset(
+                presets_,
+                name.get_ptr()
+            ) >= 0) {
+            const std::wstring wide_name =
+                preset_name_to_wide(name.get_ptr());
+
+            const std::wstring message =
+                is_english(language_)
+                    ? L"A user preset named “" + wide_name +
+                        L"” already exists."
+                    : L"「" + wide_name +
+                        L"」という任意プリセットは既に存在します。";
+
+            ::MessageBoxW(
+                m_hWnd,
+                message.c_str(),
+                L"Sonic Refiner",
+                MB_OK | MB_ICONINFORMATION
+            );
+            return;
+        }
+
+        const std::size_t source_index =
+            static_cast<std::size_t>(selected);
+
+        user_preset duplicate = presets_[source_index];
+        duplicate.name = name;
+
+        const std::size_t insert_index = source_index + 1;
+        presets_.insert(
+            presets_.begin() +
+                static_cast<std::ptrdiff_t>(insert_index),
+            duplicate
+        );
+
+        const int new_index =
+            static_cast<int>(insert_index);
+
+        if (presets_changed_callback_) {
+            presets_changed_callback_(
+                presets_,
+                new_index
+            );
+        }
+
+        if (search_edit_.GetWindowTextLengthW() > 0) {
+            suppress_search_change_ = true;
+            search_edit_.SetWindowTextW(L"");
+            suppress_search_change_ = false;
+        }
+
+        refresh_list(new_index);
+        preset_list_.SetFocus();
+    }
+
+    void on_update_current_button(UINT, int, CWindow) {
+        const int selected = selected_preset_index();
+        if (selected < 0) {
+            return;
+        }
+
+        const std::size_t index =
+            static_cast<std::size_t>(selected);
+        const std::wstring preset_name =
+            preset_name_to_wide(
+                presets_[index].name.get_ptr()
+            );
+
+        const std::wstring message =
+            is_english(language_)
+                ? L"Overwrite the saved settings of user preset “" +
+                    preset_name +
+                    L"” with the current Sonic Refiner settings?"
+                : L"任意プリセット「" +
+                    preset_name +
+                    L"」の設定内容を現在のSonic Refiner設定で上書きします。\r\n"
+                    L"よろしいですか？";
+
+        const int answer = ::MessageBoxW(
+            m_hWnd,
+            message.c_str(),
+            localized(
+                language_,
+                L"現在の設定で上書き",
+                L"Update from Current"
+            ),
+            MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2
+        );
+        if (answer != IDYES) {
+            return;
+        }
+
+        presets_[index].value = current_settings_;
+
+        if (presets_changed_callback_) {
+            presets_changed_callback_(
+                presets_,
+                selected
+            );
+        }
+
+        refresh_list(selected);
+        preset_list_.SetFocus();
+    }
+
+    void on_apply_button(UINT, int, CWindow) {
+        const int selected = selected_preset_index();
+        if (selected < 0) {
+            return;
+        }
+
+        current_settings_ = sonic_refiner::sanitize(
+            presets_[static_cast<std::size_t>(selected)].value
+        );
+
+        if (apply_callback_) {
+            apply_callback_(current_settings_);
+        }
+
+        refresh_list(selected);
+    }
+
+    void on_close_button(UINT, int, CWindow) {
+        save_current_window_size();
+        save_current_split_ratio();
+        EndDialog(IDCANCEL);
+    }
+
+    LRESULT on_context_menu(
+        UINT,
+        WPARAM wparam,
+        LPARAM lparam,
+        BOOL& handled
+    ) {
+        const HWND source =
+            reinterpret_cast<HWND>(wparam);
+
+        if (source != preset_list_.m_hWnd) {
+            handled = FALSE;
+            return 0;
+        }
+
+        if (visible_indices_.empty()) {
+            return 0;
+        }
+
+        int selected_row = -1;
+        POINT menu_point = {};
+
+        const bool keyboard_invocation =
+            static_cast<short>(LOWORD(lparam)) == -1 &&
+            static_cast<short>(HIWORD(lparam)) == -1;
+
+        if (keyboard_invocation) {
+            selected_row = preset_list_.GetCurSel();
+            if (
+                selected_row < 0 ||
+                static_cast<std::size_t>(selected_row) >=
+                    visible_indices_.size()
+            ) {
+                return 0;
+            }
+
+            RECT item_rect = {};
+            if (
+                ::SendMessageW(
+                    preset_list_,
+                    LB_GETITEMRECT,
+                    static_cast<WPARAM>(selected_row),
+                    reinterpret_cast<LPARAM>(&item_rect)
+                ) == LB_ERR
+            ) {
+                return 0;
+            }
+
+            menu_point.x =
+                item_rect.left +
+                (item_rect.right - item_rect.left) / 2;
+            menu_point.y =
+                item_rect.top +
+                (item_rect.bottom - item_rect.top) / 2;
+
+            ::ClientToScreen(
+                preset_list_,
+                &menu_point
+            );
+        } else {
+            menu_point.x =
+                static_cast<int>(
+                    static_cast<short>(LOWORD(lparam))
+                );
+            menu_point.y =
+                static_cast<int>(
+                    static_cast<short>(HIWORD(lparam))
+                );
+
+            POINT client_point = menu_point;
+            ::ScreenToClient(
+                preset_list_,
+                &client_point
+            );
+
+            RECT client_rect = {};
+            ::GetClientRect(
+                preset_list_,
+                &client_rect
+            );
+
+            if (!::PtInRect(
+                    &client_rect,
+                    client_point
+                )) {
+                return 0;
+            }
+
+            const DWORD item_result =
+                static_cast<DWORD>(
+                    ::SendMessageW(
+                        preset_list_,
+                        LB_ITEMFROMPOINT,
+                        0,
+                        MAKELPARAM(
+                            client_point.x,
+                            client_point.y
+                        )
+                    )
+                );
+
+            selected_row =
+                static_cast<int>(LOWORD(item_result));
+
+            if (
+                HIWORD(item_result) != 0 ||
+                selected_row < 0 ||
+                static_cast<std::size_t>(selected_row) >=
+                    visible_indices_.size()
+            ) {
+                return 0;
+            }
+
+            RECT item_rect = {};
+            if (
+                ::SendMessageW(
+                    preset_list_,
+                    LB_GETITEMRECT,
+                    static_cast<WPARAM>(selected_row),
+                    reinterpret_cast<LPARAM>(&item_rect)
+                ) == LB_ERR ||
+                !::PtInRect(
+                    &item_rect,
+                    client_point
+                )
+            ) {
+                return 0;
+            }
+
+            preset_list_.SetCurSel(selected_row);
+            on_selection_changed(0, 0, CWindow());
+        }
+
+        const int selected_index =
+            selected_preset_index();
+        if (selected_index < 0) {
+            return 0;
+        }
+
+        HMENU menu = ::CreatePopupMenu();
+        if (menu == nullptr) {
+            return 0;
+        }
+
+        const bool can_apply =
+            ::IsWindowEnabled(GetDlgItem(IDOK)) != FALSE;
+        const bool can_duplicate =
+            ::IsWindowEnabled(
+                GetDlgItem(IDC_PM_DUPLICATE)
+            ) != FALSE;
+        const bool can_rename =
+            ::IsWindowEnabled(
+                GetDlgItem(IDC_PM_RENAME)
+            ) != FALSE;
+        const bool can_update =
+            ::IsWindowEnabled(
+                GetDlgItem(IDC_PM_UPDATE_CURRENT)
+            ) != FALSE;
+        const bool can_delete =
+            ::IsWindowEnabled(
+                GetDlgItem(IDC_PM_DELETE)
+            ) != FALSE;
+
+        const auto menu_flags = [](bool enabled) -> UINT {
+            return MF_STRING |
+                (enabled ? MF_ENABLED : MF_GRAYED);
+        };
+
+        ::AppendMenuW(
+            menu,
+            menu_flags(can_apply),
+            IDOK,
+            localized(language_, L"適用", L"Apply")
+        );
+        ::AppendMenuW(
+            menu,
+            menu_flags(can_duplicate),
+            IDC_PM_DUPLICATE,
+            localized(language_, L"複製...", L"Duplicate...")
+        );
+        ::AppendMenuW(
+            menu,
+            menu_flags(can_rename),
+            IDC_PM_RENAME,
+            localized(language_, L"名前変更...", L"Rename...")
+        );
+        ::AppendMenuW(
+            menu,
+            menu_flags(can_update),
+            IDC_PM_UPDATE_CURRENT,
+            localized(
+                language_,
+                L"現在の設定で上書き...",
+                L"Update from Current..."
+            )
+        );
+        ::AppendMenuW(
+            menu,
+            menu_flags(can_delete),
+            IDC_PM_DELETE,
+            localized(language_, L"削除...", L"Delete...")
+        );
+
+        const UINT command =
+            ::TrackPopupMenu(
+                menu,
+                TPM_RIGHTBUTTON |
+                    TPM_RETURNCMD |
+                    TPM_NONOTIFY,
+                menu_point.x,
+                menu_point.y,
+                0,
+                m_hWnd,
+                nullptr
+            );
+
+        ::DestroyMenu(menu);
+
+        if (command != 0) {
+            ::SendMessageW(
+                m_hWnd,
+                WM_COMMAND,
+                MAKEWPARAM(command, BN_CLICKED),
+                reinterpret_cast<LPARAM>(
+                    ::GetDlgItem(
+                        m_hWnd,
+                        static_cast<int>(command)
+                    )
+                )
+            );
+        }
+
+        return 0;
+    }
+
+    LRESULT on_drag_reorder(
+        UINT,
+        WPARAM wparam,
+        LPARAM lparam,
+        BOOL&
+    ) {
+        if (search_edit_.GetWindowTextLengthW() > 0) {
+            return 0;
+        }
+
+        const int source_row =
+            static_cast<int>(wparam);
+        const int target_row =
+            static_cast<int>(lparam);
+
+        if (
+            source_row < 0 ||
+            target_row < 0 ||
+            static_cast<std::size_t>(source_row) >=
+                visible_indices_.size() ||
+            static_cast<std::size_t>(target_row) >=
+                visible_indices_.size()
+        ) {
+            return 0;
+        }
+
+        const std::size_t source_index =
+            visible_indices_[
+                static_cast<std::size_t>(source_row)
+            ];
+        const std::size_t target_index =
+            visible_indices_[
+                static_cast<std::size_t>(target_row)
+            ];
+
+        if (
+            source_index >= presets_.size() ||
+            target_index >= presets_.size() ||
+            source_index == target_index
+        ) {
+            return 0;
+        }
+
+        const user_preset moved =
+            presets_[source_index];
+
+        presets_.erase(
+            presets_.begin() +
+                static_cast<std::ptrdiff_t>(source_index)
+        );
+
+        presets_.insert(
+            presets_.begin() +
+                static_cast<std::ptrdiff_t>(target_index),
+            moved
+        );
+
+        if (presets_changed_callback_) {
+            presets_changed_callback_(
+                presets_,
+                static_cast<int>(target_index)
+            );
+        }
+
+        refresh_list(
+            static_cast<int>(target_index)
+        );
+        preset_list_.SetFocus();
+        return 0;
+    }
+
+    LRESULT on_close_message(
+        UINT,
+        WPARAM,
+        LPARAM,
+        BOOL&
+    ) {
+        save_current_window_size();
+        save_current_split_ratio();
+        EndDialog(IDCANCEL);
+        return 0;
+    }
+
+    SIZE minimum_window_size() const noexcept {
+        RECT minimum = { 0, 0, 640, 400 };
+        ::MapDialogRect(m_hWnd, &minimum);
+
+        const DWORD style = static_cast<DWORD>(
+            ::GetWindowLongPtrW(m_hWnd, GWL_STYLE)
+        );
+        const DWORD ex_style = static_cast<DWORD>(
+            ::GetWindowLongPtrW(m_hWnd, GWL_EXSTYLE)
+        );
+
+        ::AdjustWindowRectEx(
+            &minimum,
+            style,
+            FALSE,
+            ex_style
+        );
+
+        SIZE result = {};
+        result.cx = minimum.right - minimum.left;
+        result.cy = minimum.bottom - minimum.top;
+        return result;
+    }
+
+    void restore_saved_window_size() {
+        int saved_width = 0;
+        int saved_height = 0;
+
+        if (
+            !load_preset_manager_window_size(
+                saved_width,
+                saved_height
+            )
+        ) {
+            return;
+        }
+
+        const SIZE minimum = minimum_window_size();
+        saved_width = (std::max)(
+            saved_width,
+            static_cast<int>(minimum.cx)
+        );
+        saved_height = (std::max)(
+            saved_height,
+            static_cast<int>(minimum.cy)
+        );
+
+        ::SetWindowPos(
+            m_hWnd,
+            nullptr,
+            0,
+            0,
+            saved_width,
+            saved_height,
+            SWP_NOMOVE |
+                SWP_NOZORDER |
+                SWP_NOACTIVATE
+        );
+    }
+
+    void save_current_window_size() const {
+        if (!::IsWindow(m_hWnd)) {
+            return;
+        }
+
+        RECT window = {};
+        if (!::GetWindowRect(m_hWnd, &window)) {
+            return;
+        }
+
+        save_preset_manager_window_size(
+            window.right - window.left,
+            window.bottom - window.top
+        );
+    }
+
+    static constexpr int default_split_ratio_basis_points_ =
+        4000;
+    static constexpr int split_ratio_scale_ = 10000;
+    static constexpr int minimum_left_pane_width_ = 220;
+    static constexpr int minimum_right_pane_width_ = 300;
+    static constexpr int layout_margin_ = 12;
+    static constexpr int layout_gap_ = 10;
+    static constexpr int layout_bottom_area_ = 78;
+
+    void restore_saved_split_ratio() noexcept {
+        int saved_ratio = 0;
+        if (
+            load_preset_manager_split_ratio(
+                saved_ratio
+            )
+        ) {
+            split_ratio_basis_points_ = saved_ratio;
+        }
+    }
+
+    void save_current_split_ratio() const {
+        save_preset_manager_split_ratio(
+            split_ratio_basis_points_
+        );
+    }
+
+    int pane_available_width(int client_width) const noexcept {
+        return (std::max)(
+            0,
+            client_width -
+                (layout_margin_ * 2) -
+                layout_gap_
+        );
+    }
+
+    int calculate_left_pane_width(
+        int available_width
+    ) const noexcept {
+        if (available_width <= 0) {
+            return 0;
+        }
+
+        const long long scaled =
+            static_cast<long long>(available_width) *
+            static_cast<long long>(split_ratio_basis_points_);
+
+        int desired = static_cast<int>(
+            (
+                scaled +
+                (split_ratio_scale_ / 2)
+            ) /
+            split_ratio_scale_
+        );
+
+        const int maximum_left =
+            available_width - minimum_right_pane_width_;
+
+        if (maximum_left <= minimum_left_pane_width_) {
+            return (std::max)(
+                0,
+                maximum_left
+            );
+        }
+
+        desired = (std::max)(
+            minimum_left_pane_width_,
+            desired
+        );
+        desired = (std::min)(
+            maximum_left,
+            desired
+        );
+        return desired;
+    }
+
+    RECT splitter_hit_rect() const noexcept {
+        RECT client = {};
+        ::GetClientRect(m_hWnd, &client);
+
+        const int width =
+            client.right - client.left;
+        const int height =
+            client.bottom - client.top;
+        const int available_width =
+            pane_available_width(width);
+        const int left_width =
+            calculate_left_pane_width(
+                available_width
+            );
+
+        RECT result = {};
+        result.left =
+            layout_margin_ + left_width;
+        result.right =
+            result.left + layout_gap_;
+        result.top = layout_margin_;
+        result.bottom =
+            height - layout_bottom_area_;
+
+        if (result.bottom < result.top) {
+            result.bottom = result.top;
+        }
+
+        return result;
+    }
+
+    bool point_is_on_splitter(
+        POINT point
+    ) const noexcept {
+        const RECT splitter =
+            splitter_hit_rect();
+        return ::PtInRect(
+            &splitter,
+            point
+        ) != FALSE;
+    }
+
+    void update_split_ratio_from_client_x(
+        int x
+    ) {
+        RECT client = {};
+        ::GetClientRect(m_hWnd, &client);
+
+        const int width =
+            client.right - client.left;
+        const int available_width =
+            pane_available_width(width);
+        if (available_width <= 0) {
+            return;
+        }
+
+        int desired_left =
+            x -
+            layout_margin_ -
+            (layout_gap_ / 2);
+
+        const int maximum_left =
+            available_width -
+            minimum_right_pane_width_;
+
+        if (maximum_left <= minimum_left_pane_width_) {
+            return;
+        }
+
+        desired_left = (std::max)(
+            minimum_left_pane_width_,
+            desired_left
+        );
+        desired_left = (std::min)(
+            maximum_left,
+            desired_left
+        );
+
+        const long long scaled =
+            static_cast<long long>(desired_left) *
+            split_ratio_scale_;
+
+        split_ratio_basis_points_ =
+            static_cast<int>(
+                (
+                    scaled +
+                    (available_width / 2)
+                ) /
+                available_width
+            );
+
+        split_ratio_basis_points_ =
+            (std::max)(
+                1,
+                split_ratio_basis_points_
+            );
+        split_ratio_basis_points_ =
+            (std::min)(
+                split_ratio_scale_ - 1,
+                split_ratio_basis_points_
+            );
+
+        layout_controls();
+    }
+
+    LRESULT on_set_cursor(
+        UINT,
+        WPARAM,
+        LPARAM,
+        BOOL& handled
+    ) {
+        POINT point = {};
+        if (!::GetCursorPos(&point)) {
+            handled = FALSE;
+            return 0;
+        }
+
+        ::ScreenToClient(
+            m_hWnd,
+            &point
+        );
+
+        if (
+            splitter_drag_active_ ||
+            point_is_on_splitter(point)
+        ) {
+            ::SetCursor(
+                ::LoadCursorW(
+                    nullptr,
+                    IDC_SIZEWE
+                )
+            );
+            return TRUE;
+        }
+
+        handled = FALSE;
+        return 0;
+    }
+
+    LRESULT on_splitter_lbutton_down(
+        UINT,
+        WPARAM,
+        LPARAM lParam,
+        BOOL& handled
+    ) {
+        POINT point = {
+            static_cast<short>(LOWORD(lParam)),
+            static_cast<short>(HIWORD(lParam))
+        };
+
+        if (!point_is_on_splitter(point)) {
+            handled = FALSE;
+            return 0;
+        }
+
+        splitter_drag_active_ = true;
+        ::SetCapture(m_hWnd);
+        update_split_ratio_from_client_x(
+            point.x
+        );
+        return 0;
+    }
+
+    LRESULT on_splitter_mouse_move(
+        UINT,
+        WPARAM,
+        LPARAM lParam,
+        BOOL& handled
+    ) {
+        if (!splitter_drag_active_) {
+            handled = FALSE;
+            return 0;
+        }
+
+        const int x =
+            static_cast<short>(
+                LOWORD(lParam)
+            );
+        update_split_ratio_from_client_x(x);
+        return 0;
+    }
+
+    LRESULT on_splitter_lbutton_up(
+        UINT,
+        WPARAM,
+        LPARAM lParam,
+        BOOL& handled
+    ) {
+        if (!splitter_drag_active_) {
+            handled = FALSE;
+            return 0;
+        }
+
+        const int x =
+            static_cast<short>(
+                LOWORD(lParam)
+            );
+        update_split_ratio_from_client_x(x);
+
+        splitter_drag_active_ = false;
+
+        if (::GetCapture() == m_hWnd) {
+            ::ReleaseCapture();
+        }
+
+        save_current_split_ratio();
+        return 0;
+    }
+
+    LRESULT on_capture_changed(
+        UINT,
+        WPARAM,
+        LPARAM,
+        BOOL&
+    ) {
+        if (splitter_drag_active_) {
+            splitter_drag_active_ = false;
+            save_current_split_ratio();
+        }
+        return 0;
+    }
+
+    LRESULT on_get_min_max_info(
+        UINT,
+        WPARAM,
+        LPARAM lParam,
+        BOOL&
+    ) {
+        auto* info = reinterpret_cast<MINMAXINFO*>(lParam);
+        if (info == nullptr) {
+            return 0;
+        }
+
+        const SIZE minimum = minimum_window_size();
+        info->ptMinTrackSize.x = minimum.cx;
+        info->ptMinTrackSize.y = minimum.cy;
+        return 0;
+    }
+
+    LRESULT on_size(
+        UINT,
+        WPARAM,
+        LPARAM,
+        BOOL&
+    ) {
+        if (::IsWindow(GetDlgItem(IDC_PM_LIST)) &&
+            ::IsWindow(GetDlgItem(IDC_PM_PREVIEW))) {
+            layout_controls();
+        }
+        return 0;
+    }
+
+    void layout_controls() {
+        RECT client = {};
+        GetClientRect(&client);
+        const int width = client.right - client.left;
+        const int height = client.bottom - client.top;
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+
+        const int margin = layout_margin_;
+        const int gap = layout_gap_;
+        const int bottom_area = layout_bottom_area_;
+        const int group_top = margin;
+        const int group_bottom = height - bottom_area;
+        const int available_width =
+            pane_available_width(width);
+        const int adjusted_left_width =
+            calculate_left_pane_width(
+                available_width
+            );
+        const int right_width =
+            available_width -
+            adjusted_left_width;
+        const int right_x =
+            margin +
+            adjusted_left_width +
+            gap;
+        const int group_height = group_bottom - group_top;
+
+        ::SetWindowPos(
+            GetDlgItem(IDC_PM_GROUP_LIST),
+            nullptr,
+            margin,
+            group_top,
+            adjusted_left_width,
+            group_height,
+            SWP_NOZORDER | SWP_NOACTIVATE
+        );
+        ::SetWindowPos(
+            GetDlgItem(IDC_PM_SEARCH_LABEL),
+            nullptr,
+            margin + 10,
+            group_top + 22,
+            adjusted_left_width - 20,
+            16,
+            SWP_NOZORDER | SWP_NOACTIVATE
+        );
+        ::SetWindowPos(
+            GetDlgItem(IDC_PM_SEARCH),
+            nullptr,
+            margin + 10,
+            group_top + 40,
+            adjusted_left_width - 20,
+            22,
+            SWP_NOZORDER | SWP_NOACTIVATE
+        );
+        ::SetWindowPos(
+            GetDlgItem(IDC_PM_LIST),
+            nullptr,
+            margin + 10,
+            group_top + 70,
+            adjusted_left_width - 20,
+            (std::max)(80, group_height - 136),
+            SWP_NOZORDER | SWP_NOACTIVATE
+        );
+
+        const int move_button_width = 34;
+        const int move_button_height = 24;
+        const int move_button_gap = 6;
+        const int move_down_x =
+            margin + adjusted_left_width - 10 - move_button_width;
+        const int move_up_x =
+            move_down_x - move_button_gap - move_button_width;
+        const int move_button_y =
+            group_top + group_height - 58;
+
+        ::SetWindowPos(
+            GetDlgItem(IDC_PM_MOVE_UP),
+            nullptr,
+            move_up_x,
+            move_button_y,
+            move_button_width,
+            move_button_height,
+            SWP_NOZORDER | SWP_NOACTIVATE
+        );
+        ::SetWindowPos(
+            GetDlgItem(IDC_PM_MOVE_DOWN),
+            nullptr,
+            move_down_x,
+            move_button_y,
+            move_button_width,
+            move_button_height,
+            SWP_NOZORDER | SWP_NOACTIVATE
+        );
+        ::SetWindowPos(
+            GetDlgItem(IDC_PM_COUNT),
+            nullptr,
+            margin + 10,
+            group_top + group_height - 26,
+            adjusted_left_width - 20,
+            16,
+            SWP_NOZORDER | SWP_NOACTIVATE
+        );
+
+        ::SetWindowPos(
+            GetDlgItem(IDC_PM_GROUP_PREVIEW),
+            nullptr,
+            right_x,
+            group_top,
+            right_width,
+            group_height,
+            SWP_NOZORDER | SWP_NOACTIVATE
+        );
+        ::SetWindowPos(
+            GetDlgItem(IDC_PM_PREVIEW),
+            nullptr,
+            right_x + 10,
+            group_top + 24,
+            right_width - 20,
+            (std::max)(90, group_height - 36),
+            SWP_NOZORDER | SWP_NOACTIVATE
+        );
+
+        const int button_width = 88;
+        const int button_height = 26;
+        const int button_gap = 8;
+        const int new_button_width = 112;
+        const int update_button_width = 145;
+        const int duplicate_button_width = 82;
+        const int rename_button_width = 82;
+        const int delete_button_width = 72;
+        const int backup_button_width = 112;
+        const int restore_button_width = 96;
+        const int close_x = width - margin - button_width;
+        const int apply_x = close_x - button_gap - button_width;
+        const int top_button_y =
+            height - margin - (button_height * 2) - button_gap;
+        const int bottom_button_y =
+            height - margin - button_height;
+
+        ::SetWindowPos(
+            GetDlgItem(IDC_PM_NEW_CURRENT),
+            nullptr,
+            margin,
+            top_button_y,
+            new_button_width,
+            button_height,
+            SWP_NOZORDER | SWP_NOACTIVATE
+        );
+        ::SetWindowPos(
+            GetDlgItem(IDC_PM_UPDATE_CURRENT),
+            nullptr,
+            margin + new_button_width + button_gap,
+            top_button_y,
+            update_button_width,
+            button_height,
+            SWP_NOZORDER | SWP_NOACTIVATE
+        );
+        ::SetWindowPos(
+            GetDlgItem(IDC_PM_DUPLICATE),
+            nullptr,
+            margin + new_button_width + button_gap +
+                update_button_width + button_gap,
+            top_button_y,
+            duplicate_button_width,
+            button_height,
+            SWP_NOZORDER | SWP_NOACTIVATE
+        );
+        ::SetWindowPos(
+            GetDlgItem(IDC_PM_RENAME),
+            nullptr,
+            margin + new_button_width + button_gap +
+                update_button_width + button_gap +
+                duplicate_button_width + button_gap,
+            top_button_y,
+            rename_button_width,
+            button_height,
+            SWP_NOZORDER | SWP_NOACTIVATE
+        );
+        ::SetWindowPos(
+            GetDlgItem(IDC_PM_DELETE),
+            nullptr,
+            margin + new_button_width + button_gap +
+                update_button_width + button_gap +
+                duplicate_button_width + button_gap +
+                rename_button_width + button_gap,
+            top_button_y,
+            delete_button_width,
+            button_height,
+            SWP_NOZORDER | SWP_NOACTIVATE
+        );
+        ::SetWindowPos(
+            GetDlgItem(IDC_PM_BACKUP),
+            nullptr,
+            margin,
+            bottom_button_y,
+            backup_button_width,
+            button_height,
+            SWP_NOZORDER | SWP_NOACTIVATE
+        );
+        ::SetWindowPos(
+            GetDlgItem(IDC_PM_RESTORE),
+            nullptr,
+            margin + backup_button_width + button_gap,
+            bottom_button_y,
+            restore_button_width,
+            button_height,
+            SWP_NOZORDER | SWP_NOACTIVATE
+        );
+
+        ::SetWindowPos(
+            GetDlgItem(IDOK),
+            nullptr,
+            apply_x,
+            bottom_button_y,
+            button_width,
+            button_height,
+            SWP_NOZORDER | SWP_NOACTIVATE
+        );
+        ::SetWindowPos(
+            GetDlgItem(IDCANCEL),
+            nullptr,
+            close_x,
+            bottom_button_y,
+            button_width,
+            button_height,
+            SWP_NOZORDER | SWP_NOACTIVATE
+        );
+    }
+
+    std::vector<user_preset> presets_;
+    sonic_refiner::settings current_settings_;
+    ui_language language_ = ui_language::english;
+    CEdit search_edit_;
+    CListBox preset_list_;
+    CEdit preview_edit_;
+    std::vector<std::size_t> visible_indices_;
+    int initial_selected_preset_index_ = -1;
+    std::function<void(const sonic_refiner::settings&)> apply_callback_;
+    std::function<void(
+        const std::vector<user_preset>&,
+        int
+    )> presets_changed_callback_;
+    std::function<void(int)> session_selection_callback_;
+    int split_ratio_basis_points_ =
+        default_split_ratio_basis_points_;
+    bool splitter_drag_active_ = false;
+    bool suppress_search_change_ = false;
+    fb2k::CDarkModeHooks dark_mode_;
+};
+
 class sonic_refiner_dialog final :
     public CDialogImpl<sonic_refiner_dialog> {
 public:
@@ -5966,14 +9096,9 @@ public:
             on_preset_delete
         )
         COMMAND_HANDLER_EX(
-            IDC_PRESET_EXPORT,
+            IDC_PRESET_MANAGER,
             BN_CLICKED,
-            on_preset_export
-        )
-        COMMAND_HANDLER_EX(
-            IDC_PRESET_IMPORT,
-            BN_CLICKED,
-            on_preset_import
+            on_preset_manager
         )
         COMMAND_HANDLER_EX(
             IDC_PRESET_COMBO,
@@ -6179,7 +9304,7 @@ private:
 
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - 0.6.5"
+            L"Sonic Refiner - 0.7.0"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -6339,13 +9464,12 @@ private:
         );
         ::SetDlgItemTextW(
             m_hWnd,
-            IDC_PRESET_EXPORT,
-            localized(language_, L"書出...", L"Export...")
-        );
-        ::SetDlgItemTextW(
-            m_hWnd,
-            IDC_PRESET_IMPORT,
-            localized(language_, L"読込...", L"Import...")
+            IDC_PRESET_MANAGER,
+            localized(
+                language_,
+                L"プリセット管理...",
+                L"Preset Manager..."
+            )
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -6613,9 +9737,6 @@ private:
         GetDlgItem(IDC_PRESET_DELETE).EnableWindow(selected);
         GetDlgItem(IDC_PRESET_MOVE_UP).EnableWindow(can_move_up);
         GetDlgItem(IDC_PRESET_MOVE_DOWN).EnableWindow(can_move_down);
-        GetDlgItem(IDC_PRESET_EXPORT).EnableWindow(
-            user_presets_.empty() ? FALSE : TRUE
-        );
     }
 
     enum class comparison_state {
@@ -7167,6 +10288,84 @@ private:
         }
 
         refresh_preset_combo(next_selection);
+    }
+
+    int preset_manager_initial_selection() const noexcept {
+        if (!preset_manager_session_selection_valid_) {
+            return -1;
+        }
+
+        const int by_name = find_user_preset(
+            user_presets_,
+            preset_manager_session_selected_name_.get_ptr()
+        );
+        if (by_name >= 0) {
+            return by_name;
+        }
+
+        if (
+            preset_manager_session_selected_index_ >= 0 &&
+            static_cast<std::size_t>(
+                preset_manager_session_selected_index_
+            ) < user_presets_.size()
+        ) {
+            return preset_manager_session_selected_index_;
+        }
+
+        return -1;
+    }
+
+    void remember_preset_manager_selection(int selected_index) {
+        if (
+            selected_index >= 0 &&
+            static_cast<std::size_t>(selected_index) <
+                user_presets_.size()
+        ) {
+            preset_manager_session_selected_name_ =
+                user_presets_[
+                    static_cast<std::size_t>(selected_index)
+                ].name;
+            preset_manager_session_selected_index_ =
+                selected_index;
+            preset_manager_session_selection_valid_ = true;
+            return;
+        }
+
+        if (user_presets_.empty()) {
+            preset_manager_session_selected_name_ = "";
+            preset_manager_session_selected_index_ = -1;
+            preset_manager_session_selection_valid_ = false;
+        }
+    }
+
+    void on_preset_manager(UINT, int, CWindow) {
+        sonic_refiner_preset_manager_dialog dialog(
+            user_presets_,
+            settings_,
+            language_,
+            preset_manager_initial_selection(),
+            [this](const sonic_refiner::settings& applied) {
+                settings_ = sonic_refiner::sanitize(applied);
+                apply_settings_to_controls();
+                sync_builtin_preset_selection_to_settings();
+                notify_changed();
+                refresh_labels();
+            },
+            [this](
+                const std::vector<user_preset>& presets,
+                int selected_index
+            ) {
+                user_presets_ = presets;
+                save_user_presets(user_presets_);
+                refresh_preset_combo(selected_index);
+            },
+            [this](int selected_index) {
+                remember_preset_manager_selection(
+                    selected_index
+                );
+            }
+        );
+        dialog.DoModal(m_hWnd);
     }
 
     void on_preset_export(UINT, int, CWindow) {
@@ -8115,8 +11314,8 @@ private:
                 IDC_AMBIENCE_SLIDER, IDC_AMBIENCE_VALUE,
                 IDC_BUILTIN_PRESET_COMBO, IDC_BUILTIN_PRESET_LOAD,
                 IDC_PRESET_COMBO, IDC_PRESET_SAVE, IDC_PRESET_LOAD,
-                IDC_PRESET_DELETE, IDC_PRESET_EXPORT, IDC_PRESET_IMPORT,
-                IDC_PRESET_MOVE_UP, IDC_PRESET_MOVE_DOWN,
+                IDC_PRESET_DELETE,
+                IDC_PRESET_MOVE_UP, IDC_PRESET_MOVE_DOWN, IDC_PRESET_MANAGER,
                 IDC_AB_STORE_A, IDC_AB_LISTEN_A,
                 IDC_AB_STORE_B, IDC_AB_LISTEN_B, IDC_AB_END,
                 IDC_MASTER_STRENGTH_SLIDER, IDC_MASTER_STRENGTH_VALUE,
@@ -8145,6 +11344,9 @@ private:
     dsp_preset_edit_callback& callback_;
     sonic_refiner::settings settings_;
     std::vector<user_preset> user_presets_;
+    pfc::string8 preset_manager_session_selected_name_;
+    int preset_manager_session_selected_index_ = -1;
+    bool preset_manager_session_selection_valid_ = false;
     comparison_state comparison_state_ = comparison_state::none;
     bool comparison_start_valid_ = false;
     sonic_refiner::settings comparison_start_settings_;

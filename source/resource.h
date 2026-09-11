@@ -3,6 +3,7 @@
 #define IDD_SONIC_REFINER              101
 #define IDD_PRESET_NAME                102
 #define IDD_INFORMATION                103
+#define IDD_PRESET_MANAGER             104
 
 #define IDC_ENABLE                     1001
 #define IDC_DEPTH_SLIDER               1002
@@ -73,3 +74,21 @@
 #define IDC_PRESET_RENAME                1064
 #define IDC_PRESET_MOVE_UP               1065
 #define IDC_PRESET_MOVE_DOWN             1066
+#define IDC_PRESET_MANAGER               1067
+
+#define IDC_PM_GROUP_LIST                1101
+#define IDC_PM_LIST                      1102
+#define IDC_PM_COUNT                     1103
+#define IDC_PM_GROUP_PREVIEW             1104
+#define IDC_PM_PREVIEW                   1105
+#define IDC_PM_SEARCH_LABEL              1106
+#define IDC_PM_SEARCH                    1107
+#define IDC_PM_NEW_CURRENT               1108
+#define IDC_PM_UPDATE_CURRENT            1109
+#define IDC_PM_DUPLICATE                 1110
+#define IDC_PM_RENAME                    1111
+#define IDC_PM_DELETE                    1112
+#define IDC_PM_BACKUP                    1113
+#define IDC_PM_RESTORE                   1114
+#define IDC_PM_MOVE_UP                   1115
+#define IDC_PM_MOVE_DOWN                 1116
