@@ -1,5 +1,44 @@
 # Changelog
 
+## [0.8.3] - 2026-10-04
+
+### Changed
+
+- Formalized the validated v0.8.3-dev.2 display-language update.
+- Added explicit Automatic (Windows) mode alongside Japanese and English.
+- New installations default to Automatic; existing saved manual `ja` / `en` choices are preserved.
+- Standardized the settings label as `Display language` / `表示言語` and adjusted the layout so the English label is not clipped.
+- Language preference remains separate from DSP presets.
+
+### Validation / Compatibility
+
+- Automatic (Windows), Japanese, and English switching, restart retention, and built-in-preset independence were validated on v0.8.3-dev.2.
+- One-track playback check passed without audio-processing regressions.
+- Validated dev component SHA-256: `b67ac81a8bd9b04b9cc5b6c9b44b80a18343216354a1afcbf0cc8ff331fcce9c`.
+- DSP processing, built-in preset values, SRP5, `preset_version 10`, `.srpbackup`, ATB, Reverb, and legacy compatibility are unchanged from v0.8.2.
+
+## [0.8.3-dev.2] - 2026-10-04
+
+### Changed
+
+- Renamed the settings label from `Language` / `言語` to `Display language` / `表示言語`.
+- Adjusted the top-row label area so the English wording is not clipped.
+- Automatic (Windows) / Japanese / English behavior is otherwise unchanged from dev.1.
+- DSP processing and persistence formats are unchanged.
+
+## [0.8.3-dev.1] - 2026-10-04
+
+### Changed
+
+- Added explicit Automatic (Windows) display-language mode alongside Japanese and English.
+- Automatic mode resolves the display language from the Windows UI language.
+- New installations default to Automatic; existing saved manual `ja` / `en` choices are preserved.
+- Language preference remains separate from DSP presets.
+
+### Compatibility
+
+- DSP processing, built-in preset values, SRP5, `preset_version 10`, `.srpbackup`, ATB, Reverb, and legacy compatibility are unchanged from v0.8.2.
+
 ## [0.8.2] - 2026-10-03
 
 ### Changed

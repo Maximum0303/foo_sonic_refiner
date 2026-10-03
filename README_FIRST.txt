@@ -1,12 +1,13 @@
-Sonic Refiner v0.8.2 — Build and Package / ビルドと梱包
+Sonic Refiner v0.8.3 — Build and Package / ビルドと梱包
 
 ENGLISH
 
-Purpose of this development build:
-- Unify fixed Depth / Clarity maximum gain at +15.0 dB.
-- Raise ATB Auto Low / Auto High absolute maximum from +10.0 dB to +15.0 dB.
-- Keep ATB analysis / decision logic and boost-only behavior unchanged.
-- Keep SRP5, preset_version 10, .srpbackup, built-in preset parameter values, Reverb, Width, Ambience, Auto Headroom, and legacy compatibility unchanged.
+Purpose of v0.8.3:
+- Add Automatic (Windows) to the display-language selector.
+- Keep Japanese / English manual selection and make manual selection override Automatic.
+- Default new installations to Automatic while preserving existing saved manual ja / en choices.
+- Keep the language preference separate from DSP presets.
+- Keep DSP processing, SRP5, preset_version 10, .srpbackup, built-in preset values, Reverb, ATB, and legacy compatibility unchanged.
 
 Required environment:
 - foobar2000 SDK 2025-03-07
@@ -33,7 +34,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 Package:
-dist\foo_sonic_refiner_v0.8.2.fb2k-component
+dist\foo_sonic_refiner_v0.8.3.fb2k-component
 
 Checksum:
 dist\SHA256SUMS.txt
@@ -55,11 +56,12 @@ Current persistence / compatibility:
 
 日本語
 
-この開発版の目的：
-- 固定Depth／Clarityの最大ゲインを+15.0 dBへ統一します。
-- ATB Auto Low／Auto Highの絶対上限を+10.0 dBから+15.0 dBへ引き上げます。
-- ATBの解析／判定ロジックとboost-only動作は変更しません。
-- SRP5、preset_version 10、.srpbackup、内蔵プリセット設定値、Reverb、Width、Ambience、Auto Headroom、旧形式互換は変更しません。
+v0.8.3の目的：
+- 表示言語へ「自動（Windows）」を追加します。
+- 日本語 / Englishの手動選択を維持し、手動指定は自動より優先します。
+- 新規環境の初期値を自動にし、既存の手動ja / en設定は維持します。
+- 言語設定はDSPプリセットとは別に保存します。
+- DSP処理、SRP5、preset_version 10、.srpbackup、内蔵プリセット値、Reverb、ATB、旧形式互換は変更しません。
 
 ■ 対象環境
 - foobar2000 SDK 2025-03-07
@@ -87,7 +89,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 配布パッケージ:
-dist\foo_sonic_refiner_v0.8.2.fb2k-component
+dist\foo_sonic_refiner_v0.8.3.fb2k-component
 
 チェックサム:
 dist\SHA256SUMS.txt

@@ -4655,6 +4655,12 @@ enum class ui_language : t_int32 {
     english = 1
 };
 
+enum class ui_language_mode : t_int32 {
+    automatic = 0,
+    japanese = 1,
+    english = 2
+};
+
 cfg_string g_ui_language(guid_ui_language, "");
 
 constexpr GUID guid_preset_manager_window_size = {
@@ -4809,24 +4815,55 @@ ui_language detect_default_ui_language() noexcept {
         : ui_language::english;
 }
 
-ui_language load_ui_language() noexcept {
+ui_language_mode load_ui_language_mode() noexcept {
     const char* saved = g_ui_language.get_ptr();
 
     if (saved != nullptr && std::strcmp(saved, "ja") == 0) {
-        return ui_language::japanese;
+        return ui_language_mode::japanese;
     }
 
     if (saved != nullptr && std::strcmp(saved, "en") == 0) {
+        return ui_language_mode::english;
+    }
+
+    if (saved != nullptr && std::strcmp(saved, "auto") == 0) {
+        return ui_language_mode::automatic;
+    }
+
+    g_ui_language = "auto";
+    return ui_language_mode::automatic;
+}
+
+ui_language resolve_ui_language(
+    ui_language_mode mode
+) noexcept {
+    if (mode == ui_language_mode::japanese) {
+        return ui_language::japanese;
+    }
+
+    if (mode == ui_language_mode::english) {
         return ui_language::english;
     }
 
-    const ui_language detected = detect_default_ui_language();
-    g_ui_language = is_english(detected) ? "en" : "ja";
-    return detected;
+    return detect_default_ui_language();
 }
 
-void save_ui_language(ui_language language) noexcept {
-    g_ui_language = is_english(language) ? "en" : "ja";
+ui_language load_ui_language() noexcept {
+    return resolve_ui_language(load_ui_language_mode());
+}
+
+void save_ui_language_mode(ui_language_mode mode) noexcept {
+    if (mode == ui_language_mode::japanese) {
+        g_ui_language = "ja";
+        return;
+    }
+
+    if (mode == ui_language_mode::english) {
+        g_ui_language = "en";
+        return;
+    }
+
+    g_ui_language = "auto";
 }
 
 struct user_preset {
@@ -7290,7 +7327,7 @@ private:
     void apply_language() {
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - Preset Manager - 0.8.2"
+            L"Sonic Refiner - Preset Manager - 0.8.3"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -9607,25 +9644,10 @@ private:
             GetDlgItem(IDC_BUILTIN_PRESET_COMBO);
         preset_combo_ = GetDlgItem(IDC_PRESET_COMBO);
         language_combo_ = GetDlgItem(IDC_LANGUAGE_COMBO);
-        language_ = load_ui_language();
+        language_mode_ = load_ui_language_mode();
+        language_ = resolve_ui_language(language_mode_);
         comparison_state_ = comparison_state::none;
         comparison_start_valid_ = false;
-
-        ::SendMessageW(
-            language_combo_,
-            CB_ADDSTRING,
-            0,
-            reinterpret_cast<LPARAM>(L"日本語")
-        );
-        ::SendMessageW(
-            language_combo_,
-            CB_ADDSTRING,
-            0,
-            reinterpret_cast<LPARAM>(L"English")
-        );
-        language_combo_.SetCurSel(
-            is_english(language_) ? 1 : 0
-        );
 
         configure_slider(
             depth_slider_,
@@ -9741,13 +9763,50 @@ private:
         );
     }
 
+    void refresh_language_combo_items() {
+        language_combo_.ResetContent();
+
+        ::SendMessageW(
+            language_combo_,
+            CB_ADDSTRING,
+            0,
+            reinterpret_cast<LPARAM>(
+                localized(
+                    language_,
+                    L"自動（Windows）",
+                    L"Automatic (Windows)"
+                )
+            )
+        );
+        ::SendMessageW(
+            language_combo_,
+            CB_ADDSTRING,
+            0,
+            reinterpret_cast<LPARAM>(
+                localized(language_, L"日本語", L"Japanese")
+            )
+        );
+        ::SendMessageW(
+            language_combo_,
+            CB_ADDSTRING,
+            0,
+            reinterpret_cast<LPARAM>(L"English")
+        );
+
+        language_combo_.SetCurSel(
+            static_cast<int>(language_mode_)
+        );
+    }
+
     void apply_language() {
         const int selected_builtin =
             selected_builtin_preset_index();
 
+        refresh_language_combo_items();
+
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - 0.8.2"
+            L"Sonic Refiner - 0.8.3"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -9761,7 +9820,7 @@ private:
         ::SetDlgItemTextW(
             m_hWnd,
             IDC_LANGUAGE_LABEL,
-            localized(language_, L"言語:", L"Language:")
+            localized(language_, L"表示言語：", L"Display language:")
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -10349,20 +10408,20 @@ private:
     void on_language_changed(UINT, int, CWindow) {
         const int selected = language_combo_.GetCurSel();
 
-        if (selected != 0 && selected != 1) {
+        if (selected < 0 || selected > 2) {
             return;
         }
 
-        const ui_language selected_language = selected == 1
-            ? ui_language::english
-            : ui_language::japanese;
+        const ui_language_mode selected_mode =
+            static_cast<ui_language_mode>(selected);
 
-        if (selected_language == language_) {
+        if (selected_mode == language_mode_) {
             return;
         }
 
-        language_ = selected_language;
-        save_ui_language(language_);
+        language_mode_ = selected_mode;
+        save_ui_language_mode(language_mode_);
+        language_ = resolve_ui_language(language_mode_);
         apply_language();
         refresh_labels();
     }
@@ -11852,6 +11911,7 @@ private:
     CComboBox built_in_preset_combo_;
     CComboBox preset_combo_;
     CComboBox language_combo_;
+    ui_language_mode language_mode_ = ui_language_mode::automatic;
     ui_language language_ = ui_language::english;
     fb2k::CDarkModeHooks dark_mode_;
     bool modeless_ = false;

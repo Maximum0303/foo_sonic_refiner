@@ -1,0 +1,36 @@
+Sonic Refiner v0.8.3
+
+Base: validated v0.8.3-dev.2 source, itself based directly on official v0.8.2.
+
+Purpose:
+- Align Sonic Refiner display-language behavior and wording with R128 Real-time Loudness Normalizer.
+
+Changes from v0.8.2:
+- Adds Automatic (Windows) / 自動（Windows） alongside Japanese / English.
+- Automatic follows the Windows UI language: Japanese for Japanese Windows UI, English otherwise.
+- Manual Japanese / English selections override Automatic.
+- New installations default to Automatic; existing saved manual ja / en choices are preserved.
+- Language preference remains saved separately from DSP presets.
+- Japanese settings label is 表示言語：.
+- English settings label is Display language:.
+- Top-row layout adjusted so the English label is not clipped.
+
+Validated dev build:
+- v0.8.3-dev.2 source ZIP SHA-256: 88d2867d4185b9340cb78a2fcc1c6ed302ae1df281892519f992b9d03b255388
+- v0.8.3-dev.2 component SHA-256: b67ac81a8bd9b04b9cc5b6c9b44b80a18343216354a1afcbf0cc8ff331fcce9c
+- Automatic (Windows) displayed and resolved to Japanese on Japanese Windows UI.
+- Immediate Japanese / English switching passed.
+- Automatic / English / Japanese modes each retained correctly after restart.
+- Loading a built-in preset did not change the selected display-language mode.
+- One-track normal playback test passed with no reported sound dropout, abnormal level movement, noise, or ATB / Reverb regression.
+
+Unchanged:
+- Audio/DSP processing
+- Built-in preset parameter values
+- ATB / Reverb / Auto Headroom / A/B / Preset Manager processing behavior
+- SRP5 / preset_version 10 / .srpbackup / legacy compatibility
+
+Formalization changes only:
+- 0.8.3-dev.2 -> 0.8.3 version strings and package name
+- formal Release Notes / Implementation Summary / Testing document
+- README / COMPONENT_README / QUICK_START / README_FIRST / CHANGELOG formal release wording

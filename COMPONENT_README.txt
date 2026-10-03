@@ -1,4 +1,4 @@
-Sonic Refiner v0.8.2
+Sonic Refiner v0.8.3
 Adaptive Audio Enhancement DSP for foobar2000
 
 ============================================================
@@ -9,7 +9,14 @@ Sonic Refiner is a real-time tone and soundstage enhancement DSP for
 foobar2000 2.x on Windows x64.
 
 CURRENT STABLE RELEASE
-v0.8.2
+v0.8.3
+
+V0.8.3 DISPLAY LANGUAGE
+- Adds Automatic (Windows) / 自動（Windows） alongside Japanese / English.
+- Automatic follows the Windows UI language. Manual Japanese / English overrides it.
+- New installations default to Automatic; existing saved manual ja / en choices are preserved.
+- Language preference remains separate from DSP presets.
+- DSP processing, preset formats and compatibility are unchanged.
 
 V0.8.2 UNIFIED GAIN CEILING
 - Fixed Depth 100% maximum: +15.0 dB (was +16.0 dB).
@@ -33,7 +40,7 @@ MAIN FUNCTIONS
 - Preset Manager
 - Up to 20 user presets
 - .srpbackup backup / restore
-- Japanese / English UI
+- Automatic (Windows) / Japanese / English UI
 - foobar2000 Light / Dark mode support
 
 V0.8.0 REVERB
@@ -120,7 +127,7 @@ The Preset Manager supports:
 - Double-click Apply
 - Keyboard shortcuts
 - Resizable two-pane layout
-- Japanese / English and Light / Dark modes
+- Automatic (Windows) / Japanese / English and Light / Dark modes
 
 PROCESSING ORDER
 Depth / Clarity / ATB
@@ -203,8 +210,18 @@ Copyright (c) 2026 Maximum
 Sonic Refinerは、foobar2000 2.x（Windows x64）向けの
 リアルタイム音色・音場補正DSPです。
 
-現在の正式公開版
+現在のビルド
+v0.8.3
+
+基準正式版
 v0.8.2
+
+V0.8.3 表示言語
+- 日本語 / Englishに「自動（Windows）」を追加。
+- 自動時はWindows UI言語に追従し、手動指定は自動より優先。
+- 新規環境は自動が初期値。既存の手動ja / en設定は維持。
+- 言語設定はDSPプリセットとは別に保存。
+- DSP処理、保存形式、互換性は変更なし。
 
 V0.8.2 ゲイン上限統一
 - 固定Depth 100%の最大値：+15.0 dB（従来+16.0 dB）。

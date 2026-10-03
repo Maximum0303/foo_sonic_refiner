@@ -4,9 +4,9 @@
 
 Sonic Refiner is a real-time tone and soundstage enhancement DSP for foobar2000 2.x on Windows x64.
 
-> Current stable release: **v0.8.2**
+> Current stable release: **v0.8.3**
 
-> v0.8.2 unifies the fixed Depth / Clarity and ATB Auto Low / Auto High maximum gain ceiling at **+15.0 dB**. Persistence formats and built-in preset parameter values are unchanged.
+> v0.8.3 aligns Sonic Refiner's display-language behavior with R128 Real-time Loudness Normalizer while keeping DSP and preset formats unchanged.
 
 > Recommended downstream loudness processor: **R128 Real-time Loudness Normalizer**
 
@@ -15,6 +15,19 @@ Sonic Refiner is a real-time tone and soundstage enhancement DSP for foobar2000 
 ---
 
 ## English
+
+## What's new in v0.8.3
+
+v0.8.3 aligns Sonic Refiner's display-language behavior with R128 Real-time Loudness Normalizer.
+The settings label is standardized as **Display language** / **表示言語**.
+
+- Adds **Automatic (Windows)** / **自動（Windows）** to the language selector.
+- Automatic mode follows the Windows UI language: Japanese for Japanese Windows UI, English otherwise.
+- Manual **Japanese** and **English** selections remain available and override Automatic.
+- New installations default to Automatic. Existing saved manual `ja` / `en` choices are preserved.
+- Language preference remains separate from DSP presets.
+- Settings UI, Preset Manager, Help, Glossary, messages, and Playback-menu text continue to use the resolved display language.
+- DSP processing, built-in preset values, SRP5, `preset_version 10`, `.srpbackup`, Reverb, ATB, and legacy compatibility are unchanged.
 
 ## What's new in v0.8.2
 
@@ -74,7 +87,7 @@ See [RELEASE_NOTES_v0.8.2.md](RELEASE_NOTES_v0.8.2.md) for the formal v0.8.2 rel
 - **Preset Manager**
 - Up to 20 user presets
 - `.srpbackup` backup / restore
-- Japanese / English UI
+- Automatic (Windows) / Japanese / English UI
 - foobar2000 Light / Dark mode support
 
 ## Ambience and Reverb
@@ -154,7 +167,7 @@ The Preset Manager provides:
 - Double-click Apply
 - Keyboard shortcuts
 - Resizable two-pane layout
-- Japanese / English and Light / Dark mode support
+- Automatic (Windows) / Japanese / English and Light / Dark mode support
 
 User presets are saved immediately when they are created, renamed, deleted, reordered, updated, backed up, or restored.
 
@@ -262,9 +275,22 @@ Copyright (c) 2026 Maximum
 
 > 現在の正式公開版：**v0.8.2**
 
-> v0.8.2では、固定Depth／ClarityとATB Auto Low／Auto Highの最大ゲイン上限を **+15.0 dB** に統一しました。保存形式と内蔵プリセット設定値は変更しません。
+> 現在の正式版：**v0.8.3**  
+> R128 Real-time Loudness Normalizerと表示言語仕様を統一し、DSPやプリセット形式は変更しません。
 
 > 推奨する後段ラウドネス処理：**R128 Real-time Loudness Normalizer**
+
+## v0.8.3の変更点
+
+v0.8.3では、R128 Real-time Loudness Normalizerと表示言語の動作を統一します。
+
+- 言語選択へ **自動（Windows）** を追加
+- 自動時はWindows UI言語が日本語なら日本語、それ以外はEnglishを使用
+- 手動の **日本語**／**English** は引き続き選択でき、自動より優先
+- 新規・初期状態は自動。既存の手動`ja`／`en`設定は維持
+- 言語設定はDSPプリセットとは別に保存
+- 設定画面、Preset Manager、Help、用語集、メッセージ、Playbackメニュー表示へ反映
+- DSP処理、内蔵プリセット値、SRP5、`preset_version 10`、`.srpbackup`、Reverb、ATB、旧形式互換は変更なし
 
 ## v0.8.2の主な変更
 

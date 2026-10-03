@@ -1,6 +1,6 @@
-# Sonic Refiner v0.8.2 Quick Start
+# Sonic Refiner v0.8.3 Quick Start
 
-> v0.8.2 unifies fixed Depth / Clarity and ATB Auto Low / Auto High at a +15.0 dB maximum. SRP5, `preset_version 10`, `.srpbackup`, built-in preset parameter values, Reverb, and legacy compatibility are unchanged.
+> v0.8.3 adds Automatic (Windows) display-language selection and standardizes the label as Display language / 表示言語. DSP processing, SRP5, `preset_version 10`, `.srpbackup`, built-in preset parameter values, Reverb, and legacy compatibility are unchanged.
 
 ## English
 
@@ -29,7 +29,13 @@ The additional mastering presets also affect tone and dynamics. If preserving So
 
 ### 2. Select a language
 
-Use the language selector at the top of the settings window. The display changes immediately without changing audio settings.
+Use the language selector at the top of the settings window:
+
+- **Automatic (Windows)**
+- **Japanese**
+- **English**
+
+Automatic follows the Windows UI language. Manual Japanese / English selections override Automatic. The display changes immediately without changing audio settings.
 
 ### 3. Choose a starting preset
 
@@ -94,9 +100,15 @@ R128の標準ノーマライズ：
 
 追加3種は音量だけでなく音色・ダイナミクスにも影響します。Sonic Refinerの音色・音場・Reverbをなるべくそのまま生かしたい場合は、まず標準4種から選びます。
 
-### 2. 言語を選択
+### 2. 表示言語を選択
 
-設定画面上部で日本語／Englishを選択します。表示はその場で切り替わり、音質設定は変わりません。
+設定画面上部で次から選択します。
+
+- **自動（Windows）**
+- **日本語**
+- **English**
+
+自動ではWindows UI言語に合わせます。日本語／Englishを手動選択した場合は手動指定を優先します。表示はその場で切り替わり、音質設定は変わりません。
 
 ### 3. 最初のプリセット
 
