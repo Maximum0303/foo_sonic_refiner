@@ -14,7 +14,7 @@
 namespace {
 
 constexpr double depth_standard_max_boost_db = 8.0;
-constexpr double depth_extreme_max_boost_db = 16.0;
+constexpr double depth_extreme_max_boost_db = 15.0;
 constexpr double depth_shelf_frequency_hz = 120.0;
 // Development experiment: when Adaptive Tone Balance is enabled,
 // preserve the dry signal and add only a filtered 60-180 Hz Bass-band
@@ -25,7 +25,7 @@ constexpr double adaptive_depth_band_q =
     0.7071067811865476;
 
 constexpr double clarity_standard_max_boost_db = 7.0;
-constexpr double clarity_extreme_max_boost_db = 14.0;
+constexpr double clarity_extreme_max_boost_db = 15.0;
 constexpr double clarity_shelf_frequency_hz = 3500.0;
 
 constexpr double width_standard_maximum_side_gain = 3.5;
@@ -112,8 +112,8 @@ constexpr double adaptive_high_hm_severity_full_db = -16.0;
 constexpr double adaptive_high_tp_severity_start_db = -5.0;
 constexpr double adaptive_high_tp_severity_full_db = -7.5;
 
-constexpr double adaptive_depth_absolute_maximum_db = 10.0;
-constexpr double adaptive_clarity_absolute_maximum_db = 10.0;
+constexpr double adaptive_depth_absolute_maximum_db = 15.0;
+constexpr double adaptive_clarity_absolute_maximum_db = 15.0;
 
 constexpr double adaptive_analysis_window_seconds = 1.0;
 constexpr std::size_t adaptive_history_windows = 12;
@@ -5888,8 +5888,8 @@ R128 Real-time Loudness Normalizerは、ラウドネス、True Peak、
 ゆっくり補います。自動カットは行いません。
 
 ATBオン時のDepthは「低域自動補正の上限」、Clarityは
-「高域自動補正の上限」です。100%にしても常時+10 dBになるわけではなく、
-必要な場合だけ0～最大+10.0 dBの範囲で自動補正します。
+「高域自動補正の上限」です。100%にしても常時+15 dBになるわけではなく、
+必要な場合だけ0～最大+15.0 dBの範囲で自動補正します。
 Width、Ambience、ReverbはATBオン時も手動です。Master Strengthは
 自動補正を含む5つの効果全体に反映されます。
 
@@ -5974,7 +5974,7 @@ automatic cuts.
 
 With ATB On, Depth is the Auto Low correction limit and Clarity is the
 Auto High correction limit. Setting either to 100% does not force a constant
-+10 dB boost; the actual correction can range from 0 to the existing +10.0 dB
++15 dB boost; the actual correction can range from 0 to the +15.0 dB
 maximum only when the source needs it. Width, Ambience, and Reverb remain manual.
 Master Strength also scales the adaptive correction together with the other
 effects.
@@ -6057,18 +6057,18 @@ Output Gain、自動ヘッドルーム保護、レベルマッチは対象外で
 処理前の原音を解析して、不足した低域・高域だけを補うブースト専用の
 自動音色補正です。自動カットは行いません。
 オン時はDepthがAuto Lowの上限、ClarityがAuto Highの上限として働き、
-100%は「最大+10.0 dBまで許可する」という意味です。実際の補正量は
+100%は「最大+15.0 dBまで許可する」という意味です。実際の補正量は
 音源に応じて0 dBから上限まで変化します。Width／Ambience／Reverbは手動です。
 
 ■ Auto Low（低域自動補正）
 Bass 60～180 HzとBody 200～500 Hzの相対バランスを見て、Bassが不足する
 場合だけ補正します。60～180 HzのBass帯域を原音へ並列加算し、Dryは
-削りません。絶対上限は+10.0 dBで、DepthとMaster Strengthの制約も受けます。
+削りません。絶対上限は+15.0 dBで、DepthとMaster Strengthの制約も受けます。
 
 ■ Auto High（高域自動補正）
 主にHigh 3.5～10 kHzとMid 300 Hz～2.0 kHzのバランスを見て、
 Treble 5～10 kHzとPresence 2～5 kHzも補助判定に使います。高域不足時だけ
-補正し、自動カットは行いません。絶対上限は+10.0 dBで、Clarityと
+補正し、自動カットは行いません。絶対上限は+15.0 dBで、Clarityと
 Master Strengthの制約も受けます。
 
 ■ ATBの解析状態
@@ -6157,21 +6157,21 @@ Match are not affected.
 A boost-only automatic tone correction that analyzes the original source and
 raises only low/high energy that appears deficient. It never applies automatic
 cuts. With ATB On, Depth is the Auto Low limit and Clarity is the Auto High
-limit. 100% means "allow up to +10.0 dB"; the actual correction varies from
+limit. 100% means "allow up to +15.0 dB"; the actual correction varies from
 0 dB to the allowed maximum according to the source. Width, Ambience, and Reverb
 remain manual.
 
 ■ Auto Low
 Compares Bass 60–180 Hz with Body 200–500 Hz and corrects only when Bass is
 deficient. The 60–180 Hz Bass band is added in parallel while the Dry signal is
-preserved. The absolute maximum is +10.0 dB, also constrained by Depth and
+preserved. The absolute maximum is +15.0 dB, also constrained by Depth and
 Master Strength.
 
 ■ Auto High
 Primarily compares High 3.5–10 kHz with Mid 300 Hz–2.0 kHz, with Treble
 5–10 kHz versus Presence 2–5 kHz used as an additional cue. It boosts only
 when high-frequency energy is deficient and never applies automatic cuts. The
-absolute maximum is +10.0 dB, also constrained by Clarity and Master Strength.
+absolute maximum is +15.0 dB, also constrained by Clarity and Master Strength.
 
 ■ ATB Analysis State
 Playback start, track change, seek, playback after Stop, and ATB Off→On start
@@ -6256,7 +6256,7 @@ Output Gainと保護・比較機能の設定値は変更されません。
 
 ■ 適応型音色補正
 音源の周波数バランスによって結果は変わります。低域・高域とも
-最大+10 dBまでの自動ブーストに制限されていますが、
+最大+15 dBまでの自動ブーストに制限されていますが、
 レコード取り込みなどノイズを含む音源ではノイズも強調される場合があります。
 不自然に感じる場合はDepth／Clarityを下げるか機能をオフにしてください。
 
@@ -6320,7 +6320,7 @@ Output Gain and protection/comparison settings are unchanged.
 
 ■ Adaptive Tone Balance
 Results depend on the source spectrum. Automatic boosts are limited to
-+10 dB for both low and high frequencies, but noise can
++15 dB for both low and high frequencies, but noise can
 also be emphasized in sources such as vinyl transfers. Reduce Depth/Clarity
 or turn Adaptive Tone Balance off if the result sounds unnatural.
 
@@ -7290,7 +7290,7 @@ private:
     void apply_language() {
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - Preset Manager - 0.8.1"
+            L"Sonic Refiner - Preset Manager - 0.8.2"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -9747,7 +9747,7 @@ private:
 
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - 0.8.1"
+            L"Sonic Refiner - 0.8.2"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -11470,8 +11470,8 @@ private:
                 IDC_DEPTH_DESCRIPTION,
                 localized(
                     language_,
-                    L"Auto Lowの最大補正量。100%でも常時+10 dBではありません。",
-                    L"Sets the Auto Low limit; 100% does not mean constant +10 dB."
+                    L"Auto Lowの最大補正量。100%でも常時+15 dBではありません。",
+                    L"Sets the Auto Low limit; 100% does not mean constant +15 dB."
                 )
             );
             ::SetDlgItemTextW(
@@ -11488,8 +11488,8 @@ private:
                 IDC_CLARITY_DESCRIPTION,
                 localized(
                     language_,
-                    L"Auto Highの最大補正量。100%でも常時+10 dBではありません。",
-                    L"Sets the Auto High limit; 100% does not mean constant +10 dB."
+                    L"Auto Highの最大補正量。100%でも常時+15 dBではありません。",
+                    L"Sets the Auto High limit; 100% does not mean constant +15 dB."
                 )
             );
         } else {

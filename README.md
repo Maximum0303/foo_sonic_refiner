@@ -4,9 +4,9 @@
 
 Sonic Refiner is a real-time tone and soundstage enhancement DSP for foobar2000 2.x on Windows x64.
 
-> Current stable release: **v0.8.1**
+> Current stable release: **v0.8.2**
 
-> v0.8.1 is a documentation / user-guidance refresh. DSP processing, preset values, SRP5, `preset_version 10`, and compatibility behavior are unchanged from v0.8.0.
+> v0.8.2 unifies the fixed Depth / Clarity and ATB Auto Low / Auto High maximum gain ceiling at **+15.0 dB**. Persistence formats and built-in preset parameter values are unchanged.
 
 > Recommended downstream loudness processor: **R128 Real-time Loudness Normalizer**
 
@@ -15,6 +15,17 @@ Sonic Refiner is a real-time tone and soundstage enhancement DSP for foobar2000 
 ---
 
 ## English
+
+## What's new in v0.8.2
+
+v0.8.2 formalizes the validated unified maximum gain ceiling used by the fixed tone controls and Adaptive Tone Balance.
+
+- Fixed Depth at 100%: maximum **+15.0 dB** (was +16.0 dB).
+- Fixed Clarity at 100%: maximum **+15.0 dB** (was +14.0 dB).
+- ATB Auto Low absolute maximum: **+15.0 dB** (was +10.0 dB).
+- ATB Auto High absolute maximum: **+15.0 dB** (was +10.0 dB).
+- ATB analysis, demand logic, history, attack/release behavior, and boost-only policy are unchanged.
+- SRP5, `preset_version 10`, `.srpbackup`, built-in preset parameter values, Reverb, Width, Ambience, Auto Headroom, and legacy compatibility are unchanged.
 
 ## What's new in v0.8.1
 
@@ -45,7 +56,7 @@ v0.8.0 adds a dedicated **Reverb** stage while keeping the existing **Ambience**
 - SRP1–SRP4, DSP preset versions 1–9, and older `.srpbackup` files remain readable
 - Older presets load with **Reverb = 0** to preserve their previous sound
 
-See [RELEASE_NOTES_v0.8.1.md](RELEASE_NOTES_v0.8.1.md) for the formal v0.8.1 release notes and [CHANGELOG.md](CHANGELOG.md) for full history.
+See [RELEASE_NOTES_v0.8.2.md](RELEASE_NOTES_v0.8.2.md) for the formal v0.8.2 release notes and [CHANGELOG.md](CHANGELOG.md) for full history.
 
 ## Main features
 
@@ -117,9 +128,9 @@ When ATB is On:
 
 - Depth becomes the maximum permission for **Auto Low**
 - Clarity becomes the maximum permission for **Auto High**
-- 100% means the automatic correction may use the full allowed range when needed; it does not mean a constant +10 dB boost
+- 100% means the automatic correction may use the full allowed range when needed; it does not mean a constant +15 dB boost
 - Auto Low / Auto High are boost-only; ATB does not perform automatic cuts
-- Absolute maximum automatic correction is +10 dB for Auto Low and +10 dB for Auto High
+- Absolute maximum automatic correction is +15 dB for Auto Low and +15 dB for Auto High
 
 Runtime analysis values are not stored in presets.
 
@@ -249,9 +260,22 @@ Copyright (c) 2026 Maximum
 
 **Sonic Refiner** は、foobar2000 2.x（Windows x64）向けのリアルタイム音色・音場補正DSPです。
 
-> 現在の正式公開版：**v0.8.1**
+> 現在の正式公開版：**v0.8.2**
+
+> v0.8.2では、固定Depth／ClarityとATB Auto Low／Auto Highの最大ゲイン上限を **+15.0 dB** に統一しました。保存形式と内蔵プリセット設定値は変更しません。
 
 > 推奨する後段ラウドネス処理：**R128 Real-time Loudness Normalizer**
+
+## v0.8.2の主な変更
+
+v0.8.2では、実機検証済みのv0.8.2-dev.1を正式版化し、固定音色補正と適応型音色補正（ATB）の最大ゲイン上限を統一しました。
+
+- 固定Depth 100%：最大 **+15.0 dB**（従来+16.0 dB）。
+- 固定Clarity 100%：最大 **+15.0 dB**（従来+14.0 dB）。
+- ATB Auto Low絶対上限：**+15.0 dB**（従来+10.0 dB）。
+- ATB Auto High絶対上限：**+15.0 dB**（従来+10.0 dB）。
+- ATBの解析・判定・履歴・増減速度・boost-only方針は変更しません。
+- SRP5、`preset_version 10`、`.srpbackup`、内蔵プリセット設定値、Reverb、Width、Ambience、Auto Headroom、旧形式互換は変更しません。
 
 ## v0.8.1の主な変更
 
@@ -281,7 +305,7 @@ v0.8.0では、従来の **Ambience** を短い初期反射として維持した
 - SRP1～SRP4、DSP preset version 1～9、旧`.srpbackup`を引き続き読込可能
 - 旧プリセットは **Reverb = 0** として読み込み、従来の音を維持
 
-正式なv0.8.1の変更内容は [RELEASE_NOTES_v0.8.1.md](RELEASE_NOTES_v0.8.1.md)、全履歴は [CHANGELOG.md](CHANGELOG.md) を参照してください。
+正式なv0.8.2の変更内容は [RELEASE_NOTES_v0.8.2.md](RELEASE_NOTES_v0.8.2.md)、全履歴は [CHANGELOG.md](CHANGELOG.md) を参照してください。
 
 ## 主な機能
 
@@ -341,9 +365,9 @@ ATB ONでは：
 
 - Depthは **Auto Lowの自動補正上限**
 - Clarityは **Auto Highの自動補正上限**
-- 100%は「必要な場合に最大許容量まで使える」という意味で、常時+10 dBではありません
+- 100%は「必要な場合に最大許容量まで使える」という意味で、常時+15 dBではありません
 - Auto Low / Auto Highはboost-onlyで、自動カットは行いません
-- 自動補正の絶対上限はAuto Low / Auto Highそれぞれ+10 dB
+- 自動補正の絶対上限はAuto Low / Auto Highそれぞれ+15 dB
 
 解析履歴や現在のAuto Low / Auto High値はプリセットへ保存しません。
 

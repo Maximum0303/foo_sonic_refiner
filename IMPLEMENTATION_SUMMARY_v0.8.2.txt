@@ -1,0 +1,34 @@
+Sonic Refiner v0.8.2
+
+Base: validated v0.8.2-dev.1 source, itself based on official v0.8.1.
+
+Purpose:
+- Formalize the unified +15.0 dB maximum gain ceiling for fixed Depth / Clarity and ATB Auto Low / Auto High.
+
+Core DSP changes from v0.8.1:
+- depth_extreme_max_boost_db: 16.0 -> 15.0
+- clarity_extreme_max_boost_db: 14.0 -> 15.0
+- adaptive_depth_absolute_maximum_db: 10.0 -> 15.0
+- adaptive_clarity_absolute_maximum_db: 10.0 -> 15.0
+
+Validated dev build:
+- v0.8.2-dev.1 source ZIP SHA-256: c036bb58e2a15e0db648f9d3498192501ceb469ddffbaaf6bf97f10153e6eeb4
+- v0.8.2-dev.1 component SHA-256: 009723c8f9e70b3c9d582aded1e9804e9d4dc1455ca2191e68764af91a11d141
+- Adaptive Standard reached +15.0 dB in actual playback.
+- Adaptive Standard one-track listening test passed.
+- Full Boost fixed-mode listening test passed.
+- Restart / settings-display retention test passed.
+
+Unchanged:
+- Depth standard-range maximum constant (8.0 dB)
+- Clarity standard-range maximum constant (7.0 dB)
+- ATB analysis / decision logic / history / rate limiting / intro protection / boost-only behavior
+- 16 built-in preset parameter values
+- Width / Ambience / Reverb / Master Strength / Output Gain / Auto Headroom / Level-Matched Bypass
+- A/B / Preset Manager
+- SRP5 / preset_version 10 / .srpbackup / legacy compatibility
+
+Formalization changes only:
+- 0.8.2-dev.1 -> 0.8.2 version strings and package name
+- formal Release Notes / Implementation Summary / Testing document
+- README / COMPONENT_README / QUICK_START / README_FIRST / CHANGELOG formal release wording

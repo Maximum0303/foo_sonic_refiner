@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.8.2] - 2026-10-03
+
+### Changed
+
+- Formalized the validated v0.8.2-dev.1 unified gain-ceiling update.
+- Fixed Depth and Clarity maximum gain are unified at +15.0 dB.
+- ATB Auto Low and Auto High absolute maximum correction are raised from +10.0 dB to +15.0 dB.
+- Help / Glossary / Important Notes and user documentation describe the unified +15.0 dB ATB ceiling.
+
+### Validation / Compatibility
+
+- v0.8.2-dev.1 reached +15.0 dB in actual Adaptive Standard playback and passed targeted Adaptive Standard / Full Boost listening and restart-retention checks.
+- ATB analysis / decision logic, history, rate limiting, intro protection, and boost-only policy are unchanged.
+- Built-in preset parameter values are unchanged; presets using 100% Depth / Clarity may sound slightly different because the 100% gain mapping changed.
+- SRP5, `preset_version 10`, `.srpbackup`, Reverb, Width, Ambience, Auto Headroom, Preset Manager, and legacy compatibility are unchanged.
+
+## [0.8.2-dev.1] - 2026-10-03
+
+### Changed
+
+- Unified fixed Depth and Clarity maximum gain at +15.0 dB.
+- Raised ATB Auto Low and Auto High absolute maximum correction from +10.0 dB to +15.0 dB.
+- Updated Help / Glossary / Important Notes and user documentation to describe the +15.0 dB ATB ceiling.
+
+### Compatibility
+
+- ATB analysis / decision logic, history, attack / release behavior, and boost-only policy are unchanged.
+- Built-in preset parameter values are unchanged; presets using 100% Depth / Clarity may sound slightly different because the 100% gain mapping changed.
+- SRP5, `preset_version 10`, `.srpbackup`, Reverb, Width, Ambience, Auto Headroom, Preset Manager, and legacy compatibility are unchanged.
+
 ## [0.8.1] - 2026-10-03
 
 ### Changed

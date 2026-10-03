@@ -1,6 +1,6 @@
-# Sonic Refiner v0.8.1 Quick Start
+# Sonic Refiner v0.8.2 Quick Start
 
-> v0.8.1 updates user-facing guidance only. DSP processing, Reverb tuning, the 16 built-in preset values, SRP5, `preset_version 10`, and legacy compatibility are unchanged from v0.8.0.
+> v0.8.2 unifies fixed Depth / Clarity and ATB Auto Low / Auto High at a +15.0 dB maximum. SRP5, `preset_version 10`, `.srpbackup`, built-in preset parameter values, Reverb, and legacy compatibility are unchanged.
 
 ## English
 
@@ -49,7 +49,7 @@ Sonic Refiner has 16 built-in presets. `Custom` is a UI state, not a 17th preset
 - Automatic source-dependent low/high correction: Adaptive Tone Balance
 - Overall enhancement amount: Master Strength
 
-With ATB On, Depth and Clarity are automatic-correction limits rather than fixed boosts. 100% is a maximum permission, not a constant +10 dB boost.
+With ATB On, Depth and Clarity are automatic-correction limits rather than fixed boosts. 100% is a maximum permission, not a constant +15 dB boost.
 
 ### 5. Preset Manager
 
@@ -116,7 +116,7 @@ R128の標準ノーマライズ：
 - 音源ごとの低域／高域自動補正：適応型音色補正
 - 全体の補正量：Master Strength
 
-ATB ON時はDepth／Clarityが自動補正の上限になります。100%は最大許容量であり、常時+10 dBではありません。
+ATB ON時はDepth／Clarityが自動補正の上限になります。100%は最大許容量であり、常時+15 dBではありません。
 
 ### 5. Preset Manager
 

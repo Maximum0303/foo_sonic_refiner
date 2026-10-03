@@ -1,4 +1,4 @@
-Sonic Refiner v0.8.1
+Sonic Refiner v0.8.2
 Adaptive Audio Enhancement DSP for foobar2000
 
 ============================================================
@@ -9,13 +9,14 @@ Sonic Refiner is a real-time tone and soundstage enhancement DSP for
 foobar2000 2.x on Windows x64.
 
 CURRENT STABLE RELEASE
-v0.8.1
+v0.8.2
 
-V0.8.1 DOCUMENTATION REFRESH
-- User-facing guidance only; audio processing is unchanged from v0.8.0.
-- Natural -18 is documented as the recommended R128 starting point.
-- Standard R128 normalization presets are distinguished from additional mastering presets.
-- DSP algorithms, venue preset values, SRP5, preset_version 10, and legacy compatibility are unchanged.
+V0.8.2 UNIFIED GAIN CEILING
+- Fixed Depth 100% maximum: +15.0 dB (was +16.0 dB).
+- Fixed Clarity 100% maximum: +15.0 dB (was +14.0 dB).
+- ATB Auto Low absolute maximum: +15.0 dB (was +10.0 dB).
+- ATB Auto High absolute maximum: +15.0 dB (was +10.0 dB).
+- ATB decision logic, persistence formats, built-in preset parameter values, Reverb, Width, Ambience, Auto Headroom, and legacy compatibility are unchanged.
 
 MAIN FUNCTIONS
 - Depth
@@ -95,10 +96,10 @@ ATB Off:
 ATB On:
 - Depth becomes the Auto Low correction limit.
 - Clarity becomes the Auto High correction limit.
-- 100% means maximum permission, not a constant +10 dB boost.
+- 100% means maximum permission, not a constant +15 dB boost.
 - Automatic correction is boost-only; no automatic cuts.
-- Auto Low absolute maximum: +10 dB.
-- Auto High absolute maximum: +10 dB.
+- Auto Low absolute maximum: +15 dB.
+- Auto High absolute maximum: +15 dB.
 - Runtime analysis values are not persisted.
 
 PRESET MANAGER
@@ -203,13 +204,14 @@ Sonic Refinerは、foobar2000 2.x（Windows x64）向けの
 リアルタイム音色・音場補正DSPです。
 
 現在の正式公開版
-v0.8.1
+v0.8.2
 
-V0.8.1 説明更新
-- ユーザー向け説明のみの更新で、音声処理はv0.8.0から変更していません。
-- R128側の基本推奨として「ナチュラル -18」を明記します。
-- R128の標準ノーマライズと追加マスタリング処理の違いを明確化します。
-- DSPアルゴリズム、会場プリセット値、SRP5、preset_version 10、旧形式互換は変更しません。
+V0.8.2 ゲイン上限統一
+- 固定Depth 100%の最大値：+15.0 dB（従来+16.0 dB）。
+- 固定Clarity 100%の最大値：+15.0 dB（従来+14.0 dB）。
+- ATB Auto Low絶対上限：+15.0 dB（従来+10.0 dB）。
+- ATB Auto High絶対上限：+15.0 dB（従来+10.0 dB）。
+- ATB判定ロジック、保存形式、内蔵プリセット設定値、Reverb、Width、Ambience、Auto Headroom、旧形式互換は変更しません。
 
 主な機能
 - Depth
@@ -289,10 +291,10 @@ ATB OFF:
 ATB ON:
 - DepthはAuto Lowの自動補正上限になります。
 - ClarityはAuto Highの自動補正上限になります。
-- 100%は最大許容量であり、常時+10 dBではありません。
+- 100%は最大許容量であり、常時+15 dBではありません。
 - 自動補正はboost-onlyで、自動カットは行いません。
-- Auto Low絶対上限：+10 dB
-- Auto High絶対上限：+10 dB
+- Auto Low絶対上限：+15 dB
+- Auto High絶対上限：+15 dB
 - 解析中のruntime値は保存しません。
 
 PRESET MANAGER

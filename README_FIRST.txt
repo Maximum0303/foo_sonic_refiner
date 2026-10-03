@@ -1,12 +1,12 @@
-Sonic Refiner v0.8.1 — Build and Package / ビルドと梱包
+Sonic Refiner v0.8.2 — Build and Package / ビルドと梱包
 
 ENGLISH
 
-Purpose of this release:
-- User-facing documentation and in-component guidance refresh only.
-- Adds Natural -18 as the recommended R128 starting point in Help / Glossary / Important Notes.
-- Refreshes QUICK_START.md and README_FIRST.txt for the current v0.8.x feature set.
-- No DSP algorithm, Reverb tuning, built-in preset value, SRP5, preset_version 10, or compatibility change from v0.8.0.
+Purpose of this development build:
+- Unify fixed Depth / Clarity maximum gain at +15.0 dB.
+- Raise ATB Auto Low / Auto High absolute maximum from +10.0 dB to +15.0 dB.
+- Keep ATB analysis / decision logic and boost-only behavior unchanged.
+- Keep SRP5, preset_version 10, .srpbackup, built-in preset parameter values, Reverb, Width, Ambience, Auto Headroom, and legacy compatibility unchanged.
 
 Required environment:
 - foobar2000 SDK 2025-03-07
@@ -33,7 +33,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 Package:
-dist\foo_sonic_refiner_v0.8.1.fb2k-component
+dist\foo_sonic_refiner_v0.8.2.fb2k-component
 
 Checksum:
 dist\SHA256SUMS.txt
@@ -55,11 +55,11 @@ Current persistence / compatibility:
 
 日本語
 
-この正式版の目的：
-- ユーザー向け文書とコンポーネント内説明だけを更新します。
-- Help／用語集／注意事項へ、R128「ナチュラル -18」を基本推奨として追記します。
-- QUICK_START.md／README_FIRST.txtを現行v0.8.x仕様へ更新します。
-- v0.8.0からDSPアルゴリズム、Reverb調整値、内蔵プリセット値、SRP5、preset_version 10、互換動作は変更しません。
+この開発版の目的：
+- 固定Depth／Clarityの最大ゲインを+15.0 dBへ統一します。
+- ATB Auto Low／Auto Highの絶対上限を+10.0 dBから+15.0 dBへ引き上げます。
+- ATBの解析／判定ロジックとboost-only動作は変更しません。
+- SRP5、preset_version 10、.srpbackup、内蔵プリセット設定値、Reverb、Width、Ambience、Auto Headroom、旧形式互換は変更しません。
 
 ■ 対象環境
 - foobar2000 SDK 2025-03-07
@@ -87,7 +87,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 配布パッケージ:
-dist\foo_sonic_refiner_v0.8.1.fb2k-component
+dist\foo_sonic_refiner_v0.8.2.fb2k-component
 
 チェックサム:
 dist\SHA256SUMS.txt
