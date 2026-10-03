@@ -1,4 +1,4 @@
-Sonic Refiner v0.8.0
+Sonic Refiner v0.8.1
 Adaptive Audio Enhancement DSP for foobar2000
 
 ============================================================
@@ -9,7 +9,13 @@ Sonic Refiner is a real-time tone and soundstage enhancement DSP for
 foobar2000 2.x on Windows x64.
 
 CURRENT STABLE RELEASE
-v0.8.0
+v0.8.1
+
+V0.8.1 DOCUMENTATION REFRESH
+- User-facing guidance only; audio processing is unchanged from v0.8.0.
+- Natural -18 is documented as the recommended R128 starting point.
+- Standard R128 normalization presets are distinguished from additional mastering presets.
+- DSP algorithms, venue preset values, SRP5, preset_version 10, and legacy compatibility are unchanged.
 
 MAIN FUNCTIONS
 - Depth
@@ -197,7 +203,13 @@ Sonic Refinerは、foobar2000 2.x（Windows x64）向けの
 リアルタイム音色・音場補正DSPです。
 
 現在の正式公開版
-v0.8.0
+v0.8.1
+
+V0.8.1 説明更新
+- ユーザー向け説明のみの更新で、音声処理はv0.8.0から変更していません。
+- R128側の基本推奨として「ナチュラル -18」を明記します。
+- R128の標準ノーマライズと追加マスタリング処理の違いを明確化します。
+- DSPアルゴリズム、会場プリセット値、SRP5、preset_version 10、旧形式互換は変更しません。
 
 主な機能
 - Depth

@@ -5857,8 +5857,8 @@ Sonic Refiner ヘルプ
 
 ■ 概要
 Sonic Refinerは、foobar2000用の適応型音質補正DSPです。
-低域の厚み、明瞭感、ステレオの広がり、短い初期反射による
-奥行きを調整できます。
+低域の厚み、明瞭感、ステレオの広がり、短い初期反射による空間感、
+後期残響による余韻を調整できます。
 
 ■ 推奨するDSP順序
 Sonic Refiner
@@ -5870,6 +5870,11 @@ R128 Real-time Loudness Normalizer
 Sonic Refinerは音色と音場を整えます。
 R128 Real-time Loudness Normalizerは、ラウドネス、True Peak、
 リミッターなどの最終的な音量管理を担当します。
+通常の音楽鑑賞では、R128側は「ナチュラル -18」を基本推奨とします。
+ナチュラル -18／パワーブースト -14／リラックス -23／ナイトセーフ -22は
+透明なラウドネス統一を優先する標準ノーマライズです。
+モダンブースト -9／1バンド・アダプティブ -10／3バンド・アダプティブ -10は
+音色・ダイナミクスにも影響する追加マスタリング処理なので、必要な場合だけ使用してください。
 
 ■ 基本操作
 1. 内蔵プリセットを呼び出します。
@@ -5885,8 +5890,8 @@ R128 Real-time Loudness Normalizerは、ラウドネス、True Peak、
 ATBオン時のDepthは「低域自動補正の上限」、Clarityは
 「高域自動補正の上限」です。100%にしても常時+10 dBになるわけではなく、
 必要な場合だけ0～最大+10.0 dBの範囲で自動補正します。
-WidthとAmbienceはATBオン時も手動です。Master Strengthは自動補正を含む
-4つの効果全体に反映されます。
+Width、Ambience、ReverbはATBオン時も手動です。Master Strengthは
+自動補正を含む5つの効果全体に反映されます。
 
 再生開始、曲変更、シーク、Stop後の再生、ATB OFF→ONでは新しく解析し、
 その間は「自動補正：解析中...」と表示します。Pause→Resumeでは解析履歴を
@@ -5901,14 +5906,14 @@ WidthとAmbienceはATBオン時も手動です。Master Strengthは自動補正�
 内蔵プリセットは変更・削除できません。
 内蔵プリセットを呼び出して調整した後、任意プリセットとして
 別名保存できます。任意プリセットは最大20件です。保存済みの任意
-プリセットは「名前変更...」で設定値を変えずに名前だけ変更できます。
-「↑」「↓」で選択中の任意プリセットを1件ずつ並べ替えられます。
-並べ替えた順序は再起動後や.srpbackupの書出／読込でも維持されます。
+プリセットは「プリセット管理...」から、名前変更、削除、複製、現在設定での
+上書き、並べ替えなどを行えます。並べ替えた順序は再起動後や.srpbackupの
+バックアップ／復元でも維持されます。
 
 ■ バックアップ
-「書出...」で任意プリセット全件を.srpbackupファイルへ保存します。
-「読込...」では、現在の任意プリセット一覧をバックアップ内の
-一覧で置き換えます。内蔵プリセットと現在の音質設定は変わりません。
+Preset Managerの「バックアップ...」で任意プリセット全件を.srpbackupへ
+保存します。「復元...」では現在の任意プリセット一覧をバックアップ内容で
+置き換えます。内蔵プリセットと現在の音質設定は変わりません。
 
 ■ A/B比較
 「Aへ保存」「Bへ保存」でDepth、Clarity、Width、Ambience、Reverb、
@@ -5936,8 +5941,8 @@ Sonic Refiner Help
 
 ■ Overview
 Sonic Refiner is an adaptive audio enhancement DSP for foobar2000.
-It adjusts low-frequency body, clarity, stereo width, and depth created
-by short early reflections.
+It adjusts low-frequency body, clarity, stereo width, space from short early
+reflections, and late-Reverb decay / tail.
 
 ■ Recommended DSP Order
 Sonic Refiner
@@ -5949,6 +5954,11 @@ Output
 Sonic Refiner shapes tone and soundstage.
 R128 Real-time Loudness Normalizer handles final loudness management,
 including loudness control, True Peak protection, and limiting.
+For normal music listening, Natural -18 is the recommended R128 starting point.
+Natural -18 / Power Boost -14 / Relaxed -23 / Night Safe -22 are the standard
+normalization choices when transparent loudness matching is the priority.
+Modern Boost -9 / 1-Band Adaptive -10 / 3-Band Adaptive -10 also affect tone
+and dynamics, so use them only when that additional mastering is desired.
 
 ■ Basic Operation
 1. Load a built-in preset.
@@ -5982,18 +5992,17 @@ Depth / Clarity processing.
 ■ Presets
 Built-in presets cannot be changed or deleted.
 After loading and adjusting one, you can save the result under a new
-name as a user preset. Up to 20 user presets can be stored. Use Rename...
-to change only the name of an existing user preset without changing its values.
-Use the Up / Down arrow buttons to move the selected user preset one position.
-The reordered list is preserved after restart and through .srpbackup export/import.
+name as a user preset. Up to 20 user presets can be stored. Use Preset Manager... for Rename, Delete, Duplicate, Update from Current,
+reordering, and other management operations. The saved order is preserved after
+restart and through .srpbackup Backup / Restore.
 
 ■ Backup
-"Export..." saves all user presets to an .srpbackup file.
-"Import..." replaces the current user preset list with the list in the
-backup. Built-in presets and the current sound settings are unchanged.
+Preset Manager's "Backup..." saves all user presets to an .srpbackup file.
+"Restore..." replaces the current user preset list with the list in the backup.
+Built-in presets and the current sound settings are unchanged.
 
 ■ A/B Comparison
-Store A and Store B temporarily save Depth, Clarity, Width, Ambience,
+Store A and Store B temporarily save Depth, Clarity, Width, Ambience, Reverb,
 Master Strength, and the Adaptive Tone Balance On/Off state. Listen A and
 Listen B switch instantly. End Comparison
 restores the complete settings from immediately before comparison began.
@@ -6101,6 +6110,12 @@ A/B内容は再起動後に消去されます。
 ■ R128 Real-time Loudness Normalizer
 Sonic Refinerとは別の後段DSPです。
 ラウドネス正規化、True Peak保護、リミッターなどを担当します。
+基本推奨は「ナチュラル -18」です。
+標準ノーマライズ：ナチュラル -18、パワーブースト -14、
+リラックス -23、ナイトセーフ -22。
+追加マスタリング：モダンブースト -9、1バンド・アダプティブ -10、
+3バンド・アダプティブ -10。追加マスタリング3種は音色・ダイナミクスにも
+影響するため、Sonic Refinerの音作りを保ちたい場合は標準4種から選びます。
 )INFO";
 
 constexpr const wchar_t* sonic_refiner_glossary_text_english = LR"INFO(
@@ -6191,14 +6206,21 @@ On/Off state. An existing user preset can be renamed without changing its
 stored settings.
 
 ■ A/B Comparison
-Temporarily stores Depth, Clarity, Width, Ambience, Master Strength, and
-the Adaptive Tone Balance On/Off state in A or B. Output Gain, protection,
+Temporarily stores Depth, Clarity, Width, Ambience, Reverb, Master Strength,
+and the Adaptive Tone Balance On/Off state in A or B. Output Gain, protection,
 level match, the enabled state, and runtime analysis history are not stored
 in A/B. The slots are cleared when foobar2000 restarts.
 
 ■ R128 Real-time Loudness Normalizer
 A separate downstream DSP used after Sonic Refiner.
 It handles loudness normalization, True Peak protection, and limiting.
+Natural -18 is the recommended starting point.
+Standard normalization: Natural -18, Power Boost -14, Relaxed -23,
+Night Safe -22.
+Additional mastering: Modern Boost -9, 1-Band Adaptive -10,
+3-Band Adaptive -10. The three additional mastering presets also affect tone
+and dynamics; use the standard four first when preserving Sonic Refiner's
+tone and soundstage is the priority.
 )INFO";
 
 constexpr const wchar_t* sonic_refiner_notice_text_japanese = LR"INFO(
@@ -6224,6 +6246,10 @@ Sonic Refiner 使用上の注意
 高い設定では、反射音がエコーのように分離する、ボーカルが遠くなる、
 音が濁る場合があります。
 
+■ Reverb
+高い設定では残響が長く濃くなり、定位や明瞭感が弱く感じられる場合があります。
+会場系プリセットも含め、必要に応じてReverbを下げてください。
+
 ■ Master Strength
 0%にするとDepth、Clarity、Width、Ambience、Reverbは無補正になります。
 Output Gainと保護・比較機能の設定値は変更されません。
@@ -6242,6 +6268,7 @@ Output Gainと保護・比較機能の設定値は変更されません。
 軽量なブロックピーク保護です。
 インターサンプルピークを保証するTrue Peakリミッターではありません。
 通常使用では、後段のR128 Real-time Loudness Normalizerも有効にしてください。
+通常の音楽鑑賞では、R128側は「ナチュラル -18」から始めることを推奨します。
 
 ■ 聴覚と機器の保護
 フルブーストなどの極端な設定を試す際は、再生音量を十分に下げてください。
@@ -6251,9 +6278,9 @@ Output Gainと保護・比較機能の設定値は変更されません。
 A/Bスロットは一時比較専用で、foobar2000終了時に消去されます。
 残したい設定は任意プリセットとして保存してください。
 
-■ プリセット読み込み
-バックアップの読み込みは、現在の任意プリセット一覧を全件置換します。
-必要なプリセットは、読み込み前に書き出してください。
+■ プリセット復元
+「復元...」は、現在の任意プリセット一覧をバックアップ内容で全件置換します。
+必要なプリセットは、復元前に「バックアップ...」で保存してください。
 
 ■ 動作上の注意
 音源や再生環境によって補正結果は異なります。
@@ -6283,6 +6310,10 @@ and reduce mono compatibility.
 High settings can make reflections sound like separate echoes, move vocals
 farther away, or make the sound muddy.
 
+■ Reverb
+High settings produce longer and denser decay and can reduce perceived imaging
+or clarity. Reduce Reverb when necessary, including with venue presets.
+
 ■ Master Strength
 At 0%, Depth, Clarity, Width, Ambience, and Reverb are neutral.
 Output Gain and protection/comparison settings are unchanged.
@@ -6300,7 +6331,8 @@ produce peaks above 0 dBFS.
 ■ Auto Headroom Protection
 This is lightweight block-peak protection, not a True Peak limiter that
 guarantees control of inter-sample peaks. For normal use, also enable the
-downstream R128 Real-time Loudness Normalizer.
+downstream R128 Real-time Loudness Normalizer. For normal music listening,
+Natural -18 is the recommended R128 starting point.
 
 ■ Hearing and Equipment Safety
 Lower the playback volume before trying extreme settings such as Full Boost.
@@ -6310,9 +6342,9 @@ Avoid prolonged listening at high volume.
 A/B slots are temporary and are cleared when foobar2000 exits. Save settings
 you want to keep as a user preset.
 
-■ Preset Import
-Importing a backup replaces the entire current user preset list.
-Export any presets you need before importing.
+■ Preset Restore
+Restore replaces the entire current user preset list with the backup contents.
+Use Backup first if you need to preserve the current list.
 
 ■ Operating Notes
 Results vary with the source material and playback system.
@@ -7258,7 +7290,7 @@ private:
     void apply_language() {
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - Preset Manager - 0.8.0"
+            L"Sonic Refiner - Preset Manager - 0.8.1"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -9715,7 +9747,7 @@ private:
 
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - 0.8.0"
+            L"Sonic Refiner - 0.8.1"
         );
         ::SetDlgItemTextW(
             m_hWnd,

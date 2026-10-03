@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.8.1] - 2026-10-03
+
+### Changed
+
+- Formalized the validated v0.8.1-dev.1 documentation and user-guidance refresh.
+- Help / Glossary / Important Notes identify R128 Real-time Loudness Normalizer **Natural -18** as the recommended normal starting point and distinguish the four standard normalization presets from the three additional mastering presets.
+- QUICK_START.md and README_FIRST.txt now reflect Reverb, 16 built-in presets, Preset Manager, SRP5, and `preset_version 10`.
+
+### Compatibility
+
+- No DSP / ATB / Reverb algorithm changes from v0.8.0.
+- No built-in preset value changes.
+- SRP5, `preset_version 10`, `.srpbackup`, and all legacy compatibility behavior are unchanged.
+
+## [0.8.1-dev.1] - 2026-10-03
+
+### Changed
+
+- Refreshed user-facing Help / Glossary / Important Notes without changing audio processing.
+- Documented R128 Real-time Loudness Normalizer **Natural -18** as the recommended starting point.
+- Clarified standard R128 normalization presets versus additional mastering presets.
+- Refreshed README.md, COMPONENT_README.txt, QUICK_START.md, and README_FIRST.txt for current v0.8.x functionality.
+
+### Compatibility
+
+- No DSP / ATB / Reverb algorithm changes from v0.8.0.
+- No built-in preset value changes.
+- SRP5, `preset_version 10`, `.srpbackup`, and all legacy compatibility behavior are unchanged.
+
 ## [0.8.0] - 2026-10-03
 
 ### Added

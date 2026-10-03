@@ -4,7 +4,9 @@
 
 Sonic Refiner is a real-time tone and soundstage enhancement DSP for foobar2000 2.x on Windows x64.
 
-> Current stable release: **v0.8.0**
+> Current stable release: **v0.8.1**
+
+> v0.8.1 is a documentation / user-guidance refresh. DSP processing, preset values, SRP5, `preset_version 10`, and compatibility behavior are unchanged from v0.8.0.
 
 > Recommended downstream loudness processor: **R128 Real-time Loudness Normalizer**
 
@@ -13,6 +15,16 @@ Sonic Refiner is a real-time tone and soundstage enhancement DSP for foobar2000 
 ---
 
 ## English
+
+## What's new in v0.8.1
+
+v0.8.1 updates user-facing guidance without changing audio processing.
+
+- Help / Glossary / Important Notes clarify the recommended downstream R128 setup.
+- **Natural -18 / ナチュラル -18** is documented as the recommended R128 starting point.
+- The four standard R128 normalization presets are distinguished from the three additional mastering presets.
+- QUICK_START.md and README_FIRST.txt are refreshed for Reverb, 16 built-in presets, Preset Manager, SRP5, and `preset_version 10`.
+- No DSP algorithm, Reverb tuning, built-in preset value, persistence format, or legacy compatibility change.
 
 ## What's new in v0.8.0
 
@@ -33,7 +45,7 @@ v0.8.0 adds a dedicated **Reverb** stage while keeping the existing **Ambience**
 - SRP1–SRP4, DSP preset versions 1–9, and older `.srpbackup` files remain readable
 - Older presets load with **Reverb = 0** to preserve their previous sound
 
-See [RELEASE_NOTES_v0.8.0.md](RELEASE_NOTES_v0.8.0.md) for the formal v0.8.0 release notes and [CHANGELOG.md](CHANGELOG.md) for older history.
+See [RELEASE_NOTES_v0.8.1.md](RELEASE_NOTES_v0.8.1.md) for the formal v0.8.1 release notes and [CHANGELOG.md](CHANGELOG.md) for full history.
 
 ## Main features
 
@@ -237,9 +249,18 @@ Copyright (c) 2026 Maximum
 
 **Sonic Refiner** は、foobar2000 2.x（Windows x64）向けのリアルタイム音色・音場補正DSPです。
 
-> 現在の正式公開版：**v0.8.0**
+> 現在の正式公開版：**v0.8.1**
 
 > 推奨する後段ラウドネス処理：**R128 Real-time Loudness Normalizer**
+
+## v0.8.1の主な変更
+
+v0.8.1は、音声処理を変更せず、ユーザー向け説明を現行仕様へ整備した更新です。
+
+- Help／用語集／注意事項で、後段R128の基本推奨として **「ナチュラル -18」** を明記
+- R128の標準ノーマライズ4種と追加マスタリング3種の違いを明確化
+- QUICK_START.md／README_FIRST.txtをReverb、16内蔵プリセット、Preset Manager、SRP5、`preset_version 10`の現行仕様へ更新
+- DSPアルゴリズム、Reverb調整値、内蔵プリセット値、保存形式、旧形式互換はv0.8.0から変更なし
 
 ## v0.8.0の主な追加・変更
 
@@ -260,7 +281,7 @@ v0.8.0では、従来の **Ambience** を短い初期反射として維持した
 - SRP1～SRP4、DSP preset version 1～9、旧`.srpbackup`を引き続き読込可能
 - 旧プリセットは **Reverb = 0** として読み込み、従来の音を維持
 
-正式なv0.8.0の変更内容は [RELEASE_NOTES_v0.8.0.md](RELEASE_NOTES_v0.8.0.md)、過去の履歴は [CHANGELOG.md](CHANGELOG.md) を参照してください。
+正式なv0.8.1の変更内容は [RELEASE_NOTES_v0.8.1.md](RELEASE_NOTES_v0.8.1.md)、全履歴は [CHANGELOG.md](CHANGELOG.md) を参照してください。
 
 ## 主な機能
 

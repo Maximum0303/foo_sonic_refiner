@@ -1,6 +1,12 @@
-Sonic Refiner v0.7.0 — Build and Package / ビルドと梱包
+Sonic Refiner v0.8.1 — Build and Package / ビルドと梱包
 
 ENGLISH
+
+Purpose of this release:
+- User-facing documentation and in-component guidance refresh only.
+- Adds Natural -18 as the recommended R128 starting point in Help / Glossary / Important Notes.
+- Refreshes QUICK_START.md and README_FIRST.txt for the current v0.8.x feature set.
+- No DSP algorithm, Reverb tuning, built-in preset value, SRP5, preset_version 10, or compatibility change from v0.8.0.
 
 Required environment:
 - foobar2000 SDK 2025-03-07
@@ -27,24 +33,33 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 Package:
-dist\foo_sonic_refiner_v0.7.0.fb2k-component
+dist\foo_sonic_refiner_v0.8.1.fb2k-component
 
 Checksum:
 dist\SHA256SUMS.txt
-
-v0.7.0 feature:
-Adds the read-only Preset Manager foundation: user-preset list, settings preview, current-settings match marker, resizing, Japanese/English, and Light/Dark support.
 
 Manual build:
 1. Open foo_sonic_refiner.sln in Visual Studio 2022.
 2. Select Release and x64.
 3. Run Build -> Rebuild Solution.
 
-This source builds the Sonic Refiner v0.7.0 development package. It is based on the formal v0.6.5 source and adds only the read-only Preset Manager foundation. DSP / ATB processing, SRP4, preset_version 9, .srpbackup, and built-in preset values are unchanged.
+Current persistence / compatibility:
+- User presets: SRP5
+- DSP presets: preset_version 10
+- SRP1-SRP4 remain readable
+- DSP preset versions 1-9 remain readable
+- Legacy .srpbackup remains restorable
+- Older formats load Reverb = 0
 
 ------------------------------------------------------------
 
 日本語
+
+この正式版の目的：
+- ユーザー向け文書とコンポーネント内説明だけを更新します。
+- Help／用語集／注意事項へ、R128「ナチュラル -18」を基本推奨として追記します。
+- QUICK_START.md／README_FIRST.txtを現行v0.8.x仕様へ更新します。
+- v0.8.0からDSPアルゴリズム、Reverb調整値、内蔵プリセット値、SRP5、preset_version 10、互換動作は変更しません。
 
 ■ 対象環境
 - foobar2000 SDK 2025-03-07
@@ -72,7 +87,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 配布パッケージ:
-dist\foo_sonic_refiner_v0.7.0.fb2k-component
+dist\foo_sonic_refiner_v0.8.1.fb2k-component
 
 チェックサム:
 dist\SHA256SUMS.txt
@@ -82,4 +97,10 @@ dist\SHA256SUMS.txt
 2. 構成をRelease、プラットフォームをx64にします。
 3. ビルド→ソリューションのリビルドを実行します。
 
-このソースからSonic Refiner v0.7.0開発版パッケージを作成できます。正式v0.6.5ソースを基準に、読み取り専用Preset Managerの土台だけを追加しています。DSP／ATB処理、SRP4、preset_version 9、.srpbackup、内蔵プリセット値は変更していません。
+■ 現行の保存形式・互換性
+- 任意プリセット：SRP5
+- DSP preset：preset_version 10
+- SRP1～SRP4を引き続き読込可能
+- DSP preset version 1～9を引き続き読込可能
+- 旧.srpbackupを引き続き復元可能
+- 旧形式読込時のReverbは0

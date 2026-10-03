@@ -1,0 +1,27 @@
+Sonic Refiner v0.8.1
+
+Base: official v0.8.0 source (SHA-256 42a18d35d15058bddc060d283794ee00cea4eb0ab6bfb3ba1bbb9ba8d4a47262).
+
+Purpose:
+- Formal documentation and user-guidance refresh only.
+- Formalizes the validated v0.8.1-dev.1 behavior without changing DSP processing.
+
+Changes:
+- Updated in-component Help with R128 Natural -18 as the recommended starting point.
+- Refreshed stale in-component Help wording for Preset Manager Backup / Restore and current Reverb/A-B behavior.
+- Clarified the four standard R128 normalization presets versus the three additional mastering presets.
+- Expanded the R128 Glossary entry with the current seven preset names and usage distinction.
+- Added Natural -18 guidance to Important Notes.
+- Refreshed README.md and COMPONENT_README.txt for current v0.8.x functionality.
+- Refreshed QUICK_START.md for Reverb, 16 built-ins, Preset Manager, SRP5, preset_version 10, and R128 guidance.
+- Refreshed README_FIRST.txt for the v0.8.1 build/package name and current compatibility.
+
+No intentional changes to:
+- Depth / Clarity / Width / Ambience / Reverb DSP algorithms
+- Adaptive Tone Balance decision logic
+- Reverb tuning or venue preset values
+- 16 built-in preset values
+- SRP5 layout
+- preset_version 10
+- .srpbackup outer format
+- legacy preset / backup compatibility
