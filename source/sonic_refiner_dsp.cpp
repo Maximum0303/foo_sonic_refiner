@@ -39,6 +39,18 @@ constexpr double ambience_extreme_maximum_dry_reduction = 0.28;
 constexpr double ambience_first_reflection_ms = 11.0;
 constexpr double ambience_second_reflection_ms = 19.0;
 
+// v0.8.0 late-reverb stage. Ambience remains the legacy early-reflection
+// processor; Reverb adds a decaying feedback tail after Ambience.
+constexpr double reverb_maximum_wet_mix = 0.34;
+constexpr double reverb_minimum_decay_seconds = 0.25;
+constexpr double reverb_maximum_decay_seconds = 4.25;
+constexpr double reverb_feedback_damping = 0.42;
+constexpr double reverb_tail_peak_threshold = 0.00003;
+constexpr double reverb_tail_extra_seconds = 0.35;
+constexpr double reverb_comb_delay_ms[] = { 29.7, 37.1, 41.1, 43.7 };
+constexpr std::size_t reverb_comb_count =
+    sizeof(reverb_comb_delay_ms) / sizeof(reverb_comb_delay_ms[0]);
+
 constexpr double auto_headroom_ceiling = 0.98;
 constexpr double auto_headroom_release_seconds = 1.5;
 
@@ -943,6 +955,22 @@ double effective_ambience_dry_reduction(
     float master_strength
 ) noexcept {
     return ambience_to_dry_reduction(ambience) *
+        master_strength_factor(master_strength);
+}
+
+double reverb_decay_seconds(float reverb) noexcept {
+    const double normalized = normalized_parameter(reverb);
+    return reverb_minimum_decay_seconds +
+        ((reverb_maximum_decay_seconds - reverb_minimum_decay_seconds) *
+         std::pow(normalized, 1.5));
+}
+
+double effective_reverb_wet_mix(
+    float reverb,
+    float master_strength
+) noexcept {
+    return reverb_maximum_wet_mix *
+        normalized_parameter(reverb) *
         master_strength_factor(master_strength);
 }
 
@@ -3424,6 +3452,227 @@ private:
     std::vector<audio_sample> delay_buffer_;
 };
 
+class reverb_processor {
+public:
+    void configure(
+        double sample_rate,
+        unsigned channels,
+        float reverb,
+        float master_strength
+    ) {
+        clear_configuration();
+
+        sample_rate_ = sample_rate;
+        channels_ = channels;
+        wet_mix_ = effective_reverb_wet_mix(
+            reverb,
+            master_strength
+        );
+        decay_seconds_ = reverb_decay_seconds(reverb);
+
+        if (!std::isfinite(sample_rate_) ||
+            sample_rate_ <= 0.0 ||
+            channels_ == 0 ||
+            wet_mix_ <= 0.0) {
+            clear_configuration();
+            return;
+        }
+
+        lines_.resize(
+            static_cast<std::size_t>(channels_) * reverb_comb_count
+        );
+        input_frame_.assign(channels_, 0.0);
+        wet_frame_.assign(channels_, 0.0);
+
+        for (unsigned channel = 0; channel < channels_; ++channel) {
+            for (std::size_t index = 0; index < reverb_comb_count; ++index) {
+                delay_line& line = line_for(channel, index);
+                const double channel_offset_ms =
+                    0.73 * static_cast<double>(channel);
+                const double delay_ms =
+                    reverb_comb_delay_ms[index] + channel_offset_ms;
+                const t_size delay_samples = milliseconds_to_samples(
+                    sample_rate_,
+                    delay_ms
+                );
+
+                line.buffer.assign(
+                    std::max<t_size>(delay_samples, 2),
+                    static_cast<audio_sample>(0)
+                );
+                line.index = 0;
+                line.damping_state = 0.0;
+
+                const double delay_seconds =
+                    static_cast<double>(line.buffer.size()) / sample_rate_;
+                line.feedback = std::pow(
+                    10.0,
+                    (-3.0 * delay_seconds) / decay_seconds_
+                );
+                line.feedback = std::clamp(line.feedback, 0.0, 0.985);
+            }
+        }
+    }
+
+    void reset() noexcept {
+        for (auto& line : lines_) {
+            std::fill(
+                line.buffer.begin(),
+                line.buffer.end(),
+                static_cast<audio_sample>(0)
+            );
+            line.index = 0;
+            line.damping_state = 0.0;
+        }
+        std::fill(input_frame_.begin(), input_frame_.end(), 0.0);
+        std::fill(wet_frame_.begin(), wet_frame_.end(), 0.0);
+    }
+
+    bool active() const noexcept {
+        return wet_mix_ > 0.0 && channels_ > 0 && !lines_.empty();
+    }
+
+    double tail_duration_seconds() const noexcept {
+        return active()
+            ? decay_seconds_ + reverb_tail_extra_seconds
+            : 0.0;
+    }
+
+    bool has_audible_tail() const noexcept {
+        if (!active()) {
+            return false;
+        }
+
+        double peak = 0.0;
+        for (const auto& line : lines_) {
+            peak = (std::max)(peak, std::abs(line.damping_state));
+            for (const audio_sample sample : line.buffer) {
+                peak = (std::max)(
+                    peak,
+                    std::abs(static_cast<double>(sample))
+                );
+                if (peak >= reverb_tail_peak_threshold) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    void process_frame(audio_sample* frame, unsigned channels) noexcept {
+        if (frame == nullptr ||
+            !active() ||
+            channels != channels_ ||
+            input_frame_.size() != channels_ ||
+            wet_frame_.size() != channels_) {
+            return;
+        }
+
+        for (unsigned channel = 0; channel < channels_; ++channel) {
+            const double input = static_cast<double>(frame[channel]);
+            if (!std::isfinite(input)) {
+                reset();
+                return;
+            }
+            input_frame_[channel] = input;
+            wet_frame_[channel] = 0.0;
+        }
+
+        for (unsigned channel = 0; channel < channels_; ++channel) {
+            double wet_sum = 0.0;
+
+            for (std::size_t index = 0; index < reverb_comb_count; ++index) {
+                delay_line& line = line_for(channel, index);
+                const double delayed = static_cast<double>(
+                    line.buffer[line.index]
+                );
+                const double damped =
+                    ((1.0 - reverb_feedback_damping) * delayed) +
+                    (reverb_feedback_damping * line.damping_state);
+                line.damping_state = damped;
+
+                const double feedback_sample =
+                    input_frame_[channel] + (damped * line.feedback);
+
+                if (!std::isfinite(feedback_sample)) {
+                    reset();
+                    return;
+                }
+
+                line.buffer[line.index] = static_cast<audio_sample>(
+                    std::clamp(feedback_sample, -8.0, 8.0)
+                );
+                line.index = (line.index + 1) % line.buffer.size();
+                wet_sum += damped;
+            }
+
+            wet_frame_[channel] =
+                wet_sum / static_cast<double>(reverb_comb_count);
+        }
+
+        for (unsigned channel = 0; channel < channels_; ++channel) {
+            double wet = wet_frame_[channel];
+
+            if (channels_ >= 2 && channel < 2) {
+                const unsigned other = channel == 0 ? 1 : 0;
+                wet = (wet * 0.78) + (wet_frame_[other] * 0.22);
+            }
+
+            const double output =
+                input_frame_[channel] + (wet * wet_mix_);
+
+            if (!std::isfinite(output)) {
+                reset();
+                return;
+            }
+
+            frame[channel] = static_cast<audio_sample>(output);
+        }
+    }
+
+private:
+    struct delay_line {
+        std::vector<audio_sample> buffer;
+        t_size index = 0;
+        double feedback = 0.0;
+        double damping_state = 0.0;
+    };
+
+    static t_size milliseconds_to_samples(
+        double sample_rate,
+        double milliseconds
+    ) noexcept {
+        const double samples = sample_rate * milliseconds * 0.001;
+        if (!std::isfinite(samples) || samples < 1.0) {
+            return 1;
+        }
+        return static_cast<t_size>(std::lround(samples));
+    }
+
+    delay_line& line_for(unsigned channel, std::size_t index) noexcept {
+        return lines_[
+            static_cast<std::size_t>(channel) * reverb_comb_count + index
+        ];
+    }
+
+    void clear_configuration() noexcept {
+        sample_rate_ = 0.0;
+        channels_ = 0;
+        wet_mix_ = 0.0;
+        decay_seconds_ = 0.0;
+        lines_.clear();
+        input_frame_.clear();
+        wet_frame_.clear();
+    }
+
+    double sample_rate_ = 0.0;
+    unsigned channels_ = 0;
+    double wet_mix_ = 0.0;
+    double decay_seconds_ = 0.0;
+    std::vector<delay_line> lines_;
+    std::vector<double> input_frame_;
+    std::vector<double> wet_frame_;
+};
 
 
 class level_match_processor {
@@ -3580,6 +3829,17 @@ public:
                 value * current_gain_
             );
         }
+    }
+
+    double current_gain() const noexcept {
+        if (!enabled_ || !std::isfinite(current_gain_)) {
+            return 1.0;
+        }
+        return std::clamp(
+            current_gain_,
+            level_match_minimum_gain,
+            1.0
+        );
     }
 
 private:
@@ -3755,7 +4015,8 @@ public:
             (settings_.depth > 0.0f ||
              settings_.clarity > 0.0f ||
              settings_.width > 0.0f ||
-             settings_.ambience > 0.0f);
+             settings_.ambience > 0.0f ||
+             settings_.reverb > 0.0f);
 
         if (!enhancement_active &&
             std::abs(settings_.output_gain_db) <= 0.0001f &&
@@ -3765,6 +4026,7 @@ public:
 
         const unsigned sample_rate = chunk->get_srate();
         const unsigned channels = chunk->get_channels();
+        channel_config_ = chunk->get_channel_config();
 
         if (sample_rate == 0 || channels == 0) {
             return true;
@@ -3874,6 +4136,14 @@ public:
                     channels
                 );
             }
+
+            if (settings_.master_strength > 0.0f &&
+                settings_.reverb > 0.0f) {
+                reverb_processor_.process_frame(
+                    data + frame_offset,
+                    channels
+                );
+            }
         }
 
         if (settings_.level_matched_bypass) {
@@ -3902,7 +4172,8 @@ public:
         return true;
     }
 
-    void on_endofplayback(abort_callback&) override {
+    void on_endofplayback(abort_callback& abort) override {
+        emit_reverb_tail(abort);
         adaptive_tone_balance_processor_.stop();
         reset_audio_processors();
         g_last_tone_gain_valid.store(
@@ -3915,7 +4186,8 @@ public:
         );
     }
 
-    void on_endoftrack(abort_callback&) override {
+    void on_endoftrack(abort_callback& abort) override {
+        emit_reverb_tail(abort);
         adaptive_tone_balance_processor_
             .reset_for_discontinuity();
         tone_bass_body_comparison_analyzer_.reset();
@@ -3947,6 +4219,123 @@ public:
     }
 
 private:
+    void emit_reverb_tail(abort_callback& abort) {
+        if (!settings_.enabled ||
+            settings_.master_strength <= 0.0f ||
+            settings_.reverb <= 0.0f ||
+            sample_rate_ == 0 ||
+            channels_ == 0 ||
+            channel_config_ == 0 ||
+            !reverb_processor_.has_audible_tail()) {
+            if (settings_.reverb > 0.0f) {
+                reverb_processor_.reset();
+            }
+            return;
+        }
+
+        const double maximum_seconds =
+            reverb_processor_.tail_duration_seconds();
+        const t_size maximum_frames = static_cast<t_size>(
+            std::ceil(maximum_seconds * static_cast<double>(sample_rate_))
+        );
+        const t_size block_frames = std::clamp<t_size>(
+            static_cast<t_size>(sample_rate_ / 50),
+            static_cast<t_size>(256),
+            static_cast<t_size>(2048)
+        );
+        const t_size minimum_frames = static_cast<t_size>(
+            std::ceil(0.10 * static_cast<double>(sample_rate_))
+        );
+
+        std::vector<audio_sample> block(
+            block_frames * static_cast<t_size>(channels_),
+            static_cast<audio_sample>(0)
+        );
+
+        t_size generated_frames = 0;
+        unsigned quiet_blocks = 0;
+
+        while (generated_frames < maximum_frames) {
+            abort.check();
+
+            const t_size frames = (std::min)(
+                block_frames,
+                maximum_frames - generated_frames
+            );
+            const t_size samples =
+                frames * static_cast<t_size>(channels_);
+            std::fill(
+                block.begin(),
+                block.begin() + samples,
+                static_cast<audio_sample>(0)
+            );
+
+            double peak = 0.0;
+            for (t_size frame_index = 0; frame_index < frames; ++frame_index) {
+                audio_sample* frame =
+                    block.data() + (frame_index * channels_);
+                reverb_processor_.process_frame(frame, channels_);
+
+                for (unsigned channel = 0; channel < channels_; ++channel) {
+                    peak = (std::max)(
+                        peak,
+                        std::abs(static_cast<double>(frame[channel]))
+                    );
+                }
+            }
+
+            if (settings_.level_matched_bypass) {
+                const double level_match_gain =
+                    level_match_processor_.current_gain();
+                for (t_size index = 0; index < samples; ++index) {
+                    block[index] = static_cast<audio_sample>(
+                        static_cast<double>(block[index]) *
+                        level_match_gain
+                    );
+                }
+            }
+
+            apply_output_gain(
+                block.data(),
+                samples,
+                settings_.output_gain_db
+            );
+
+            if (settings_.auto_headroom) {
+                auto_headroom_processor_.process(
+                    block.data(),
+                    frames,
+                    channels_
+                );
+            }
+
+            generated_frames += frames;
+
+            if (peak < reverb_tail_peak_threshold) {
+                ++quiet_blocks;
+            } else {
+                quiet_blocks = 0;
+            }
+
+            if (quiet_blocks >= 3 && generated_frames >= minimum_frames) {
+                break;
+            }
+
+            audio_chunk* tail = insert_chunk(samples);
+            tail->set_data(
+                block.data(),
+                frames,
+                channels_,
+                sample_rate_,
+                channel_config_
+            );
+        }
+
+        // Never carry a venue tail into the next track.
+        reverb_processor_.reset();
+        ambience_processor_.reset();
+    }
+
     void configure_processors(
         unsigned sample_rate,
         unsigned channels,
@@ -4042,6 +4431,13 @@ private:
             static_cast<double>(sample_rate),
             channels,
             settings_.ambience,
+            settings_.master_strength
+        );
+
+        reverb_processor_.configure(
+            static_cast<double>(sample_rate),
+            channels,
+            settings_.reverb,
             settings_.master_strength
         );
 
@@ -4200,6 +4596,7 @@ private:
 
         width_processor_.reset();
         ambience_processor_.reset();
+        reverb_processor_.reset();
         level_match_processor_.reset();
         auto_headroom_processor_.reset();
         tone_bass_body_comparison_analyzer_.reset();
@@ -4209,9 +4606,11 @@ private:
     sonic_refiner::settings settings_;
     unsigned sample_rate_ = 0;
     unsigned channels_ = 0;
+    unsigned channel_config_ = 0;
     std::vector<channel_filters> filters_;
     stereo_width_processor width_processor_;
     ambience_processor ambience_processor_;
+    reverb_processor reverb_processor_;
     level_match_processor level_match_processor_;
     auto_headroom_processor auto_headroom_processor_;
     adaptive_tone_balance_processor
@@ -4440,6 +4839,7 @@ struct ab_comparison_value {
     float clarity = 45.0f;
     float width = 50.0f;
     float ambience = 40.0f;
+    float reverb = 0.0f;
     float master_strength = 100.0f;
     bool adaptive_tone_balance = false;
 };
@@ -4460,6 +4860,7 @@ ab_comparison_value capture_ab_comparison_value(
         settings.clarity,
         settings.width,
         settings.ambience,
+        settings.reverb,
         settings.master_strength,
         settings.adaptive_tone_balance
     };
@@ -4473,6 +4874,7 @@ void apply_ab_comparison_value(
     settings.clarity = value.clarity;
     settings.width = value.width;
     settings.ambience = value.ambience;
+    settings.reverb = value.reverb;
     settings.master_strength = value.master_strength;
     settings.adaptive_tone_balance =
         value.adaptive_tone_balance;
@@ -4486,56 +4888,23 @@ struct built_in_preset {
 };
 
 const built_in_preset g_built_in_presets[] = {
-    {
-        L"標準", L"Standard",
-        { 55.0f, 45.0f, 50.0f, 40.0f, 100.0f, 0.0f, true, true, true, false }
-    },
-    {
-        L"低域強化", L"Bass Boost",
-        { 90.0f, 30.0f, 30.0f, 25.0f, 100.0f, 0.0f, true, true, true, false }
-    },
-    {
-        L"ボーカル重視", L"Vocal Focus",
-        { 35.0f, 90.0f, 25.0f, 25.0f, 100.0f, 0.0f, true, true, true, false }
-    },
-    {
-        L"ワイド", L"Wide",
-        { 40.0f, 45.0f, 90.0f, 30.0f, 100.0f, 0.0f, true, true, true, false }
-    },
-    {
-        L"ライブ", L"Live",
-        { 55.0f, 50.0f, 70.0f, 80.0f, 100.0f, 0.0f, true, true, true, false }
-    },
-    {
-        L"ヘッドホン", L"Headphones",
-        { 45.0f, 50.0f, 65.0f, 40.0f, 100.0f, 0.0f, true, true, true, false }
-    },
-    {
-        L"超低域強化", L"Extreme Bass",
-        { 100.0f, 35.0f, 30.0f, 20.0f, 100.0f, 0.0f, true, true, true, false }
-    },
-    {
-        L"超明瞭", L"Extreme Clarity",
-        { 30.0f, 100.0f, 25.0f, 20.0f, 100.0f, 0.0f, true, true, true, false }
-    },
-    {
-        L"超ワイド", L"Extreme Wide",
-        { 30.0f, 40.0f, 100.0f, 25.0f, 100.0f, 0.0f, true, true, true, false }
-    },
-    {
-        L"大ホール", L"Large Hall",
-        { 45.0f, 45.0f, 75.0f, 100.0f, 100.0f, 0.0f, true, true, true, false }
-    },
-    {
-        L"フルブースト", L"Full Boost",
-        { 100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 0.0f, true, true, true, false }
-    },
-    {
-        L"適応型標準", L"Adaptive Standard",
-        { 100.0f, 100.0f, 50.0f, 40.0f, 100.0f, 0.0f, true, true, true, true }
-    },
+    { L"標準", L"Standard", { 55.0f, 45.0f, 50.0f, 40.0f, 0.0f, 100.0f, 0.0f, true, true, true, false } },
+    { L"低域強化", L"Bass Boost", { 90.0f, 30.0f, 30.0f, 25.0f, 0.0f, 100.0f, 0.0f, true, true, true, false } },
+    { L"ボーカル重視", L"Vocal Focus", { 35.0f, 90.0f, 25.0f, 25.0f, 0.0f, 100.0f, 0.0f, true, true, true, false } },
+    { L"ワイド", L"Wide", { 40.0f, 45.0f, 90.0f, 30.0f, 0.0f, 100.0f, 0.0f, true, true, true, false } },
+    { L"ライブ", L"Live", { 55.0f, 50.0f, 70.0f, 80.0f, 0.0f, 100.0f, 0.0f, true, true, true, false } },
+    { L"ヘッドホン", L"Headphones", { 45.0f, 50.0f, 65.0f, 40.0f, 0.0f, 100.0f, 0.0f, true, true, true, false } },
+    { L"超低域強化", L"Extreme Bass", { 100.0f, 35.0f, 30.0f, 20.0f, 0.0f, 100.0f, 0.0f, true, true, true, false } },
+    { L"超明瞭", L"Extreme Clarity", { 30.0f, 100.0f, 25.0f, 20.0f, 0.0f, 100.0f, 0.0f, true, true, true, false } },
+    { L"超ワイド", L"Extreme Wide", { 30.0f, 40.0f, 100.0f, 25.0f, 0.0f, 100.0f, 0.0f, true, true, true, false } },
+    { L"大ホール", L"Large Hall", { 45.0f, 45.0f, 75.0f, 100.0f, 0.0f, 100.0f, 0.0f, true, true, true, false } },
+    { L"フルブースト", L"Full Boost", { 100.0f, 100.0f, 100.0f, 100.0f, 0.0f, 100.0f, 0.0f, true, true, true, false } },
+    { L"適応型標準", L"Adaptive Standard", { 100.0f, 100.0f, 50.0f, 40.0f, 0.0f, 100.0f, 0.0f, true, true, true, true } },
+    { L"適応型ホール", L"Adaptive Hall", { 100.0f, 100.0f, 60.0f, 55.0f, 50.0f, 100.0f, 0.0f, true, true, true, true } },
+    { L"適応型アリーナ", L"Adaptive Arena", { 100.0f, 100.0f, 72.0f, 65.0f, 68.0f, 100.0f, 0.0f, true, true, true, true } },
+    { L"適応型ドーム", L"Adaptive Dome", { 100.0f, 100.0f, 85.0f, 75.0f, 85.0f, 100.0f, 0.0f, true, true, true, true } },
+    { L"適応型野外", L"Adaptive Open Air", { 100.0f, 100.0f, 75.0f, 20.0f, 10.0f, 100.0f, 0.0f, true, true, true, true } },
 };
-
 const wchar_t* built_in_preset_name(
     const built_in_preset& preset,
     ui_language language
@@ -4564,6 +4933,7 @@ bool built_in_preset_settings_match(
         same_float(left.clarity, right.clarity) &&
         same_float(left.width, right.width) &&
         same_float(left.ambience, right.ambience) &&
+        same_float(left.reverb, right.reverb) &&
         same_float(left.master_strength, right.master_strength) &&
         same_float(left.output_gain_db, right.output_gain_db) &&
         left.auto_headroom == right.auto_headroom &&
@@ -4718,7 +5088,7 @@ std::string serialize_user_presets(
     const std::vector<user_preset>& presets
 ) {
     std::ostringstream stream;
-    stream << "SRP4\n";
+    stream << "SRP5\n";
 
     const std::size_t count = (std::min)(
         presets.size(),
@@ -4740,6 +5110,8 @@ std::string serialize_user_presets(
             << static_cast<int>(std::lround(value.width))
             << '\t'
             << static_cast<int>(std::lround(value.ambience))
+            << '\t'
+            << static_cast<int>(std::lround(value.reverb))
             << '\t'
             << static_cast<int>(
                 std::lround(value.master_strength)
@@ -4784,11 +5156,13 @@ bool parse_user_presets(
     const bool srp2_format = line == "SRP2";
     const bool srp3_format = line == "SRP3";
     const bool srp4_format = line == "SRP4";
+    const bool srp5_format = line == "SRP5";
 
     if (!srp1_format &&
         !srp2_format &&
         !srp3_format &&
-        !srp4_format) {
+        !srp4_format &&
+        !srp5_format) {
         return false;
     }
 
@@ -4808,11 +5182,13 @@ bool parse_user_presets(
         const std::vector<std::string> fields =
             split_tab_fields(line);
         const std::size_t expected_fields =
-            srp4_format
-                ? 11
-                : (srp3_format
-                    ? 10
-                    : (srp2_format ? 9 : 8));
+            srp5_format
+                ? 12
+                : (srp4_format
+                    ? 11
+                    : (srp3_format
+                        ? 10
+                        : (srp2_format ? 9 : 8)));
 
         if (fields.size() != expected_fields) {
             if (strict) {
@@ -4834,6 +5210,7 @@ bool parse_user_presets(
         int clarity = 0;
         int width = 0;
         int ambience = 0;
+        int reverb = 0;
         int master_strength = 100;
         int output_gain_steps = 0;
         int auto_headroom = 0;
@@ -4847,7 +5224,19 @@ bool parse_user_presets(
             parse_integer(fields[3], width) &&
             parse_integer(fields[4], ambience);
 
-        if (srp4_format) {
+        if (srp5_format) {
+            parsed = parsed &&
+                parse_integer(fields[5], reverb) &&
+                parse_integer(fields[6], master_strength) &&
+                parse_integer(fields[7], output_gain_steps) &&
+                parse_integer(fields[8], auto_headroom) &&
+                parse_integer(fields[9], level_match) &&
+                parse_integer(fields[10], enabled) &&
+                parse_integer(
+                    fields[11],
+                    adaptive_tone_balance
+                );
+        } else if (srp4_format) {
             parsed = parsed &&
                 parse_integer(fields[5], master_strength) &&
                 parse_integer(fields[6], output_gain_steps) &&
@@ -4884,7 +5273,8 @@ bool parse_user_presets(
             clarity >= 0 && clarity <= 100 &&
             width >= 0 && width <= 100 &&
             ambience >= 0 && ambience <= 100 &&
-            (!(srp3_format || srp4_format) ||
+            (!srp5_format || (reverb >= 0 && reverb <= 100)) &&
+            (!(srp3_format || srp4_format || srp5_format) ||
                 (master_strength >= 0 &&
                  master_strength <= 100)) &&
             (srp1_format ||
@@ -4893,7 +5283,7 @@ bool parse_user_presets(
             is_boolean_integer(auto_headroom) &&
             is_boolean_integer(level_match) &&
             is_boolean_integer(enabled) &&
-            (!srp4_format ||
+            (!(srp4_format || srp5_format) ||
                 is_boolean_integer(adaptive_tone_balance));
 
         if (!values_valid) {
@@ -4907,8 +5297,11 @@ bool parse_user_presets(
         preset.value.clarity = static_cast<float>(clarity);
         preset.value.width = static_cast<float>(width);
         preset.value.ambience = static_cast<float>(ambience);
+        preset.value.reverb = srp5_format
+            ? static_cast<float>(reverb)
+            : 0.0f;
         preset.value.master_strength =
-            (srp3_format || srp4_format)
+            (srp3_format || srp4_format || srp5_format)
                 ? static_cast<float>(master_strength)
                 : 100.0f;
         preset.value.output_gain_db = srp1_format
@@ -4918,7 +5311,7 @@ bool parse_user_presets(
         preset.value.level_matched_bypass = level_match != 0;
         preset.value.enabled = enabled != 0;
         preset.value.adaptive_tone_balance =
-            srp4_format &&
+            (srp4_format || srp5_format) &&
             adaptive_tone_balance != 0;
         preset.value = sonic_refiner::sanitize(preset.value);
 
@@ -5480,8 +5873,8 @@ R128 Real-time Loudness Normalizerは、ラウドネス、True Peak、
 
 ■ 基本操作
 1. 内蔵プリセットを呼び出します。
-2. Depth、Clarity、Width、Ambienceを好みに合わせて調整します。
-3. Master Strengthで4項目の効果を一括調整します。
+2. Depth、Clarity、Width、Ambience、Reverbを好みに合わせて調整します。
+3. Master Strengthで5項目の効果を一括調整します。
 4. 必要に応じて出力ゲインを調整します。
 5. 調整結果を任意プリセットとして保存します。
 
@@ -5518,7 +5911,7 @@ WidthとAmbienceはATBオン時も手動です。Master Strengthは自動補正�
 一覧で置き換えます。内蔵プリセットと現在の音質設定は変わりません。
 
 ■ A/B比較
-「Aへ保存」「Bへ保存」でDepth、Clarity、Width、Ambience、
+「Aへ保存」「Bへ保存」でDepth、Clarity、Width、Ambience、Reverb、
 Master Strength、適応型音色補正のオン／オフを一時保存できます。
 「Aを試聴」「Bを試聴」で
 即時に切り替え、「比較終了」で比較開始直前の全設定へ戻ります。
@@ -5559,8 +5952,8 @@ including loudness control, True Peak protection, and limiting.
 
 ■ Basic Operation
 1. Load a built-in preset.
-2. Adjust Depth, Clarity, Width, and Ambience to taste.
-3. Use Master Strength to adjust all four effects together.
+2. Adjust Depth, Clarity, Width, Ambience, and Reverb to taste.
+3. Use Master Strength to adjust all five effects together.
 4. Adjust Output Gain when necessary.
 5. Save the result as a user preset.
 
@@ -5572,7 +5965,7 @@ automatic cuts.
 With ATB On, Depth is the Auto Low correction limit and Clarity is the
 Auto High correction limit. Setting either to 100% does not force a constant
 +10 dB boost; the actual correction can range from 0 to the existing +10.0 dB
-maximum only when the source needs it. Width and Ambience remain manual.
+maximum only when the source needs it. Width, Ambience, and Reverb remain manual.
 Master Strength also scales the adaptive correction together with the other
 effects.
 
@@ -5640,10 +6033,15 @@ Mid/Side方式でステレオのSide成分を広げます。
 最大Wet Mixは85%です。長いリバーブではなく、近い反射音によって
 空間の広さや奥行きを作ります。
 
+■ Reverb（残響・余韻）
+Ambienceの後段で、複数のフィードバック反射を使った後期残響を加えます。
+値が大きいほど残響量と減衰時間が増えます。曲中の無音でも自然に減衰し、
+曲末のカットアウト時は残響テールを追加出力してから次曲へ移ります。
+
 ■ Master Strength（全体効果量）
-Depth、Clarity、Width、Ambienceのバランスを保ったまま、
-4項目の実効効果を0～100%で一括調整します。
-0%では4項目が無補正、100%では各スライダーの設定どおりになります。
+Depth、Clarity、Width、Ambience、Reverbのバランスを保ったまま、
+5項目の実効効果を0～100%で一括調整します。
+0%では5項目が無補正、100%では各スライダーの設定どおりになります。
 Output Gain、自動ヘッドルーム保護、レベルマッチは対象外です。
 
 ■ 適応型音色補正 (Adaptive Tone Balance)
@@ -5651,7 +6049,7 @@ Output Gain、自動ヘッドルーム保護、レベルマッチは対象外で
 自動音色補正です。自動カットは行いません。
 オン時はDepthがAuto Lowの上限、ClarityがAuto Highの上限として働き、
 100%は「最大+10.0 dBまで許可する」という意味です。実際の補正量は
-音源に応じて0 dBから上限まで変化します。Width／Ambienceは手動です。
+音源に応じて0 dBから上限まで変化します。Width／Ambience／Reverbは手動です。
 
 ■ Auto Low（低域自動補正）
 Bass 60～180 HzとBody 200～500 Hzの相対バランスを見て、Bassが不足する
@@ -5690,12 +6088,12 @@ Sonic Refinerに固定で収録された設定です。
 
 ■ 任意プリセット
 ユーザーが名前を付けて保存する設定です。
-補正値、Master Strength、出力ゲイン、保護、レベル一致、
+補正値（Reverbを含む）、Master Strength、出力ゲイン、保護、レベル一致、
 本体の有効状態、適応型音色補正のオン／オフを保存します。
 保存後に名前だけ変更でき、設定値はそのまま維持されます。
 
 ■ A/B比較
-Depth、Clarity、Width、Ambience、Master Strengthと適応型音色補正の
+Depth、Clarity、Width、Ambience、Reverb、Master Strengthと適応型音色補正の
 オン／オフをA/Bへ一時保存して比較する機能です。Output Gain、保護、
 レベル一致、本体の有効状態はA/Bへ保存しません。解析履歴も保存せず、
 A/B内容は再起動後に消去されます。
@@ -5728,10 +6126,15 @@ Adds short early reflections at approximately 11 ms and 19 ms.
 The maximum Wet Mix is 85%. It creates space and depth with nearby
 reflections rather than a long reverb tail.
 
+■ Reverb
+Adds decaying late reflections after Ambience using a lightweight feedback
+network. Higher values increase both wet level and decay time. The tail continues
+through silence and is emitted after abrupt track endings before the next track.
+
 ■ Master Strength
-Adjusts the effective amount of Depth, Clarity, Width, and Ambience
+Adjusts the effective amount of Depth, Clarity, Width, Ambience, and Reverb
 from 0% to 100% while preserving their balance.
-At 0%, all four are neutral. At 100%, each slider works at its full
+At 0%, all five are neutral. At 100%, each slider works at its full
 configured value. Output Gain, Auto Headroom Protection, and Level
 Match are not affected.
 
@@ -5740,8 +6143,8 @@ A boost-only automatic tone correction that analyzes the original source and
 raises only low/high energy that appears deficient. It never applies automatic
 cuts. With ATB On, Depth is the Auto Low limit and Clarity is the Auto High
 limit. 100% means "allow up to +10.0 dB"; the actual correction varies from
-0 dB to the allowed maximum according to the source. Width and Ambience remain
-manual.
+0 dB to the allowed maximum according to the source. Width, Ambience, and Reverb
+remain manual.
 
 ■ Auto Low
 Compares Bass 60–180 Hz with Body 200–500 Hz and corrects only when Bass is
@@ -5822,7 +6225,7 @@ Sonic Refiner 使用上の注意
 音が濁る場合があります。
 
 ■ Master Strength
-0%にするとDepth、Clarity、Width、Ambienceは無補正になります。
+0%にするとDepth、Clarity、Width、Ambience、Reverbは無補正になります。
 Output Gainと保護・比較機能の設定値は変更されません。
 
 ■ 適応型音色補正
@@ -5881,7 +6284,7 @@ High settings can make reflections sound like separate echoes, move vocals
 farther away, or make the sound muddy.
 
 ■ Master Strength
-At 0%, Depth, Clarity, Width, and Ambience are neutral.
+At 0%, Depth, Clarity, Width, Ambience, and Reverb are neutral.
 Output Gain and protection/comparison settings are unchanged.
 
 ■ Adaptive Tone Balance
@@ -6855,7 +7258,7 @@ private:
     void apply_language() {
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - Preset Manager - 0.7.0"
+            L"Sonic Refiner - Preset Manager - 0.8.0"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -7312,6 +7715,9 @@ private:
              << L"%\r\n";
         text << L"Ambience: "
              << static_cast<int>(std::lround(value.ambience))
+             << L"%\r\n";
+        text << L"Reverb: "
+             << static_cast<int>(std::lround(value.reverb))
              << L"%\r\n";
         text << L"Master Strength: "
              << static_cast<int>(std::lround(value.master_strength))
@@ -9153,6 +9559,7 @@ private:
         clarity_slider_ = GetDlgItem(IDC_CLARITY_SLIDER);
         width_slider_ = GetDlgItem(IDC_WIDTH_SLIDER);
         ambience_slider_ = GetDlgItem(IDC_AMBIENCE_SLIDER);
+        reverb_slider_ = GetDlgItem(IDC_REVERB_SLIDER);
         master_strength_slider_ =
             GetDlgItem(IDC_MASTER_STRENGTH_SLIDER);
         output_gain_slider_ =
@@ -9203,6 +9610,10 @@ private:
         configure_slider(
             ambience_slider_,
             static_cast<int>(std::lround(settings_.ambience))
+        );
+        configure_slider(
+            reverb_slider_,
+            static_cast<int>(std::lround(settings_.reverb))
         );
         configure_slider(
             master_strength_slider_,
@@ -9304,7 +9715,7 @@ private:
 
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - 0.7.0"
+            L"Sonic Refiner - 0.8.0"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -9403,6 +9814,24 @@ private:
                 language_,
                 L"11 ms・19 msの初期反射を最大Mix 85%まで加えます。",
                 L"Adds 11 ms and 19 ms early reflections, up to 85% Mix."
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_REVERB_LABEL,
+            localized(
+                language_,
+                L"残響・余韻 (Reverb)",
+                L"Reverb"
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_REVERB_DESCRIPTION,
+            localized(
+                language_,
+                L"自然に減衰する後期残響。曲末のカットアウトでも余韻を残します。",
+                L"Adds a decaying late-reverb tail, including after abrupt track endings."
             )
         );
         ::SetDlgItemTextW(
@@ -9578,6 +10007,9 @@ private:
         );
         ambience_slider_.SetPos(
             static_cast<int>(std::lround(settings_.ambience))
+        );
+        reverb_slider_.SetPos(
+            static_cast<int>(std::lround(settings_.reverb))
         );
         master_strength_slider_.SetPos(
             static_cast<int>(
@@ -9912,6 +10344,8 @@ private:
             static_cast<float>(width_slider_.GetPos());
         settings_.ambience =
             static_cast<float>(ambience_slider_.GetPos());
+        settings_.reverb =
+            static_cast<float>(reverb_slider_.GetPos());
         settings_.master_strength =
             static_cast<float>(
                 master_strength_slider_.GetPos()
@@ -11065,6 +11499,8 @@ private:
             static_cast<int>(std::lround(settings_.width));
         const int ambience =
             static_cast<int>(std::lround(settings_.ambience));
+        const int reverb =
+            static_cast<int>(std::lround(settings_.reverb));
         const int master_strength = static_cast<int>(
             std::lround(settings_.master_strength)
         );
@@ -11207,6 +11643,22 @@ private:
             ambience_text
         );
 
+        pfc::string_formatter reverb_text;
+        reverb_text << reverb << "%";
+        if (reverb > 0 && settings_.master_strength > 0.0f) {
+            reverb_text
+                << localized_utf8(language_, "  /  余韻 約 ", "  /  Tail approx. ")
+                << pfc::format_float(reverb_decay_seconds(settings_.reverb), 0, 1)
+                << " s";
+        } else {
+            reverb_text << localized_utf8(language_, "  /  オフ", "  /  Off");
+        }
+        uSetDlgItemText(
+            m_hWnd,
+            IDC_REVERB_VALUE,
+            reverb_text
+        );
+
         pfc::string_formatter master_strength_text;
         master_strength_text
             << master_strength
@@ -11245,6 +11697,8 @@ private:
         GetDlgItem(IDC_WIDTH_VALUE).EnableWindow(enabled);
         GetDlgItem(IDC_AMBIENCE_SLIDER).EnableWindow(enabled);
         GetDlgItem(IDC_AMBIENCE_VALUE).EnableWindow(enabled);
+        GetDlgItem(IDC_REVERB_SLIDER).EnableWindow(enabled);
+        GetDlgItem(IDC_REVERB_VALUE).EnableWindow(enabled);
         GetDlgItem(IDC_MASTER_STRENGTH_SLIDER)
             .EnableWindow(enabled);
         GetDlgItem(IDC_MASTER_STRENGTH_VALUE)
@@ -11312,6 +11766,7 @@ private:
                 IDC_CLARITY_SLIDER, IDC_CLARITY_VALUE,
                 IDC_WIDTH_SLIDER, IDC_WIDTH_VALUE,
                 IDC_AMBIENCE_SLIDER, IDC_AMBIENCE_VALUE,
+                IDC_REVERB_SLIDER, IDC_REVERB_VALUE,
                 IDC_BUILTIN_PRESET_COMBO, IDC_BUILTIN_PRESET_LOAD,
                 IDC_PRESET_COMBO, IDC_PRESET_SAVE, IDC_PRESET_LOAD,
                 IDC_PRESET_DELETE,
@@ -11355,6 +11810,7 @@ private:
     CTrackBarCtrl clarity_slider_;
     CTrackBarCtrl width_slider_;
     CTrackBarCtrl ambience_slider_;
+    CTrackBarCtrl reverb_slider_;
     CTrackBarCtrl master_strength_slider_;
     CTrackBarCtrl output_gain_slider_;
     CButton enable_checkbox_;

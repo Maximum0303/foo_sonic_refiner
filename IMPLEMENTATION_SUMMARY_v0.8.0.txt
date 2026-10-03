@@ -1,0 +1,22 @@
+Sonic Refiner v0.8.0 formalization summary
+
+Baseline
+- Directly based on v0.8.0-dev.3, which completed the Reverb, persistence, compatibility, UI, and playback-state regression checks.
+
+Formalization-only changes
+- Version: 0.8.0-dev.3 -> 0.8.0.
+- Formal package naming.
+- Formal release documentation.
+
+No behavior changes from v0.8.0-dev.3
+- Reverb DSP algorithm and decay mapping unchanged.
+- Venue preset values unchanged.
+- preset_version 10 unchanged.
+- SRP5 unchanged.
+- SRP1-SRP4 and DSP preset version 1-9 backward reading unchanged.
+- Legacy .srpbackup compatibility unchanged.
+- Existing 12 built-in presets remain Reverb 0.
+
+Primary v0.8.0 theme
+- Dedicated late Reverb with track-end tail rendering.
+- Four venue-oriented built-in presets: Hall, Arena, Dome, and Open Air.

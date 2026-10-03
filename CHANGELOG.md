@@ -1,5 +1,58 @@
 # Changelog
 
+## [0.8.0] - 2026-10-03
+
+### Added
+
+- Added a dedicated Reverb control (0-100) as a separate late-reverberation stage after the existing Ambience early-reflection stage.
+- Added natural Reverb decay during in-track silence and track-end tail rendering.
+- Added four built-in venue presets:
+  - Adaptive Hall: Width 60 / Ambience 55 / Reverb 50.
+  - Adaptive Arena: Width 72 / Ambience 65 / Reverb 68.
+  - Adaptive Dome: Width 85 / Ambience 75 / Reverb 85.
+  - Adaptive Open Air: Width 75 / Ambience 20 / Reverb 10.
+- Added Reverb persistence to DSP presets and user presets.
+
+### Persistence / Compatibility
+
+- DSP preset format is now `preset_version 10`.
+- User preset format is now SRP5.
+- SRP1-SRP4, DSP preset versions 1-9, older user presets, and legacy `.srpbackup` files remain readable.
+- Older presets default Reverb to 0, preserving their previous sound.
+- Existing 12 built-in presets remain Reverb 0.
+- `.srpbackup` outer header remains `SONIC_REFINER_PRESET_BACKUP_V1`.
+
+### Changed
+
+- Formalized the validated v0.8.0-dev.3 build as v0.8.0.
+- No DSP, Reverb tuning, venue preset values, SRP5 layout, or compatibility behavior changed during formalization.
+
+## [0.8.0-dev.3] - 2026-10-03
+
+### Changed
+
+- Strengthened the built-in venue Reverb presets after listening tests:
+  - Adaptive Hall: Reverb 35 -> 50.
+  - Adaptive Arena: Reverb 50 -> 68.
+  - Adaptive Dome: Reverb 65 -> 85.
+  - Adaptive Open Air remains Reverb 10.
+- Width and Ambience values are unchanged.
+
+### Compatibility
+
+- No Reverb algorithm, SRP5 layout, `preset_version 10`, legacy preset parsing, or `.srpbackup` compatibility behavior changed from v0.8.0-dev.2.
+
+## [0.8.0-dev.2] - 2026-10-03
+
+### Fixed
+
+- Fixed MSVC build errors in the new Reverb code caused by the Windows `max` macro colliding with three `std::max(...)` calls.
+- Switched those calls to the project's existing Windows-safe `(std::max)(...)` form.
+
+### Compatibility
+
+- No DSP tuning, Reverb values, preset values, SRP5 layout, `preset_version 10`, or legacy compatibility behavior changed from v0.8.0-dev.1.
+
 ## [0.7.0] - 2026-09-11
 
 ### Added

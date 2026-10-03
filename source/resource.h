@@ -75,6 +75,10 @@
 #define IDC_PRESET_MOVE_UP               1065
 #define IDC_PRESET_MOVE_DOWN             1066
 #define IDC_PRESET_MANAGER               1067
+#define IDC_REVERB_SLIDER                1068
+#define IDC_REVERB_VALUE                 1069
+#define IDC_REVERB_LABEL                 1070
+#define IDC_REVERB_DESCRIPTION           1071
 
 #define IDC_PM_GROUP_LIST                1101
 #define IDC_PM_LIST                      1102
