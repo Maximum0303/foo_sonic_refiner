@@ -1,188 +1,379 @@
-Sonic Refiner 0.7.0
-
-v0.6.3 HELP / GLOSSARY CLARITY
-- Reorganized ATB explanations for practical user understanding.
-- Added distinct Auto Low / Auto High / ATB Analysis State glossary entries.
-- No DSP / ATB algorithm changes.
+Sonic Refiner v0.8.0
 Adaptive Audio Enhancement DSP for foobar2000
+
+============================================================
 ENGLISH
+============================================================
 
-V0.7.0-DEV.1 PRESET MANAGER FOUNDATION
+Sonic Refiner is a real-time tone and soundstage enhancement DSP for
+foobar2000 2.x on Windows x64.
 
-- Adds a new read-only Preset Manager opened from the Sonic Refiner settings dialog.
-- Shows user presets in their existing saved order.
-- Shows stored settings in a read-only preview without changing playback settings.
-- Marks every preset whose stored settings match the current Sonic Refiner settings with `●`.
-- Supports resizing, Japanese/English UI, and foobar2000 Light/Dark mode.
-- Existing v0.6.5 user-preset management controls remain available in this first development build.
-- DSP / ATB processing, SRP4, .srpbackup, preset_version 9, and all 12 built-in preset values are unchanged.
+CURRENT STABLE RELEASE
+v0.8.0
 
-V0.6.5 USER PRESET REORDERING
+MAIN FUNCTIONS
+- Depth
+- Clarity
+- Adaptive Tone Balance (ATB)
+- Width
+- Ambience
+- Reverb
+- Master Strength
+- Output Gain
+- Auto Headroom Protection
+- Level-Matched Bypass
+- A/B comparison
+- Preset Manager
+- Up to 20 user presets
+- .srpbackup backup / restore
+- Japanese / English UI
+- foobar2000 Light / Dark mode support
 
-- Adds Up / Down buttons for the selected user preset.
-- Moving changes only the order of user_preset entries.
-- The selected preset remains selected after moving.
-- Boundary / no-selection states disable the unavailable move buttons.
-- Existing SRP4 list order preserves the new order across restart and .srpbackup export/import.
-- DSP / ATB processing, preset_version 9, and built-in preset values are unchanged.
+V0.8.0 REVERB
+v0.8.0 keeps the existing Ambience stage as short early reflections and
+adds an independent late-Reverb stage after it.
 
-V0.6.4 USER PRESET RENAME
-- Existing user presets can be renamed without changing stored DSP settings
-- Duplicate names used by another user preset are rejected
-- Built-in presets remain fixed
-- SRP4, .srpbackup and preset_version 9 are unchanged
-- No DSP / ATB algorithm changes
+Width     = stereo spread
+Ambience  = early reflections / immediate room impression
+Reverb    = late reflections / decay / tail
 
-v0.6.3 UI CLARITY
-- With ATB ON, Depth is labeled as the Auto Low correction limit.
-- With ATB ON, Clarity is labeled as the Auto High correction limit.
-- 100% means maximum permission only; it does not force a constant +10 dB boost.
-- With ATB OFF, the original fixed-mode labels are shown.
-- The Custom / カスタム state is included as a UI-only status.
+Reverb range: 0-100.
 
-Sonic Refiner combines tone and soundstage enhancement with optional
-Adaptive Tone Balance (ATB). ATB is OFF by default, so the existing fixed
-Depth / Clarity behavior is preserved until ATB is enabled.
+Reverb naturally decays through silent passages.
+At track end, Sonic Refiner can emit a Reverb tail so that a cut-off ending
+decays naturally before playback fully ends.
+
+Reverb state is reset at track boundaries, seeks, Stop, and other playback
+discontinuities so that the previous track's tail does not leak into the next.
+
+With Reverb = 0, the Reverb processor is effectively disabled and older
+Sonic Refiner sound is preserved.
+
+NEW V0.8.0 VENUE PRESETS
+- Adaptive Hall
+  Width 60 / Ambience 55 / Reverb 50
+- Adaptive Arena
+  Width 72 / Ambience 65 / Reverb 68
+- Adaptive Dome
+  Width 85 / Ambience 75 / Reverb 85
+- Adaptive Open Air
+  Width 75 / Ambience 20 / Reverb 10
+
+BUILT-IN PRESETS
+1. Standard
+2. Bass Boost
+3. Vocal Focus
+4. Wide
+5. Live
+6. Headphones
+7. Extreme Bass
+8. Extreme Clarity
+9. Extreme Wide
+10. Large Hall
+11. Full Boost
+12. Adaptive Standard
+13. Adaptive Hall
+14. Adaptive Arena
+15. Adaptive Dome
+16. Adaptive Open Air
+
+The original 12 presets keep Reverb = 0.
+Custom is a UI state, not a 17th built-in preset.
 
 ADAPTIVE TONE BALANCE
-- Analyzes the original signal before Sonic Refiner processing
-- Auto Low decision: Bass 60-180 Hz vs Body 200-500 Hz
-- Bass/Body target: +6.5 dB
-- Auto Low processing: dry signal + parallel filtered 60-180 Hz Bass addition
-- Auto High primary balance: 3.5-10 kHz vs 300 Hz-2.0 kHz
-- Auto High secondary balance: 5-10 kHz vs 2-5 kHz
-- High/Mid shortage reference: -6 dB, tolerance 1.5 dB
-- Boost only; no automatic cuts
-- Auto Low absolute maximum: +10.0 dB
-- Auto High absolute maximum: +10.0 dB
-- With ATB ON, Depth and Clarity act as maximum permissions for automatic correction
-- Master Strength scales the final automatic correction
-- Slow rolling analysis and gain movement reduce pumping
-- Input below approximately -55 dBFS does not update analysis
-- Track changes, seeks, Stop and ATB Off->On restart analysis
-- During fresh analysis the status shows `Auto: Analyzing...`; numeric Auto Low / Auto High returns after sufficient analysis
-- Pause/Resume preserves analysis
-- Multichannel analysis uses the first L/R pair
+ATB is Off by default.
 
-PRESETS AND A/B
-- The existing 11 built-in presets remain unchanged and load ATB OFF
-- Added one Adaptive Standard built-in preset with Depth 100, Clarity 100, Width 50, Ambience 40 and ATB ON
-- Adaptive Standard gives Auto Low / Auto High the full permitted range while keeping standard Width / Ambience values
-- User presets save the ATB On/Off state
-- A/B stores the ATB On/Off state
-- A/B slots remain runtime-only and are cleared when foobar2000 exits
-- Runtime analyzer history and live Auto Low/High values are not persisted
+ATB Off:
+- Depth / Clarity use the fixed processing behavior.
 
-PRESETS AND COMPATIBILITY
-- DSP write format: preset_version 9
-- User-preset write format: SRP4
-- SRP1, SRP2, SRP3 and SRP4 are readable
-- Legacy DSP preset versions 1-8 remain readable
-- Legacy data without an ATB field loads ATB OFF
-- New .srpbackup files include ATB On/Off
-- Older .srpbackup files remain importable
+ATB On:
+- Depth becomes the Auto Low correction limit.
+- Clarity becomes the Auto High correction limit.
+- 100% means maximum permission, not a constant +10 dB boost.
+- Automatic correction is boost-only; no automatic cuts.
+- Auto Low absolute maximum: +10 dB.
+- Auto High absolute maximum: +10 dB.
+- Runtime analysis values are not persisted.
 
-OTHER FEATURES
-- Depth around 120 Hz, up to approximately +16 dB in fixed mode
-- Clarity above approximately 3.5 kHz, up to approximately +14 dB in fixed mode
-- Mid/Side Width with low-frequency protection, up to Side 600%
-- 11 ms and 19 ms early-reflection Ambience, up to 85% Wet Mix
-- Master Strength from 0% to 100%
-- Output Gain from -12.0 dB to +6.0 dB in 0.5 dB steps
-- Auto Headroom Protection around -0.2 dBFS block/sample peak
-- Level-Matched Bypass
-- Twelve built-in presets
-- Up to 20 UTF-8 user presets
-- Direct settings access from the Playback menu
-- Keyboard Shortcuts support
-- Japanese/English UI
-- Light and dark mode support
+PRESET MANAGER
+The Preset Manager supports:
+- Search
+- Read-only preview
+- Current-setting match marker
+- New from Current
+- Update from Current
+- Duplicate
+- Rename
+- Delete
+- Backup / Restore
+- Up / Down reordering
+- Alt+Up / Alt+Down
+- Drag & Drop
+- Right-click menu
+- Double-click Apply
+- Keyboard shortcuts
+- Resizable two-pane layout
+- Japanese / English and Light / Dark modes
+
+PROCESSING ORDER
+Depth / Clarity / ATB
+-> Width
+-> Ambience
+-> Reverb
+-> Level-Matched Bypass
+-> Output Gain
+-> Auto Headroom
+-> Output
 
 RECOMMENDED DSP ORDER
-Sonic Refiner -> R128 Real-time Loudness Normalizer -> Output
+Sonic Refiner
+-> R128 Real-time Loudness Normalizer
+-> Output
 
-IMPORTANT
-Adaptive Tone Balance is a tonal balance helper, not a loudness normalizer,
-AGC, True Peak limiter, or restoration tool. Auto Headroom Protection is not
-a True Peak limiter. The downstream R128 Real-time Loudness Normalizer remains
-responsible for final loudness and True Peak management.
+Sonic Refiner handles tone and soundstage.
+R128 Real-time Loudness Normalizer handles final loudness, LUFS, True Peak
+management, and limiting.
+
+RECOMMENDED R128 PRESET
+For normal music listening, start with:
+
+Sonic Refiner
+-> R128 Real-time Loudness Normalizer: Natural -18
+-> Output
+
+As of 2026-10-03, R128 Real-time Loudness Normalizer v1.11.0 has these
+built-in presets.
+
+Standard normalization:
+- Natural -18
+- Power Boost -14
+- Relaxed -23
+- Night Safe -22
+
+Use the standard four presets when transparent loudness matching is the
+priority. Natural -18 is the recommended starting point.
+
+Additional mastering processing:
+- Modern Boost -9
+  Compression + soft clipping + True Peak limiting.
+- 1-Band Adaptive -10
+  Automatically adjusts Modern Processing strength from loudness / LRA.
+- 3-Band Adaptive -10
+  Controls low / mid / high bands independently.
+  Approximate crossover boundaries: 160 Hz / 4 kHz.
+
+The three additional mastering presets affect tone and dynamics as well as
+loudness. Use them only when that extra processing is desired.
+
+3-Band Adaptive may overlap with Sonic Refiner Depth / Clarity / ATB because
+it processes low, mid, and high bands independently.
+
+PRESET COMPATIBILITY
+- DSP write format: preset_version 10
+- User-preset write format: SRP5
+- SRP1 / SRP2 / SRP3 / SRP4 / SRP5 readable
+- DSP preset versions 1-10 readable
+- Older presets without Reverb load with Reverb = 0
+- Older .srpbackup files remain restorable
+- .srpbackup outer header remains:
+  SONIC_REFINER_PRESET_BACKUP_V1
+
+INSTALLATION
+1. Install foo_sonic_refiner_v0.8.0.fb2k-component.
+2. Restart foobar2000.
+3. Add Sonic Refiner in DSP Manager.
+4. If R128 Real-time Loudness Normalizer is used, place it after Sonic Refiner.
 
 LICENSE
-MIT License. Copyright (c) 2026 Maximum.
-The full license is included as MIT_LICENSE.txt and is also available from the
-component's License page.
+MIT License
+Copyright (c) 2026 Maximum
 
-------------------------------------------------------------
 
+============================================================
 日本語
+============================================================
 
-V0.7.0-DEV.1 PRESET MANAGER 基礎実装
-- Sonic Refiner設定画面から開く読み取り専用Preset Managerを追加しました。
-- 任意プリセットを既存の保存順で一覧表示します。
-- 保存済み設定値を読み取り専用で表示し、選択しただけでは現在の音質設定を変更しません。
-- 現在のSonic Refiner設定と保存内容が一致する任意プリセットすべてに「●」を表示します。
-- サイズ変更、日本語／English、foobar2000 Light／Darkモードに対応します。
-- 最初の開発版ではv0.6.5の既存任意プリセット管理操作もそのまま残します。
-- DSP／ATB処理、SRP4、.srpbackup、preset_version 9、12種類の内蔵プリセット値は変更していません。
+Sonic Refinerは、foobar2000 2.x（Windows x64）向けの
+リアルタイム音色・音場補正DSPです。
 
-V0.6.5 任意プリセット並べ替え
-- 選択中の任意プリセットを「↑」「↓」で1件ずつ移動できます。
-- 移動後も対象プリセットを選択した状態を維持します。
-- 先頭／末尾／未選択など、移動できない方向のボタンは無効になります。
-- 変更されるのは任意プリセット一覧の順序だけで、名前や保存済みDSP設定値は変わりません。
-- 既存SRP4のリスト順をそのまま使うため、再起動後や.srpbackup書出／読込でも順序を維持します。
-- SRP4、.srpbackup、preset_version 9、DSP／ATB処理、12種類の内蔵プリセット値は変更していません。
+現在の正式公開版
+v0.8.0
 
-Sonic Refiner 0.6.4では、既存の任意プリセットについて、保存済みのDSP設定値を
-変えずに名前だけを変更できる「名前変更...」機能を追加しました。
-SRP4、.srpbackup、preset_version 9、DSP／ATBアルゴリズム、12種類の内蔵プリセット値は変更していません。
+主な機能
+- Depth
+- Clarity
+- Adaptive Tone Balance（ATB）
+- Width
+- Ambience
+- Reverb
+- Master Strength
+- Output Gain
+- Auto Headroom Protection
+- Level-Matched Bypass
+- A/B比較
+- Preset Manager
+- 任意プリセット最大20件
+- .srpbackupバックアップ／復元
+- 日本語／英語UI
+- foobar2000 Light／Darkモード対応
 
-適応型音色補正
-- Sonic Refiner処理前の原音を解析
-- Auto Low判定：Bass 60～180 Hz 対 Body 200～500 Hz
-- Bass/Body目標：+6.5 dB
-- Auto Low処理：原音 + フィルターした60～180 Hz Bass成分の並列加算
-- Auto High主判定：3.5～10 kHz 対 300 Hz～2.0 kHz
-- Auto High補助判定：5～10 kHz 対 2～5 kHz
-- High/Mid不足判定基準：-6 dB、許容1.5 dB
-- 不足分のブーストのみ。自動カットなし
-- Auto Low絶対上限：+10.0 dB
-- Auto High絶対上限：+10.0 dB
-- ATB ON時はDepth／Clarityが自動補正の上限として動作
-- Master Strengthは自動補正にも適用
-- ゆっくりした解析と追従でポンピングを抑制
-- 約-55 dBFS未満では解析を更新しない
-- 曲変更・シーク・Stop・ATB OFF->ONで解析をやり直す
-- 新しい解析中は「自動補正：解析中...」と表示し、十分な解析後にAuto Low／Auto High数値へ戻る
-- Pause/Resumeでは解析を保持
-- マルチチャンネル解析は最初のL/Rを使用
+V0.8.0 REVERB
+v0.8.0では、従来のAmbienceを短い初期反射として維持し、
+その後段に独立したReverbを追加しました。
 
-プリセットとA/B
-- 既存11種類の内蔵プリセットは変更せず、呼び出し時はATB OFF
-- 「適応型標準」を追加：Depth 100 / Clarity 100 / Width 50 / Ambience 40 / Master Strength 100% / ATB ON
-- 「適応型標準」はAuto Low／Auto Highへ最大限の許容量を与えつつ、Width／Ambienceは標準値を維持
-- 任意プリセットにはATBのON/OFFも保存
-- A/BにもATBのON/OFFを保存
-- A/Bスロットはメモリ上のみで、foobar2000終了時に消去
-- 解析履歴や現在のAuto Low／High値は保存しない
+Width     = 左右方向の広がり
+Ambience  = 初期反射・すぐ近くの空間感
+Reverb    = 後期残響・余韻・テール
 
-プリセット互換性
-- DSP書き込み形式：preset_version 9
-- 任意プリセット書き込み形式：SRP4
-- SRP1／SRP2／SRP3／SRP4を読み込み可能
-- 旧DSP preset version 1～8を読み込み可能
-- ATB項目を持たない旧データはATB OFFとして読み込む
-- 新しい.srpbackupにはATB ON/OFFを含む
-- 旧.srpbackupも引き続き読み込み可能
+Reverbの範囲は0～100です。
+
+曲中の無音でもReverbは自然に減衰します。
+カットアウト気味の曲末では残響テールを追加出力し、
+再生終了前に自然な余韻を作ります。
+
+曲境界、シーク、Stopなどでは残響状態をリセットし、
+前の曲の余韻が次の曲へ不自然に持ち越されないようにします。
+
+Reverb = 0ではReverb処理が実質OFFとなり、
+従来のSonic Refinerの音を維持します。
+
+V0.8.0 新会場プリセット
+- 適応型ホール
+  Width 60 / Ambience 55 / Reverb 50
+- 適応型アリーナ
+  Width 72 / Ambience 65 / Reverb 68
+- 適応型ドーム
+  Width 85 / Ambience 75 / Reverb 85
+- 適応型野外
+  Width 75 / Ambience 20 / Reverb 10
+
+内蔵プリセット
+1. 標準
+2. 低域強化
+3. ボーカル重視
+4. ワイド
+5. ライブ
+6. ヘッドホン
+7. 超低域強化
+8. 超明瞭
+9. 超ワイド
+10. 大ホール
+11. フルブースト
+12. 適応型標準
+13. 適応型ホール
+14. 適応型アリーナ
+15. 適応型ドーム
+16. 適応型野外
+
+既存12種類はReverb = 0のままです。
+「カスタム」はUI状態であり、17番目の内蔵プリセットではありません。
+
+ADAPTIVE TONE BALANCE
+ATBの初期状態はOFFです。
+
+ATB OFF:
+- Depth / Clarityは固定補正として動作します。
+
+ATB ON:
+- DepthはAuto Lowの自動補正上限になります。
+- ClarityはAuto Highの自動補正上限になります。
+- 100%は最大許容量であり、常時+10 dBではありません。
+- 自動補正はboost-onlyで、自動カットは行いません。
+- Auto Low絶対上限：+10 dB
+- Auto High絶対上限：+10 dB
+- 解析中のruntime値は保存しません。
+
+PRESET MANAGER
+Preset Managerでは次を利用できます。
+- Search
+- 読み取り専用プレビュー
+- 現在設定との一致表示
+- New from Current
+- Update from Current
+- Duplicate
+- Rename
+- Delete
+- Backup / Restore
+- ↑ / ↓
+- Alt+↑ / Alt+↓
+- ドラッグ＆ドロップ
+- 右クリックメニュー
+- ダブルクリックApply
+- キーボードショートカット
+- リサイズ可能な2ペインUI
+- 日本語／英語、Light／Dark対応
+
+SONIC REFINER内の処理順序
+Depth / Clarity / ATB
+-> Width
+-> Ambience
+-> Reverb
+-> Level-Matched Bypass
+-> Output Gain
+-> Auto Headroom
+-> Output
 
 推奨DSP順序
-Sonic Refiner -> R128 Real-time Loudness Normalizer -> Output
+Sonic Refiner
+-> R128 Real-time Loudness Normalizer
+-> Output
 
-注意
-Adaptive Tone Balanceは音色バランス補助であり、ラウドネスノーマライズ、
-AGC、True Peakリミッター、音源修復機能ではありません。
-最終的なラウドネスとTrue Peak管理は従来どおり
-R128 Real-time Loudness Normalizerが担当します。
+Sonic Refinerは音色・音場を担当します。
+R128 Real-time Loudness Normalizerは最終ラウドネス、LUFS、
+True Peak管理、リミッター系を担当します。
+
+R128側の基本推奨
+通常の音楽鑑賞では、まず次を推奨します。
+
+Sonic Refiner
+-> R128 Real-time Loudness Normalizer「ナチュラル -18」
+-> Output
+
+2026-10-03時点のR128 Real-time Loudness Normalizer v1.11.0には
+次の内蔵プリセットがあります。
+
+標準ノーマライズ:
+- ナチュラル -18
+- パワーブースト -14
+- リラックス -23
+- ナイトセーフ -22
+
+Sonic Refinerで作った音色・音場・Reverbをなるべくそのまま生かして
+音量を整えたい場合は、標準4種類から選びます。
+基本推奨は「ナチュラル -18」です。
+
+追加マスタリング処理:
+- モダンブースト -9
+  コンプレッション＋ソフトクリッピング＋True Peakリミッター
+- 1バンド・アダプティブ -10
+  loudness / LRAからModern Processingの強度を自動調整
+- 3バンド・アダプティブ -10
+  low / mid / highを独立制御
+  crossoverの目安：約160 Hz / 4 kHz
+
+追加3種類は音量だけでなく音色・ダイナミクスにも影響します。
+必要な場合だけ使用してください。
+
+特に3バンド・アダプティブはlow / mid / highを独立制御するため、
+Sonic RefinerのDepth / Clarity / ATBとの役割重複に注意してください。
+
+プリセット互換性
+- DSP書込形式：preset_version 10
+- 任意プリセット書込形式：SRP5
+- SRP1 / SRP2 / SRP3 / SRP4 / SRP5を読込可能
+- DSP preset version 1～10を読込可能
+- Reverb項目を持たない旧プリセットはReverb = 0
+- 旧.srpbackupも復元可能
+- .srpbackup外側ヘッダー：
+  SONIC_REFINER_PRESET_BACKUP_V1
+
+インストール
+1. foo_sonic_refiner_v0.8.0.fb2k-componentをインストールします。
+2. foobar2000を再起動します。
+3. DSP ManagerへSonic Refinerを追加します。
+4. R128 Real-time Loudness Normalizerを併用する場合は、
+   Sonic Refinerの後段へ配置します。
 
 ライセンス
-MIT License. Copyright (c) 2026 Maximum.
+MIT License
+Copyright (c) 2026 Maximum
