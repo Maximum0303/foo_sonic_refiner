@@ -52,7 +52,11 @@ constexpr std::size_t reverb_comb_count =
     sizeof(reverb_comb_delay_ms) / sizeof(reverb_comb_delay_ms[0]);
 
 constexpr double auto_headroom_ceiling = 0.98;
-constexpr double auto_headroom_release_seconds = 1.5;
+constexpr double auto_headroom_peak_release_seconds = 0.03;
+constexpr double auto_headroom_detector_attack_seconds = 0.08;
+constexpr double auto_headroom_detector_release_seconds = 0.20;
+constexpr double auto_headroom_gain_attack_seconds = 0.15;
+constexpr double auto_headroom_gain_release_seconds = 0.45;
 
 constexpr double level_match_meter_seconds = 0.75;
 constexpr double level_match_attack_seconds = 0.10;
@@ -3862,6 +3866,8 @@ public:
     }
 
     void reset() noexcept {
+        fast_peak_envelope_ = 0.0;
+        sustained_peak_envelope_ = 0.0;
         current_gain_ = 1.0;
     }
 
@@ -3879,64 +3885,117 @@ public:
             return;
         }
 
-        const t_size sample_count =
-            frames * static_cast<t_size>(channels);
+        const double peak_release_coefficient = std::exp(
+            -1.0 /
+            (sample_rate_ * auto_headroom_peak_release_seconds)
+        );
+        const double detector_attack_coefficient = std::exp(
+            -1.0 /
+            (sample_rate_ * auto_headroom_detector_attack_seconds)
+        );
+        const double detector_release_coefficient = std::exp(
+            -1.0 /
+            (sample_rate_ * auto_headroom_detector_release_seconds)
+        );
+        const double gain_attack_coefficient = std::exp(
+            -1.0 /
+            (sample_rate_ * auto_headroom_gain_attack_seconds)
+        );
+        const double gain_release_coefficient = std::exp(
+            -1.0 /
+            (sample_rate_ * auto_headroom_gain_release_seconds)
+        );
 
-        double peak = 0.0;
+        for (t_size frame = 0; frame < frames; ++frame) {
+            const t_size frame_offset =
+                frame * static_cast<t_size>(channels);
+            double frame_peak = 0.0;
 
-        for (t_size index = 0; index < sample_count; ++index) {
-            const double value = static_cast<double>(data[index]);
+            for (unsigned channel = 0; channel < channels; ++channel) {
+                const t_size index = frame_offset + channel;
+                const double value = static_cast<double>(data[index]);
 
-            if (!std::isfinite(value)) {
-                data[index] = static_cast<audio_sample>(0);
-                continue;
+                if (!std::isfinite(value)) {
+                    data[index] = static_cast<audio_sample>(0);
+                    continue;
+                }
+
+                frame_peak = (std::max)(frame_peak, std::abs(value));
             }
 
-            peak = (std::max)(peak, std::abs(value));
-        }
+            // Stage 1: preserve short transients instead of reacting to a
+            // single block/sample peak. Fast peak capture plus a short hold
+            // envelope feeds the slower sustained-peak detector below.
+            if (frame_peak >= fast_peak_envelope_) {
+                fast_peak_envelope_ = frame_peak;
+            } else {
+                fast_peak_envelope_ =
+                    frame_peak +
+                    ((fast_peak_envelope_ - frame_peak) *
+                     peak_release_coefficient);
+            }
 
-        double target_gain = 1.0;
+            const double detector_coefficient =
+                fast_peak_envelope_ > sustained_peak_envelope_
+                    ? detector_attack_coefficient
+                    : detector_release_coefficient;
 
-        if (peak > auto_headroom_ceiling) {
-            target_gain = auto_headroom_ceiling / peak;
-        }
+            sustained_peak_envelope_ =
+                fast_peak_envelope_ +
+                ((sustained_peak_envelope_ - fast_peak_envelope_) *
+                 detector_coefficient);
 
-        target_gain = std::clamp(target_gain, 0.0, 1.0);
-
-        if (target_gain < current_gain_) {
-            current_gain_ = target_gain;
-        } else {
-            const double elapsed_seconds =
-                static_cast<double>(frames) / sample_rate_;
-            const double release_coefficient = std::exp(
-                -elapsed_seconds / auto_headroom_release_seconds
+            sustained_peak_envelope_ = (std::max)(
+                0.0,
+                sustained_peak_envelope_
             );
+
+            double target_gain = 1.0;
+
+            if (sustained_peak_envelope_ > auto_headroom_ceiling) {
+                target_gain =
+                    auto_headroom_ceiling /
+                    sustained_peak_envelope_;
+            }
+
+            target_gain = std::clamp(target_gain, 0.0, 1.0);
+
+            // Stage 2: move the protection gain smoothly in both
+            // directions. This deliberately is not a brick-wall limiter;
+            // final True Peak control remains the downstream R128 stage.
+            const double gain_coefficient =
+                target_gain < current_gain_
+                    ? gain_attack_coefficient
+                    : gain_release_coefficient;
 
             current_gain_ =
                 target_gain +
-                ((current_gain_ - target_gain) * release_coefficient);
+                ((current_gain_ - target_gain) * gain_coefficient);
 
             current_gain_ = std::clamp(
                 current_gain_,
                 0.0,
-                target_gain
+                1.0
             );
-        }
 
-        if (current_gain_ >= 0.999999) {
-            return;
-        }
+            if (current_gain_ >= 0.999999) {
+                continue;
+            }
 
-        for (t_size index = 0; index < sample_count; ++index) {
-            data[index] = static_cast<audio_sample>(
-                static_cast<double>(data[index]) * current_gain_
-            );
+            for (unsigned channel = 0; channel < channels; ++channel) {
+                const t_size index = frame_offset + channel;
+                data[index] = static_cast<audio_sample>(
+                    static_cast<double>(data[index]) * current_gain_
+                );
+            }
         }
     }
 
 private:
     bool enabled_ = true;
     double sample_rate_ = 0.0;
+    double fast_peak_envelope_ = 0.0;
+    double sustained_peak_envelope_ = 0.0;
     double current_gain_ = 1.0;
 };
 
@@ -6119,9 +6178,10 @@ Pause→Resumeでは履歴を保持します。Auto Low／Auto Highの現在値�
 範囲は-12.0～+6.0 dB、0.5 dB刻みです。
 
 ■ 自動ヘッドルーム保護
-補正後のブロックピークが約-0.2 dBFSを超えそうな場合に、
-即座に減衰します。約1.5秒かけて元のレベルへ戻ります。
-これは軽量なサンプルピーク保護であり、True Peakリミッターではありません。
+補正後のピークを短時間平滑化し、約-0.2 dBFS付近を継続的に
+超える状態だけを穏やかに減衰します。一瞬のピークには過剰反応せず、
+保護解除後も急に戻さず滑らかに復帰します。
+これは軽量なヘッドルーム保護であり、True Peakリミッターではありません。
 
 ■ レベルマッチ・バイパス
 処理前後の平均電力を約0.75秒で測定します。
@@ -6222,9 +6282,10 @@ Adjusts level after all tone, soundstage, and level-match processing.
 The range is -12.0 to +6.0 dB in 0.5 dB steps.
 
 ■ Auto Headroom Protection
-Immediately reduces gain when the processed block peak would exceed
-approximately -0.2 dBFS, then releases over approximately 1.5 seconds.
-This is lightweight sample/block peak protection, not a True Peak limiter.
+Smooths processed peaks over a short time and gently reduces gain only when
+levels remain around/above approximately -0.2 dBFS. Brief transients normally
+pass without a sudden gain drop, and recovery is also smoothed.
+This is lightweight headroom protection, not a True Peak limiter.
 
 ■ Level-Matched Bypass
 Measures average power before and after processing over approximately
@@ -7327,7 +7388,7 @@ private:
     void apply_language() {
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - Preset Manager - 0.8.3"
+            L"Sonic Refiner - Preset Manager - 0.8.4"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -9806,7 +9867,7 @@ private:
 
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - 0.8.3"
+            L"Sonic Refiner - 0.8.4"
         );
         ::SetDlgItemTextW(
             m_hWnd,

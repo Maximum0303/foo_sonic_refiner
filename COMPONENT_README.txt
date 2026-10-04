@@ -1,4 +1,4 @@
-Sonic Refiner v0.8.3
+Sonic Refiner v0.8.4
 Adaptive Audio Enhancement DSP for foobar2000
 
 ============================================================
@@ -9,7 +9,14 @@ Sonic Refiner is a real-time tone and soundstage enhancement DSP for
 foobar2000 2.x on Windows x64.
 
 CURRENT STABLE RELEASE
-v0.8.3
+v0.8.4
+
+V0.8.4 AUTO HEADROOM
+- Replaces instant peak-triggered attenuation with smoothed sustained-peak detection.
+- Brief transients normally do not reduce whole-signal gain.
+- Sustained high peaks are reduced with smooth attack/recovery around the existing approx. -0.2 dBFS reference.
+- This is still lightweight headroom protection; final True Peak management remains downstream.
+- ATB, Level-Matched Bypass, Reverb, preset values and persistence formats are unchanged.
 
 V0.8.3 DISPLAY LANGUAGE
 - Adds Automatic (Windows) / 自動（Windows） alongside Japanese / English.
@@ -210,11 +217,15 @@ Copyright (c) 2026 Maximum
 Sonic Refinerは、foobar2000 2.x（Windows x64）向けの
 リアルタイム音色・音場補正DSPです。
 
-現在のビルド
-v0.8.3
+現在の正式公開版
+v0.8.4
 
-基準正式版
-v0.8.2
+V0.8.4 自動ヘッドルーム保護
+- 瞬間ピーク即減衰をやめ、平滑化した持続ピークを検出。
+- 短いトランジェントでは原則として全体ゲインを下げない。
+- 持続的な高ピークだけを、従来の約-0.2 dBFS基準付近で滑らかに保護。
+- True Peakリミッターではなく、最終True Peak管理は後段R128が担当。
+- ATB、レベルマッチ・バイパス、Reverb、プリセット値、保存形式は変更なし。
 
 V0.8.3 表示言語
 - 日本語 / Englishに「自動（Windows）」を追加。

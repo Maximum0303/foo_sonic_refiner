@@ -4,9 +4,9 @@
 
 Sonic Refiner is a real-time tone and soundstage enhancement DSP for foobar2000 2.x on Windows x64.
 
-> Current stable release: **v0.8.3**
+> Current stable release: **v0.8.4**
 
-> v0.8.3 aligns Sonic Refiner's display-language behavior with R128 Real-time Loudness Normalizer while keeping DSP and preset formats unchanged.
+> v0.8.4 redesigns Auto Headroom so brief transients no longer cause an abrupt whole-signal attenuation; sustained high peaks are handled with smoothed detection and gain movement.
 
 > Recommended downstream loudness processor: **R128 Real-time Loudness Normalizer**
 
@@ -15,6 +15,17 @@ Sonic Refiner is a real-time tone and soundstage enhancement DSP for foobar2000 
 ---
 
 ## English
+
+## What's new in v0.8.4
+
+v0.8.4 formalizes the validated **Auto Headroom Protection** redesign to reduce audible level dips, especially on quieter material and ballads using Adaptive Standard / ATB.
+
+- Replaces instant block-peak attenuation with two-stage smoothed peak detection.
+- Short transients normally pass without changing the whole-signal gain.
+- Sustained high peaks around the existing approx. -0.2 dBFS reference are attenuated gradually.
+- Protection gain now uses a smooth attack and recovery instead of an immediate drop plus a long 1.5-second release.
+- This remains lightweight headroom protection, not a True Peak limiter; final True Peak control remains the downstream R128 component's responsibility.
+- ATB analysis/decision logic, Level-Matched Bypass, Reverb, built-in preset values, SRP5, `preset_version 10`, `.srpbackup`, display-language behavior, and legacy compatibility are unchanged.
 
 ## What's new in v0.8.3
 
@@ -273,12 +284,21 @@ Copyright (c) 2026 Maximum
 
 **Sonic Refiner** は、foobar2000 2.x（Windows x64）向けのリアルタイム音色・音場補正DSPです。
 
-> 現在の正式公開版：**v0.8.2**
-
-> 現在の正式版：**v0.8.3**  
-> R128 Real-time Loudness Normalizerと表示言語仕様を統一し、DSPやプリセット形式は変更しません。
+> 現在の正式版：**v0.8.4**  
+> 自動ヘッドルーム保護を改善し、一瞬のピークで全体音量を急減衰させず、持続的な高ピークだけを平滑化して保護します.
 
 > 推奨する後段ラウドネス処理：**R128 Real-time Loudness Normalizer**
+
+## v0.8.4の変更点
+
+v0.8.4では、特に静かな曲やバラードを適応型標準／ATBで聴いた際に起きた「音量が微妙にガクッと下がる」現象を改善するため、**自動ヘッドルーム保護**を見直しました。
+
+- 瞬間的なブロックピークで即座に全体ゲインを下げる方式を廃止
+- 2段階の平滑化ピーク検出で短いトランジェントを見送り、持続的な高ピークを検出
+- 約-0.2 dBFSの保護基準付近を継続的に超えたときだけ穏やかに減衰
+- 保護ゲインの低下／復帰を滑らかにし、急な音量変化を抑制
+- True Peakリミッターではなく、最終True Peak管理は従来どおり後段R128が担当
+- ATB解析・判定、レベルマッチ・バイパス、Reverb、内蔵プリセット値、SRP5、`preset_version 10`、`.srpbackup`、表示言語、旧形式互換は変更なし
 
 ## v0.8.3の変更点
 

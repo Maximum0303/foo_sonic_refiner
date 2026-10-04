@@ -1,13 +1,13 @@
-Sonic Refiner v0.8.3 — Build and Package / ビルドと梱包
+Sonic Refiner v0.8.4 — Build and Package / ビルドと梱包
 
 ENGLISH
 
-Purpose of v0.8.3:
-- Add Automatic (Windows) to the display-language selector.
-- Keep Japanese / English manual selection and make manual selection override Automatic.
-- Default new installations to Automatic while preserving existing saved manual ja / en choices.
-- Keep the language preference separate from DSP presets.
-- Keep DSP processing, SRP5, preset_version 10, .srpbackup, built-in preset values, Reverb, ATB, and legacy compatibility unchanged.
+Purpose of this release:
+- Redesign Auto Headroom so brief transients do not cause an abrupt whole-signal gain drop.
+- Detect sustained high peaks with a two-stage smoothed peak envelope.
+- Apply protection gain with a gentle attack and release instead of instant attenuation.
+- Keep the approx. -0.2 dBFS protection reference while leaving final True Peak control to the downstream R128 component.
+- Keep ATB, Level-Matched Bypass, Reverb, preset values, SRP5, preset_version 10, .srpbackup, and legacy compatibility unchanged.
 
 Required environment:
 - foobar2000 SDK 2025-03-07
@@ -34,7 +34,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 Package:
-dist\foo_sonic_refiner_v0.8.3.fb2k-component
+dist\foo_sonic_refiner_v0.8.4.fb2k-component
 
 Checksum:
 dist\SHA256SUMS.txt
@@ -56,12 +56,12 @@ Current persistence / compatibility:
 
 日本語
 
-v0.8.3の目的：
-- 表示言語へ「自動（Windows）」を追加します。
-- 日本語 / Englishの手動選択を維持し、手動指定は自動より優先します。
-- 新規環境の初期値を自動にし、既存の手動ja / en設定は維持します。
-- 言語設定はDSPプリセットとは別に保存します。
-- DSP処理、SRP5、preset_version 10、.srpbackup、内蔵プリセット値、Reverb、ATB、旧形式互換は変更しません。
+この正式版の目的：
+- 一瞬のピークで全体音量が急に下がらないよう、自動ヘッドルーム保護を見直します。
+- 2段階の平滑化ピーク検出で、持続的な高ピークだけを保護対象にします。
+- 瞬時減衰ではなく、穏やかなアタック／リリースで保護ゲインを動かします。
+- 約-0.2 dBFSの保護基準は維持し、最終True Peak管理は後段R128へ任せます。
+- ATB、レベルマッチ・バイパス、Reverb、内蔵プリセット値、SRP5、preset_version 10、.srpbackup、旧形式互換は変更しません。
 
 ■ 対象環境
 - foobar2000 SDK 2025-03-07
@@ -89,7 +89,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 配布パッケージ:
-dist\foo_sonic_refiner_v0.8.3.fb2k-component
+dist\foo_sonic_refiner_v0.8.4.fb2k-component
 
 チェックサム:
 dist\SHA256SUMS.txt

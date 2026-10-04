@@ -1,0 +1,39 @@
+Sonic Refiner v0.8.4
+
+Base: validated v0.8.4-dev.1 source, itself based directly on official v0.8.3.
+
+Purpose:
+- Fix audible small/abrupt whole-signal level drops traced to Auto Headroom Protection, especially on quieter songs / ballads with Adaptive Standard (ATB).
+
+Auto Headroom changes:
+- Keep reference ceiling at 0.98 (approx. -0.2 dBFS).
+- Replace block-wide instantaneous peak attenuation with a per-frame two-stage envelope detector.
+- Stage 1: immediate peak capture with ~0.03 s peak-envelope release.
+- Stage 2: sustained-peak smoothing with ~0.08 s attack / ~0.20 s release.
+- Protection gain uses ~0.15 s attack / ~0.45 s release.
+- Brief transients normally do not cross the sustained detector threshold and therefore do not pull down the whole signal.
+- Sustained high peaks are still attenuated, but the gain movement is gradual.
+- This is not a brick-wall / True Peak limiter; downstream R128 remains responsible for final True Peak control.
+
+Validated dev build:
+- v0.8.4-dev.1 source ZIP SHA-256: fad0a991630340050004e2dbb339febf74f2532492fc151d8baeadd297830122
+- v0.8.4-dev.1 component SHA-256: a3e7c60a4bf601fa55a4fa0ee7c0ae8b8ad836dbb630b02c17f686e4c5c0119a
+- Previously affected quiet / ballad passage improved with Adaptive Standard / ATB and Auto Headroom On.
+- Re-enabling Level-Matched Bypass did not reintroduce the problem.
+- Louder / denser playback passed without abrupt level drops, audible pumping, clipping-like distortion, or unstable gain movement.
+- Full Boost stress check passed with ATB Off, Level-Matched Bypass On, and Auto Headroom On.
+
+Unchanged:
+- ATB analysis / decision / history / rate limiting / intro protection / boost-only behavior
+- Level-Matched Bypass
+- Depth / Clarity gain ceilings
+- Width / Ambience / Reverb
+- Master Strength / Output Gain
+- Built-in preset values
+- SRP5 / preset_version 10 / .srpbackup / legacy readers
+- Automatic (Windows) / Japanese / English display-language behavior
+
+Formalization changes only:
+- 0.8.4-dev.1 -> 0.8.4 version strings and package name
+- formal Release Notes / Implementation Summary / Testing document
+- README / COMPONENT_README / QUICK_START / README_FIRST / CHANGELOG formal release wording

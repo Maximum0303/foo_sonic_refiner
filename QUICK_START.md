@@ -1,6 +1,6 @@
-# Sonic Refiner v0.8.3 Quick Start
+# Sonic Refiner v0.8.4 Quick Start
 
-> v0.8.3 adds Automatic (Windows) display-language selection and standardizes the label as Display language / 表示言語. DSP processing, SRP5, `preset_version 10`, `.srpbackup`, built-in preset parameter values, Reverb, and legacy compatibility are unchanged.
+> v0.8.4 improves Auto Headroom so brief transients do not cause abrupt whole-signal attenuation. SRP5, `preset_version 10`, `.srpbackup`, built-in preset parameter values, Reverb, display-language behavior, and legacy compatibility are unchanged.
 
 ## English
 

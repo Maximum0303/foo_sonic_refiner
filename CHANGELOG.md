@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.8.4] - 2026-10-04
+
+### Changed
+
+- Formalized the validated v0.8.4-dev.1 Auto Headroom redesign.
+- Replaced immediate block-peak attenuation with smoothed sustained-peak protection.
+- Brief transients normally pass without pulling down the whole signal, while sustained high peaks are attenuated gradually.
+- Protection gain now moves with a smooth attack and release to reduce audible level steps and pumping.
+
+### Validation / Compatibility
+
+- The previously affected quiet / ballad passage improved in actual Adaptive Standard / ATB playback.
+- Level-Matched Bypass On did not reintroduce the issue.
+- Louder / denser playback and a Full Boost stress check passed without abrupt level drops or clipping-like distortion.
+- Validated dev component SHA-256: `a3e7c60a4bf601fa55a4fa0ee7c0ae8b8ad836dbb630b02c17f686e4c5c0119a`.
+- ATB logic, Level-Matched Bypass, Reverb, built-in preset values, SRP5, `preset_version 10`, `.srpbackup`, display-language behavior, and legacy compatibility are unchanged from v0.8.3.
+
+## [0.8.4-dev.1] - 2026-10-04
+
+### Changed
+
+- Redesigned Auto Headroom Protection to avoid abrupt whole-signal attenuation from isolated short peaks.
+- Added a fast peak envelope followed by a slower sustained-peak envelope before headroom gain is requested.
+- Added smooth protection-gain attack and release instead of immediate attenuation with a 1.5-second recovery.
+- Kept the existing approximately -0.2 dBFS reference as the sustained-peak protection target.
+
+### Compatibility
+
+- Auto Headroom behavior changes; this is the only intended audio-processing change in dev.1.
+- ATB analysis/decision logic, Level-Matched Bypass, Reverb, built-in preset values, SRP5, `preset_version 10`, `.srpbackup`, display-language behavior, and legacy compatibility are unchanged from v0.8.3.
+- Auto Headroom remains lightweight protection, not a True Peak limiter; final True Peak management remains the downstream R128 stage's responsibility.
+
 ## [0.8.3] - 2026-10-04
 
 ### Changed
