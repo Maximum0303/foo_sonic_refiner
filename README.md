@@ -4,9 +4,9 @@
 
 Sonic Refiner is a real-time tone and soundstage enhancement DSP for foobar2000 2.x on Windows x64.
 
-> Current stable release: **v0.9.0**
+> Current stable release: **v0.9.1** — adds **How to read the monitor... / モニターの見方...** to the Processing Monitor without changing DSP audio processing.
 
-> v0.9.0 adds the independent compact **Sonic Refiner Processing Monitor**, showing real-time Auto Low, Auto High, Auto Headroom and Level Match correction values without changing the v0.8.4 audio-processing baseline.
+> v0.8.4 redesigns Auto Headroom so brief transients no longer cause an abrupt whole-signal attenuation; sustained high peaks are handled with smoothed detection and gain movement.
 
 > Recommended downstream loudness processor: **R128 Real-time Loudness Normalizer**
 
@@ -16,19 +16,30 @@ Sonic Refiner is a real-time tone and soundstage enhancement DSP for foobar2000 
 
 ## English
 
+## What's new in v0.9.1
+
+v0.9.1 adds a built-in **How to read the monitor...** guide to the Processing Monitor introduced in formal v0.9.0. The right-click menu order matches R128: **Always on Top → separator → How to read the monitor...**.
+
+- Right-click the monitor and choose **How to read the monitor...**.
+- Japanese UI shows **モニターの見方...**.
+- Explains Auto Low, Auto High, Auto Headroom and Level Match values.
+- Keeps the R128-aligned 156 DLU monitor width and 49 DLU meter bars; the compact row label is **AutoHeadroom / 自動HR**, while the guide uses the full **Auto Headroom / 自動ヘッドルーム** name.
+- Explains bar ranges, Active / Analyzing / Waiting / Paused / Disabled states, and the recommended Sonic Refiner → R128 → Output order.
+- Adds `MONITOR_GUIDE.md` with the same guidance for GitHub/source users.
+- Keeps Always on Top, position/open-state persistence and startup restoration unchanged.
+- DSP algorithms, Auto Headroom constants, ATB logic, 16 built-in preset values, SRP5, `preset_version 10`, `.srpbackup`, Reverb, A/B and legacy compatibility are unchanged from v0.9.0.
+
 ## What's new in v0.9.0
 
-v0.9.0 formalizes the validated independent, modeless **Sonic Refiner Processing Monitor** developed in v0.9.0-dev.1/dev.2. The dev.2 build-compatibility fix for foobar2000 SDK `initquit_factory_t` is included. Monitor behavior does not change the DSP audio path.
+v0.9.0 formally introduced the independent, modeless **Sonic Refiner Processing Monitor**. It can remain visible while the normal settings dialog is closed.
 
-- Open it from the Playback menu: **Sonic Refiner Processing Monitor**.
-- Displays **Auto Low**, **Auto High**, **Headroom** attenuation, and **Level Match** attenuation.
-- Updates the display every 100 ms without changing DSP processing.
+- Open it from the Playback menu.
+- Displays Auto Low, Auto High, Auto Headroom attenuation and Level Match attenuation.
+- Updates approximately every 100 ms.
 - Shows Active / Analyzing / Waiting / Paused / Disabled states.
-- Remembers whether it was open when foobar2000 exited and restores it on the next launch.
-- Remembers its window position.
-- Right-click the window to toggle **Always on Top**.
-- Follows Sonic Refiner's Automatic (Windows) / Japanese / English display language and foobar2000 light/dark appearance.
-- DSP algorithms, built-in preset values, SRP5, `preset_version 10`, `.srpbackup`, and legacy compatibility remain unchanged from v0.8.4.
+- Remembers open/closed state, window position and Always on Top.
+- Follows Automatic (Windows) / Japanese / English and foobar2000 light/dark appearance.
+- Monitor telemetry is display-only and does not change DSP processing or persistence formats.
 
 ## What's new in v0.8.4
 
@@ -298,24 +309,35 @@ Copyright (c) 2026 Maximum
 
 **Sonic Refiner** は、foobar2000 2.x（Windows x64）向けのリアルタイム音色・音場補正DSPです。
 
-> 現在の正式版：**v0.9.0**  
-> v0.9.0では、独立した小型の **Sonic Refiner 補正モニター** を追加しました。Auto Low／Auto High／Auto Headroom／Level Matchの補正値をリアルタイム表示し、v0.8.4の音声処理基準は変更していません。
+> 現在の正式版：**v0.9.1** — 補正モニターに **「モニターの見方...」** を追加。DSP音声処理は変更しません。
+> v0.8.4では自動ヘッドルーム保護を改善し、一瞬のピークで全体音量を急減衰させず、持続的な高ピークだけを平滑化して保護します。
 
 > 推奨する後段ラウドネス処理：**R128 Real-time Loudness Normalizer**
 
-## v0.9.0の変更点
+## v0.9.1
 
-v0.9.0では、v0.9.0-dev.1/dev.2で実機検証した独立型の **Sonic Refiner 補正モニター** を正式搭載します。dev.2で行ったfoobar2000 SDK `initquit_factory_t` とのビルド互換性修正も含みます。モニターはDSP音声処理経路を変更しません。
+v0.9.1では、v0.9.0で搭載した補正モニターに **「モニターの見方...」** を追加します。 右クリックメニュー順もR128と揃え、**「常に手前に表示」→ 区切り線 →「モニターの見方...」** とします。
 
-- Playbackメニューの **Sonic Refiner 補正モニター** から表示
-- **低域補正（Auto Low）／高域補正（Auto High）／ヘッドルーム減衰／レベル一致減衰** をリアルタイム表示
-- 100 ms間隔で表示更新し、DSP音声処理そのものは変更なし
-- 動作中／解析中／待機中／一時停止中／無効を表示
-- foobar2000終了時に開いていれば次回起動時に自動再表示
-- ウィンドウ位置を記憶
-- 右クリックから **常に手前に表示** をON/OFF可能
-- Sonic Refinerの自動（Windows）／日本語／English表示とfoobar2000のライト／ダーク表示に追従
-- DSPアルゴリズム、16内蔵プリセット値、SRP5、`preset_version 10`、`.srpbackup`、旧形式互換はv0.8.4から変更なし
+- 補正モニターを右クリックして **「モニターの見方...」** を選択。
+- English表示では **How to read the monitor...**。
+- 低域補正、高域補正、Auto Headroom、Level Matchの意味を説明。
+- バー範囲、動作中／解析中／待機中／一時停止中／無効の意味を説明。
+- Sonic Refiner → R128 → 出力の推奨順序も説明。
+- GitHub／ソース向けに `MONITOR_GUIDE.md` を追加。
+- 常に手前、位置・開閉状態保存、起動時再表示は変更なし。
+- DSPアルゴリズム、Auto Headroom定数、ATB、16内蔵プリセット値、SRP5、`preset_version 10`、`.srpbackup`、Reverb、A/B、旧形式互換は正式v0.9.0から変更しません。
+
+## v0.9.0
+
+正式v0.9.0では、通常の設定画面とは独立した小型の **Sonic Refiner 補正モニター** を搭載しました。
+
+- Playbackメニューから表示。
+- 低域補正／高域補正／自動ヘッドルーム／レベル一致をリアルタイム表示。
+- 約100 ms間隔で更新。
+- 動作中／解析中／待機中／一時停止中／無効を表示。
+- 開閉状態、位置、常に手前に表示を保存。
+- 自動（Windows）／日本語／Englishとlight/darkへ追従。
+- Monitorは表示専用で、DSP音声処理や保存形式を変更しません。
 
 ## v0.8.4の変更点
 

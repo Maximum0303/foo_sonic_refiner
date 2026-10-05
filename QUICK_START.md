@@ -1,6 +1,6 @@
-# Sonic Refiner v0.9.0 Quick Start
+# Sonic Refiner v0.9.1 Quick Start
 
-> v0.9.0 is the formal release of the validated independent real-time Processing Monitor developed in v0.9.0-dev.1/dev.2 on top of the v0.8.4 audio baseline. Audio algorithms, SRP5, `preset_version 10`, `.srpbackup`, built-in preset parameter values, Reverb, display-language behavior, and legacy compatibility remain unchanged.
+> v0.9.1 adds a built-in monitor-reading guide to the formal v0.9.0 Processing Monitor. DSP audio processing and compatibility formats are unchanged.
 
 ## English
 
@@ -44,10 +44,10 @@ From the Playback menu, choose **Sonic Refiner Processing Monitor**. The compact
 It shows:
 - Auto Low
 - Auto High
-- Headroom attenuation
+- AutoHeadroom (Auto Headroom attenuation)
 - Level Match attenuation
 
-The display refreshes every 100 ms. Right-click the monitor to toggle **Always on Top**. Its open/closed state and window position are restored on the next foobar2000 launch.
+The display refreshes every 100 ms. Right-click the monitor and choose **How to read the monitor...** for a description of the four values, bars and states. The same menu also toggles **Always on Top**. Its open/closed state and window position are restored on the next foobar2000 launch.
 
 ### 4. Choose a starting preset
 
@@ -129,7 +129,7 @@ Playbackメニューから **Sonic Refiner 補正モニター** を選びます�
 表示項目：
 - 低域補正（Auto Low）
 - 高域補正（Auto High）
-- ヘッドルーム減衰
+- 自動ヘッドルーム減衰
 - レベル一致減衰
 
 表示は100 ms間隔で更新します。小窓を右クリックすると **常に手前に表示** を切り替えられます。開閉状態とウィンドウ位置は次回起動時に復元されます。

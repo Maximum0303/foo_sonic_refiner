@@ -1,37 +1,83 @@
 # Changelog
 
-## [0.9.0] - 2026-10-05
+## [0.9.1] - 2026-10-05
 
 ### Added
 
-- Formalized the validated independent compact **Sonic Refiner Processing Monitor** developed in v0.9.0-dev.1/dev.2.
-- The Playback-menu monitor displays live **Auto Low**, **Auto High**, **Auto Headroom attenuation**, and **Level Match attenuation** values.
-- Includes approximately 100 ms display refresh, state display, window-position persistence, open/closed persistence, startup re-display, and optional **Always on Top** persistence.
-- Monitor text follows Sonic Refiner's resolved Automatic (Windows) / Japanese / English display language.
+- Added the built-in **How to read the monitor... / モニターの見方...** guide and `MONITOR_GUIDE.md`.
 
-### Build / Validation
+### Changed
 
-- Includes the dev.2 foobar2000 SDK `initquit_factory_t` build-compatibility fix (`sonic_refiner_monitor_initquit` is not `final`).
-- Validated v0.9.0-dev.2 component SHA-256: `dbb831f98cbf7b26ab6c7f2a97f49e6edddd9e6d9dda72cd235dfa4775105db3`.
-- Monitor startup, live values, persistence, language switching, multi-instance prevention, playback transitions, user presets, A/B, SRP5 backup/restore, Reverb tail handling, venue presets, and Auto Headroom + strong Reverb regression checks passed on dev.2.
+- Standardized monitor right-click order with R128: **Always on Top → separator → How to read the monitor...**.
+- Kept the monitor at **156 DLU** wide and all meter bars at **49 DLU**.
+- Uses compact visible label **AutoHeadroom / 自動HR** while the guide uses the full **Auto Headroom / 自動ヘッドルーム** terminology.
+- Removed the garbled duplicate top-level `.cmd` launcher from the formal source package; `build_and_package.cmd` is the single launcher.
 
 ### Compatibility
 
-- v0.8.4 DSP processing and Auto Headroom constants are unchanged.
-- ATB, Level-Matched Bypass, Width, Ambience, Reverb, Master Strength, Output Gain, 16 built-in preset values, SRP5, `preset_version 10`, `.srpbackup`, display-language behavior, and legacy compatibility remain unchanged.
+- No DSP audio-processing changes.
+- Monitor telemetry/persistence, Auto Headroom constants, ATB logic, 16 built-in presets, SRP5, `preset_version 10`, `.srpbackup`, Reverb, A/B and legacy compatibility are unchanged.
 
-## [0.9.0-dev.2] - 2026-10-05
+## [0.9.1-dev.5] - 2026-10-05
 
-### Fixed
+### Changed
 
-- Fixed the MSVC C3246 build failure in the new Processing Monitor startup helper.
-- Removed `final` from `sonic_refiner_monitor_initquit` because foobar2000 SDK `initquit_factory_t` wraps the class through inheritance.
-- No intended runtime monitor behavior or audio-processing changes from v0.9.0-dev.1.
+- Restored the Processing Monitor geometry to the v0.9.1-dev.3 / R128-aligned layout: **156 DLU window width** and **49 DLU meter bars**.
+- Shortened only the visible monitor row label to **AutoHeadroom** / **自動HR** so it stays on one line without widening the label column or shrinking the bars.
+- Kept the built-in guide and `MONITOR_GUIDE.md` on the full terminology **Auto Headroom** / **自動ヘッドルーム**.
+- The dev.4 internal-layout widening is not adopted in dev.5.
 
 ### Compatibility
 
-- v0.8.4 DSP processing and Auto Headroom constants are unchanged.
-- ATB, Level-Matched Bypass, Width, Ambience, Reverb, Master Strength, Output Gain, 16 built-in preset values, SRP5, `preset_version 10`, `.srpbackup`, display-language behavior, and legacy compatibility remain unchanged.
+- No DSP audio-processing changes.
+- Monitor telemetry and persistence behavior are unchanged.
+- `sonic_refiner_monitor_initquit` remains non-final.
+- Auto Headroom constants, ATB logic, 16 built-in preset values, SRP5, `preset_version 10`, `.srpbackup`, Reverb, A/B, display-language behavior and legacy compatibility are unchanged.
+
+
+## [0.9.1-dev.3] - 2026-10-05
+
+### Changed
+
+- Renamed the Processing Monitor row label from **Headroom** to **Auto Headroom**.
+- Renamed the Japanese row label from **ヘッドルーム** to **自動ヘッドルーム**.
+- Aligned the built-in monitor guide and `MONITOR_GUIDE.md` with the same terminology.
+
+### Compatibility
+
+- No DSP audio-processing changes.
+- Monitor telemetry and persistence behavior are unchanged.
+- `sonic_refiner_monitor_initquit` remains non-final.
+- Auto Headroom constants, ATB logic, 16 built-in preset values, SRP5, `preset_version 10`, `.srpbackup`, Reverb, A/B, display-language behavior and legacy compatibility are unchanged.
+
+
+## [0.9.1-dev.2] - 2026-10-05
+
+### Changed
+
+- Aligned the Processing Monitor right-click menu order with R128: **Always on Top → separator → How to read the monitor...**.
+- Kept the monitor guide text, telemetry, DSP processing and persistence behavior unchanged from dev.1.
+
+### Compatibility
+
+- No DSP audio-processing changes.
+- `sonic_refiner_monitor_initquit` remains non-final.
+- Auto Headroom constants, ATB logic, 16 built-in preset values, SRP5, `preset_version 10`, `.srpbackup`, Reverb, A/B, display-language behavior and legacy compatibility are unchanged.
+
+## [0.9.1-dev.1] - 2026-10-05
+
+### Added
+
+- Added **How to read the monitor... / モニターの見方...** to the Processing Monitor right-click menu.
+- Added an in-component Japanese/English guide for Auto Low, Auto High, Headroom, Level Match, bar ranges, display states and recommended DSP order.
+- Added `MONITOR_GUIDE.md` for the same Sonic Refiner-specific monitor guidance.
+
+### Compatibility
+
+- Based on formal v0.9.0 monitor behavior.
+- `sonic_refiner_monitor_initquit` remains non-final for foobar2000 SDK `initquit_factory_t` compatibility.
+- No DSP audio-processing changes.
+- Auto Headroom constants, ATB logic, 16 built-in preset values, SRP5, `preset_version 10`, `.srpbackup`, Reverb, A/B, display-language behavior and legacy compatibility are unchanged.
 
 ## [0.9.0-dev.1] - 2026-10-05
 

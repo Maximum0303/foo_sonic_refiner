@@ -1,0 +1,31 @@
+Sonic Refiner v0.9.1 Implementation Summary
+
+Base
+- Formal v0.9.0 Processing Monitor and v0.9.1-dev.5 validated UI behavior.
+
+Added
+- Built-in How to read the monitor... / モニターの見方... guide.
+- MONITOR_GUIDE.md.
+
+Monitor layout
+- Dialog width: 156 DLU.
+- Label column: x=8, width=48 DLU.
+- Value column: x=57, width=38 DLU.
+- Meter bars: x=99, width=49 DLU.
+- Visible compact label: Japanese 自動HR / English AutoHeadroom.
+- Guide terminology: 自動ヘッドルーム / Auto Headroom.
+
+Context menu
+- Always on Top / 常に手前に表示
+- separator
+- How to read the monitor... / モニターの見方...
+
+Compatibility
+- No DSP algorithm changes.
+- Monitor telemetry and persistence unchanged.
+- sonic_refiner_monitor_initquit remains non-final.
+- Auto Headroom constants, ATB logic, 16 built-in preset values, SRP5, preset_version 10, .srpbackup, Reverb, A/B, display-language behavior and legacy compatibility unchanged.
+
+Build source cleanup
+- Formal source keeps build_and_package.cmd as the single top-level .cmd launcher.
+- The garbled duplicate launcher produced by earlier ZIP filename handling is not included.
