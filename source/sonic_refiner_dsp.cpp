@@ -5,6 +5,7 @@
 #include <functional>
 #include <utility>
 #include <cstdio>
+#include <cwchar>
 
 #ifdef _WIN32
 #include <helpers/DarkMode.h>
@@ -148,6 +149,14 @@ std::atomic<int> g_adaptive_runtime_state{
 };
 std::atomic<int> g_adaptive_runtime_depth_tenths_db{0};
 std::atomic<int> g_adaptive_runtime_clarity_tenths_db{0};
+
+// v0.9.0-dev.1: runtime-only values for the independent Processing Monitor.
+// These values are deliberately kept outside presets/config serialization.
+std::atomic<int> g_monitor_auto_headroom_tenths_db{0};
+std::atomic<int> g_monitor_level_match_tenths_db{0};
+std::atomic<bool> g_monitor_playback_active{false};
+std::atomic<bool> g_monitor_playback_paused{false};
+
 // UI-only guard for playback discontinuities.  The audio processor can retain
 // the previous gain very briefly for a click-free transition, but the settings
 // dialog must not present that previous-track value as a result for the new
@@ -573,6 +582,19 @@ double tenths_to_db(int value) noexcept {
     return static_cast<double>(value) / 10.0;
 }
 
+int linear_gain_to_tenths_db(double gain) noexcept {
+    if (!std::isfinite(gain) || gain >= 0.999999) {
+        return 0;
+    }
+
+    const double safe_gain = std::clamp(
+        gain,
+        1.0e-6,
+        1.0
+    );
+    return db_to_tenths(20.0 * std::log10(safe_gain));
+}
+
 void publish_adaptive_runtime(
     adaptive_runtime_state state,
     double depth_db,
@@ -621,30 +643,68 @@ class adaptive_playback_discontinuity_callback
     : public play_callback_static {
 public:
     unsigned get_flags() override {
-        return flag_on_playback_new_track |
-            flag_on_playback_seek;
+        return flag_on_playback_starting |
+            flag_on_playback_new_track |
+            flag_on_playback_stop |
+            flag_on_playback_seek |
+            flag_on_playback_pause;
     }
 
     void on_playback_starting(
         play_control::t_track_command,
-        bool
-    ) noexcept override {}
+        bool paused
+    ) noexcept override {
+        g_monitor_playback_active.store(
+            true,
+            std::memory_order_relaxed
+        );
+        g_monitor_playback_paused.store(
+            paused,
+            std::memory_order_relaxed
+        );
+    }
 
     void on_playback_new_track(
         metadb_handle_ptr
     ) noexcept override {
+        g_monitor_playback_active.store(
+            true,
+            std::memory_order_relaxed
+        );
         mark_adaptive_playback_discontinuity();
     }
 
     void on_playback_stop(
         play_control::t_stop_reason
-    ) noexcept override {}
+    ) noexcept override {
+        g_monitor_playback_active.store(
+            false,
+            std::memory_order_relaxed
+        );
+        g_monitor_playback_paused.store(
+            false,
+            std::memory_order_relaxed
+        );
+        g_monitor_auto_headroom_tenths_db.store(
+            0,
+            std::memory_order_relaxed
+        );
+        g_monitor_level_match_tenths_db.store(
+            0,
+            std::memory_order_relaxed
+        );
+    }
 
     void on_playback_seek(double) noexcept override {
         mark_adaptive_playback_discontinuity();
     }
 
-    void on_playback_pause(bool) noexcept override {}
+    void on_playback_pause(bool paused) noexcept override {
+        g_monitor_playback_paused.store(
+            paused,
+            std::memory_order_relaxed
+        );
+    }
 
     void on_playback_edited(
         metadb_handle_ptr
@@ -3991,6 +4051,13 @@ public:
         }
     }
 
+    double current_gain() const noexcept {
+        if (!enabled_ || !std::isfinite(current_gain_)) {
+            return 1.0;
+        }
+        return std::clamp(current_gain_, 0.0, 1.0);
+    }
+
 private:
     bool enabled_ = true;
     double sample_rate_ = 0.0;
@@ -4046,7 +4113,20 @@ public:
             return true;
         }
 
+        g_monitor_playback_active.store(
+            true,
+            std::memory_order_relaxed
+        );
+
         if (!settings_.enabled) {
+            g_monitor_auto_headroom_tenths_db.store(
+                0,
+                std::memory_order_relaxed
+            );
+            g_monitor_level_match_tenths_db.store(
+                0,
+                std::memory_order_relaxed
+            );
             publish_adaptive_runtime(
                 adaptive_runtime_state::off,
                 0.0,
@@ -4080,6 +4160,14 @@ public:
         if (!enhancement_active &&
             std::abs(settings_.output_gain_db) <= 0.0001f &&
             !analysis_requested) {
+            g_monitor_auto_headroom_tenths_db.store(
+                0,
+                std::memory_order_relaxed
+            );
+            g_monitor_level_match_tenths_db.store(
+                0,
+                std::memory_order_relaxed
+            );
             return true;
         }
 
@@ -4212,6 +4300,17 @@ public:
                 channels,
                 input_power
             );
+            g_monitor_level_match_tenths_db.store(
+                linear_gain_to_tenths_db(
+                    level_match_processor_.current_gain()
+                ),
+                std::memory_order_relaxed
+            );
+        } else {
+            g_monitor_level_match_tenths_db.store(
+                0,
+                std::memory_order_relaxed
+            );
         }
 
         apply_output_gain(
@@ -4225,6 +4324,17 @@ public:
                 data,
                 frames,
                 channels
+            );
+            g_monitor_auto_headroom_tenths_db.store(
+                linear_gain_to_tenths_db(
+                    auto_headroom_processor_.current_gain()
+                ),
+                std::memory_order_relaxed
+            );
+        } else {
+            g_monitor_auto_headroom_tenths_db.store(
+                0,
+                std::memory_order_relaxed
             );
         }
 
@@ -4241,6 +4351,14 @@ public:
         );
         g_last_tone_was_adaptive.store(
             false,
+            std::memory_order_relaxed
+        );
+        g_monitor_auto_headroom_tenths_db.store(
+            0,
+            std::memory_order_relaxed
+        );
+        g_monitor_level_match_tenths_db.store(
+            0,
             std::memory_order_relaxed
         );
     }
@@ -4844,6 +4962,34 @@ void save_preset_manager_split_ratio(
 // These HWNDs are runtime-only and are never serialized.
 HWND g_direct_sonic_refiner_settings_window = nullptr;
 HWND g_standard_sonic_refiner_settings_window = nullptr;
+HWND g_sonic_refiner_monitor_window = nullptr;
+
+constexpr GUID guid_processing_monitor_open = {
+    0xb43c2d17, 0x2f86, 0x4c31,
+    { 0xa4, 0xe1, 0x67, 0x91, 0x02, 0x54, 0xcb, 0x73 }
+};
+constexpr GUID guid_processing_monitor_position = {
+    0x6fd8a123, 0x91ee, 0x4b7a,
+    { 0x9d, 0x15, 0x38, 0xae, 0xd0, 0x6f, 0x44, 0x8c }
+};
+constexpr GUID guid_processing_monitor_topmost = {
+    0x21c58eb4, 0x7d0a, 0x41f2,
+    { 0x8e, 0xc5, 0xa9, 0x33, 0x5b, 0x17, 0x2d, 0xe6 }
+};
+
+cfg_bool g_processing_monitor_open(
+    guid_processing_monitor_open,
+    false
+);
+cfg_string g_processing_monitor_position(
+    guid_processing_monitor_position,
+    ""
+);
+cfg_bool g_processing_monitor_topmost(
+    guid_processing_monitor_topmost,
+    false
+);
+
 constexpr UINT wm_sonic_refiner_direct_chain_invalidated = WM_APP + 0x04A1;
 constexpr UINT wm_sonic_refiner_preset_manager_drag_reorder = WM_APP + 0x04A2;
 
@@ -7388,7 +7534,7 @@ private:
     void apply_language() {
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - Preset Manager - 0.8.4"
+            L"Sonic Refiner - Preset Manager - 0.9.0"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -9867,7 +10013,7 @@ private:
 
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - 0.8.4"
+            L"Sonic Refiner - 0.9.0"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -12067,6 +12213,555 @@ static const GUID guid_mainmenu_open_sonic_refiner_settings = {
     { 0x86, 0x8d, 0x57, 0x6b, 0x0d, 0x4f, 0x2b, 0x91 }
 };
 
+static const GUID guid_mainmenu_open_sonic_refiner_monitor = {
+    0x4a6fdc88, 0x5e91, 0x4b76,
+    { 0x99, 0x12, 0x0b, 0xe4, 0x65, 0xd8, 0x3a, 0x2f }
+};
+
+bool load_processing_monitor_position(int& x, int& y) noexcept {
+    const char* saved = g_processing_monitor_position.get_ptr();
+    if (saved == nullptr || saved[0] == '\0') {
+        return false;
+    }
+
+    int parsed_x = 0;
+    int parsed_y = 0;
+    if (std::sscanf(saved, "%d,%d", &parsed_x, &parsed_y) != 2) {
+        return false;
+    }
+
+    x = parsed_x;
+    y = parsed_y;
+    return true;
+}
+
+void save_processing_monitor_position(HWND window) {
+    if (!IsWindow(window)) {
+        return;
+    }
+
+    RECT rect{};
+    if (!::GetWindowRect(window, &rect)) {
+        return;
+    }
+
+    char serialized[64] = {};
+    std::snprintf(
+        serialized,
+        sizeof(serialized),
+        "%ld,%ld",
+        static_cast<long>(rect.left),
+        static_cast<long>(rect.top)
+    );
+    g_processing_monitor_position = serialized;
+}
+
+void place_processing_monitor_window(HWND window, HWND owner) {
+    if (!IsWindow(window)) {
+        return;
+    }
+
+    RECT window_rect{};
+    ::GetWindowRect(window, &window_rect);
+    const int width = window_rect.right - window_rect.left;
+    const int height = window_rect.bottom - window_rect.top;
+
+    int x = window_rect.left;
+    int y = window_rect.top;
+
+    if (!load_processing_monitor_position(x, y)) {
+        RECT owner_rect{};
+        if (IsWindow(owner) && ::GetWindowRect(owner, &owner_rect)) {
+            x = owner_rect.right + 8;
+            y = owner_rect.top;
+        } else {
+            x = ::GetSystemMetrics(SM_XVIRTUALSCREEN) + 32;
+            y = ::GetSystemMetrics(SM_YVIRTUALSCREEN) + 32;
+        }
+    }
+
+    const int virtual_left = ::GetSystemMetrics(SM_XVIRTUALSCREEN);
+    const int virtual_top = ::GetSystemMetrics(SM_YVIRTUALSCREEN);
+    const int virtual_width = ::GetSystemMetrics(SM_CXVIRTUALSCREEN);
+    const int virtual_height = ::GetSystemMetrics(SM_CYVIRTUALSCREEN);
+    const int virtual_right = virtual_left + virtual_width;
+    const int virtual_bottom = virtual_top + virtual_height;
+
+    if (virtual_width > width) {
+        x = std::clamp(x, virtual_left, virtual_right - width);
+    }
+    if (virtual_height > height) {
+        y = std::clamp(y, virtual_top, virtual_bottom - height);
+    }
+
+    ::SetWindowPos(
+        window,
+        nullptr,
+        x,
+        y,
+        0,
+        0,
+        SWP_NOZORDER | SWP_NOSIZE | SWP_NOACTIVATE
+    );
+}
+
+void apply_processing_monitor_topmost(HWND window) {
+    if (!IsWindow(window)) {
+        return;
+    }
+
+    ::SetWindowPos(
+        window,
+        g_processing_monitor_topmost ? HWND_TOPMOST : HWND_NOTOPMOST,
+        0,
+        0,
+        0,
+        0,
+        SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE
+    );
+}
+
+class sonic_refiner_monitor_dialog final
+    : public CDialogImpl<sonic_refiner_monitor_dialog> {
+public:
+    enum { IDD = IDD_PROCESSING_MONITOR };
+
+    void OnFinalMessage(HWND window) override {
+        if (g_sonic_refiner_monitor_window == window) {
+            g_sonic_refiner_monitor_window = nullptr;
+        }
+        delete this;
+    }
+
+    BEGIN_MSG_MAP_EX(sonic_refiner_monitor_dialog)
+        MSG_WM_INITDIALOG(on_init_dialog)
+        MSG_WM_TIMER(on_timer)
+        MSG_WM_CLOSE(on_close)
+        MSG_WM_DESTROY(on_destroy)
+        MSG_WM_CONTEXTMENU(on_context_menu)
+    END_MSG_MAP()
+
+private:
+    static constexpr UINT_PTR timer_id_ = 1;
+    static constexpr UINT monitor_timer_ms_ = 100;
+    static constexpr UINT context_always_on_top_ = 1;
+
+    BOOL on_init_dialog(CWindow, LPARAM) {
+        g_sonic_refiner_monitor_window = m_hWnd;
+        language_ = load_ui_language();
+        dark_mode_.AddDialogWithControls(m_hWnd);
+
+        for (const int control : {
+            IDC_MONITOR_AUTO_LOW_BAR,
+            IDC_MONITOR_AUTO_HIGH_BAR,
+            IDC_MONITOR_HEADROOM_BAR,
+            IDC_MONITOR_LEVEL_MATCH_BAR
+        }) {
+            ::SendDlgItemMessageW(
+                m_hWnd,
+                control,
+                PBM_SETRANGE32,
+                0,
+                150
+            );
+        }
+
+        apply_language();
+        refresh_chain_settings();
+        refresh_values();
+        place_processing_monitor_window(
+            m_hWnd,
+            core_api::get_main_window()
+        );
+        apply_processing_monitor_topmost(m_hWnd);
+        ::SetTimer(m_hWnd, timer_id_, monitor_timer_ms_, nullptr);
+        return TRUE;
+    }
+
+    void on_timer(UINT_PTR timer_id) {
+        if (timer_id != timer_id_) {
+            return;
+        }
+
+        const ui_language current_language = load_ui_language();
+        if (current_language != language_) {
+            language_ = current_language;
+            apply_language();
+        }
+
+        ++chain_poll_ticks_;
+        if (chain_poll_ticks_ >= 10) {
+            chain_poll_ticks_ = 0;
+            refresh_chain_settings();
+        }
+
+        refresh_values();
+    }
+
+    void on_close() {
+        g_processing_monitor_open = false;
+        ::DestroyWindow(m_hWnd);
+    }
+
+    void on_destroy() {
+        ::KillTimer(m_hWnd, timer_id_);
+        save_processing_monitor_position(m_hWnd);
+    }
+
+    void on_context_menu(CWindow, CPoint point) {
+        HMENU menu = ::CreatePopupMenu();
+        if (menu == nullptr) {
+            return;
+        }
+
+        const UINT flags = MF_STRING |
+            (g_processing_monitor_topmost ? MF_CHECKED : MF_UNCHECKED);
+        ::AppendMenuW(
+            menu,
+            flags,
+            context_always_on_top_,
+            localized(
+                language_,
+                L"常に手前に表示",
+                L"Always on Top"
+            )
+        );
+
+        if (point.x == -1 && point.y == -1) {
+            RECT rect{};
+            ::GetWindowRect(m_hWnd, &rect);
+            point.x = rect.left + 16;
+            point.y = rect.top + 16;
+        }
+
+        const UINT selected = ::TrackPopupMenu(
+            menu,
+            TPM_RETURNCMD | TPM_RIGHTBUTTON,
+            point.x,
+            point.y,
+            0,
+            m_hWnd,
+            nullptr
+        );
+        ::DestroyMenu(menu);
+
+        if (selected == context_always_on_top_) {
+            g_processing_monitor_topmost =
+                !static_cast<bool>(g_processing_monitor_topmost);
+            apply_processing_monitor_topmost(m_hWnd);
+        }
+    }
+
+    void apply_language() {
+        ::SetWindowTextW(
+            m_hWnd,
+            localized(
+                language_,
+                L"Sonic Refiner 補正モニター",
+                L"Sonic Refiner Monitor"
+            )
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_MONITOR_AUTO_LOW_LABEL,
+            localized(language_, L"低域補正", L"Auto Low")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_MONITOR_AUTO_HIGH_LABEL,
+            localized(language_, L"高域補正", L"Auto High")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_MONITOR_HEADROOM_LABEL,
+            localized(language_, L"ヘッドルーム", L"Headroom")
+        );
+        ::SetDlgItemTextW(
+            m_hWnd,
+            IDC_MONITOR_LEVEL_MATCH_LABEL,
+            localized(language_, L"レベル一致", L"Level Match")
+        );
+    }
+
+    void refresh_chain_settings() {
+        static_api_ptr_t<dsp_config_manager> manager;
+        dsp_chain_config_impl chain;
+        manager->get_core_settings(chain);
+
+        t_size match_count = 0;
+        t_size match_index = 0;
+        for (t_size index = 0; index < chain.get_count(); ++index) {
+            if (chain.get_item(index).get_owner() == sonic_refiner::guid) {
+                match_index = index;
+                ++match_count;
+            }
+        }
+
+        chain_valid_ = match_count == 1;
+        if (!chain_valid_) {
+            settings_ = sonic_refiner::settings{};
+            return;
+        }
+
+        const dsp_preset_impl preset(chain.get_item(match_index));
+        settings_ = sonic_refiner::parse_preset(preset);
+    }
+
+    void set_row_text(int control, const wchar_t* text) {
+        ::SetDlgItemTextW(m_hWnd, control, text);
+    }
+
+    void set_bar(int control, int value, int maximum = 150) {
+        const int safe_maximum = (std::max)(1, maximum);
+        const int safe_value = std::clamp(value, 0, safe_maximum);
+        ::SendDlgItemMessageW(
+            m_hWnd,
+            control,
+            PBM_SETRANGE32,
+            0,
+            safe_maximum
+        );
+        ::SendDlgItemMessageW(
+            m_hWnd,
+            control,
+            PBM_SETPOS,
+            safe_value,
+            0
+        );
+    }
+
+    void set_rows_unavailable(const wchar_t* text) {
+        set_row_text(IDC_MONITOR_AUTO_LOW_VALUE, text);
+        set_row_text(IDC_MONITOR_AUTO_HIGH_VALUE, text);
+        set_row_text(IDC_MONITOR_HEADROOM_VALUE, text);
+        set_row_text(IDC_MONITOR_LEVEL_MATCH_VALUE, text);
+        set_bar(IDC_MONITOR_AUTO_LOW_BAR, 0);
+        set_bar(IDC_MONITOR_AUTO_HIGH_BAR, 0);
+        set_bar(IDC_MONITOR_HEADROOM_BAR, 0, 120);
+        set_bar(IDC_MONITOR_LEVEL_MATCH_BAR, 0, 120);
+    }
+
+    void set_signed_db_row(
+        int value_control,
+        int bar_control,
+        int tenths_db,
+        int maximum_tenths
+    ) {
+        wchar_t text[32] = {};
+        const double db = tenths_to_db(tenths_db);
+        std::swprintf(
+            text,
+            sizeof(text) / sizeof(text[0]),
+            L"%+.1f dB",
+            db
+        );
+        set_row_text(value_control, text);
+        set_bar(
+            bar_control,
+            std::abs(tenths_db),
+            maximum_tenths
+        );
+    }
+
+    void refresh_values() {
+        const bool enabled = chain_valid_ && settings_.enabled;
+        const bool paused = g_monitor_playback_paused.load(
+            std::memory_order_relaxed
+        );
+        const bool playing = g_monitor_playback_active.load(
+            std::memory_order_relaxed
+        );
+
+        if (!enabled) {
+            set_rows_unavailable(L"—");
+            set_row_text(
+                IDC_MONITOR_STATUS,
+                localized(language_, L"無効", L"Disabled")
+            );
+            return;
+        }
+
+        if (!playing) {
+            set_rows_unavailable(L"—");
+            set_row_text(
+                IDC_MONITOR_STATUS,
+                localized(language_, L"待機中", L"Waiting")
+            );
+            return;
+        }
+
+        bool analyzing = false;
+        if (!settings_.adaptive_tone_balance) {
+            const wchar_t* off_text = localized(
+                language_,
+                L"オフ",
+                L"OFF"
+            );
+            set_row_text(IDC_MONITOR_AUTO_LOW_VALUE, off_text);
+            set_row_text(IDC_MONITOR_AUTO_HIGH_VALUE, off_text);
+            set_bar(IDC_MONITOR_AUTO_LOW_BAR, 0);
+            set_bar(IDC_MONITOR_AUTO_HIGH_BAR, 0);
+        } else {
+            const adaptive_runtime_state adaptive_state =
+                static_cast<adaptive_runtime_state>(
+                    g_adaptive_runtime_state.load(
+                        std::memory_order_relaxed
+                    )
+                );
+            analyzing =
+                g_adaptive_ui_analysis_pending.load(
+                    std::memory_order_acquire
+                ) ||
+                adaptive_state == adaptive_runtime_state::waiting ||
+                adaptive_state == adaptive_runtime_state::analyzing;
+
+            if (analyzing) {
+                set_row_text(IDC_MONITOR_AUTO_LOW_VALUE, L"...");
+                set_row_text(IDC_MONITOR_AUTO_HIGH_VALUE, L"...");
+                set_bar(IDC_MONITOR_AUTO_LOW_BAR, 0);
+                set_bar(IDC_MONITOR_AUTO_HIGH_BAR, 0);
+            } else {
+                set_signed_db_row(
+                    IDC_MONITOR_AUTO_LOW_VALUE,
+                    IDC_MONITOR_AUTO_LOW_BAR,
+                    g_adaptive_runtime_depth_tenths_db.load(
+                        std::memory_order_relaxed
+                    ),
+                    150
+                );
+                set_signed_db_row(
+                    IDC_MONITOR_AUTO_HIGH_VALUE,
+                    IDC_MONITOR_AUTO_HIGH_BAR,
+                    g_adaptive_runtime_clarity_tenths_db.load(
+                        std::memory_order_relaxed
+                    ),
+                    150
+                );
+            }
+        }
+
+        if (!settings_.auto_headroom) {
+            set_row_text(
+                IDC_MONITOR_HEADROOM_VALUE,
+                localized(language_, L"オフ", L"OFF")
+            );
+            set_bar(IDC_MONITOR_HEADROOM_BAR, 0, 120);
+        } else {
+            set_signed_db_row(
+                IDC_MONITOR_HEADROOM_VALUE,
+                IDC_MONITOR_HEADROOM_BAR,
+                g_monitor_auto_headroom_tenths_db.load(
+                    std::memory_order_relaxed
+                ),
+                120
+            );
+        }
+
+        if (!settings_.level_matched_bypass) {
+            set_row_text(
+                IDC_MONITOR_LEVEL_MATCH_VALUE,
+                localized(language_, L"オフ", L"OFF")
+            );
+            set_bar(IDC_MONITOR_LEVEL_MATCH_BAR, 0, 120);
+        } else {
+            set_signed_db_row(
+                IDC_MONITOR_LEVEL_MATCH_VALUE,
+                IDC_MONITOR_LEVEL_MATCH_BAR,
+                g_monitor_level_match_tenths_db.load(
+                    std::memory_order_relaxed
+                ),
+                120
+            );
+        }
+
+        set_row_text(
+            IDC_MONITOR_STATUS,
+            paused
+                ? localized(language_, L"一時停止中", L"Paused")
+                : (analyzing
+                    ? localized(language_, L"解析中", L"Analyzing")
+                    : localized(language_, L"動作中", L"Active"))
+        );
+    }
+
+    ui_language language_ = ui_language::japanese;
+    sonic_refiner::settings settings_{};
+    bool chain_valid_ = false;
+    unsigned chain_poll_ticks_ = 0;
+    fb2k::CDarkModeHooks dark_mode_;
+};
+
+void activate_existing_sonic_refiner_monitor(HWND dialog) {
+    if (!IsWindow(dialog)) {
+        return;
+    }
+
+    if (IsIconic(dialog)) {
+        ::ShowWindow(dialog, SW_RESTORE);
+    } else {
+        ::ShowWindow(dialog, SW_SHOW);
+    }
+    ::SetForegroundWindow(dialog);
+}
+
+void show_sonic_refiner_monitor(bool remember_open = true) {
+    if (IsWindow(g_sonic_refiner_monitor_window)) {
+        if (remember_open) {
+            g_processing_monitor_open = true;
+        }
+        activate_existing_sonic_refiner_monitor(
+            g_sonic_refiner_monitor_window
+        );
+        return;
+    }
+
+    auto* dialog = new sonic_refiner_monitor_dialog();
+    const HWND window = dialog->Create(core_api::get_main_window());
+    if (!IsWindow(window)) {
+        delete dialog;
+        if (remember_open) {
+            g_processing_monitor_open = false;
+        }
+        ::MessageBoxW(
+            core_api::get_main_window(),
+            localized(
+                load_ui_language(),
+                L"Sonic Refinerの補正モニターを開けませんでした。",
+                L"Could not open the Sonic Refiner processing monitor."
+            ),
+            L"Sonic Refiner",
+            MB_OK | MB_ICONERROR
+        );
+        return;
+    }
+
+    if (remember_open) {
+        g_processing_monitor_open = true;
+    }
+    ::ShowWindow(window, SW_SHOW);
+}
+
+class sonic_refiner_monitor_initquit : public initquit {
+public:
+    void on_init() override {
+        if (g_processing_monitor_open) {
+            show_sonic_refiner_monitor(false);
+        }
+    }
+
+    void on_quit() override {
+        if (IsWindow(g_sonic_refiner_monitor_window)) {
+            save_processing_monitor_position(
+                g_sonic_refiner_monitor_window
+            );
+            ::DestroyWindow(g_sonic_refiner_monitor_window);
+        }
+    }
+};
+
+static initquit_factory_t<sonic_refiner_monitor_initquit>
+    g_sonic_refiner_monitor_initquit_factory;
+
 void activate_existing_sonic_refiner_dialog(HWND dialog) {
     if (!IsWindow(dialog)) {
         return;
@@ -12210,45 +12905,63 @@ class mainmenu_commands_sonic_refiner_settings
     : public mainmenu_commands {
 public:
     t_uint32 get_command_count() override {
-        return 1;
+        return 2;
     }
 
     GUID get_command(t_uint32 index) override {
-        if (index != 0) {
-            uBugCheck();
+        if (index == 0) {
+            return guid_mainmenu_open_sonic_refiner_settings;
         }
-        return guid_mainmenu_open_sonic_refiner_settings;
+        if (index == 1) {
+            return guid_mainmenu_open_sonic_refiner_monitor;
+        }
+        uBugCheck();
     }
 
     void get_name(
         t_uint32 index,
         pfc::string_base& out
     ) override {
-        if (index != 0) {
-            uBugCheck();
+        const bool english = is_english(load_ui_language());
+
+        if (index == 0) {
+            out = english
+                ? "Sonic Refiner Settings..."
+                : "Sonic Refiner の設定...";
+            return;
         }
 
-        if (is_english(load_ui_language())) {
-            out = "Sonic Refiner Settings...";
-        } else {
-            out = "Sonic Refiner の設定...";
+        if (index == 1) {
+            out = english
+                ? "Sonic Refiner Processing Monitor"
+                : "Sonic Refiner 補正モニター";
+            return;
         }
+
+        uBugCheck();
     }
 
     bool get_description(
         t_uint32 index,
         pfc::string_base& out
     ) override {
-        if (index != 0) {
-            uBugCheck();
+        const bool english = is_english(load_ui_language());
+
+        if (index == 0) {
+            out = english
+                ? "Opens the Sonic Refiner settings dialog directly."
+                : "Sonic Refinerの設定画面を直接開きます。";
+            return true;
         }
 
-        if (is_english(load_ui_language())) {
-            out = "Opens the Sonic Refiner settings dialog directly.";
-        } else {
-            out = "Sonic Refinerの設定画面を直接開きます。";
+        if (index == 1) {
+            out = english
+                ? "Shows the independent real-time Sonic Refiner processing monitor."
+                : "Sonic Refinerのリアルタイム補正量を独立した小窓で表示します。";
+            return true;
         }
-        return true;
+
+        uBugCheck();
     }
 
     GUID get_parent() override {
@@ -12259,10 +12972,15 @@ public:
         t_uint32 index,
         service_ptr_t<service_base>
     ) override {
-        if (index != 0) {
-            uBugCheck();
+        if (index == 0) {
+            show_sonic_refiner_settings_from_main_menu();
+            return;
         }
-        show_sonic_refiner_settings_from_main_menu();
+        if (index == 1) {
+            show_sonic_refiner_monitor(true);
+            return;
+        }
+        uBugCheck();
     }
 };
 

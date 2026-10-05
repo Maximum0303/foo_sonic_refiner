@@ -1,13 +1,15 @@
-Sonic Refiner v0.8.4 — Build and Package / ビルドと梱包
+Sonic Refiner v0.9.0 — Build and Package / ビルドと梱包
 
 ENGLISH
 
 Purpose of this release:
-- Redesign Auto Headroom so brief transients do not cause an abrupt whole-signal gain drop.
-- Detect sustained high peaks with a two-stage smoothed peak envelope.
-- Apply protection gain with a gentle attack and release instead of instant attenuation.
-- Keep the approx. -0.2 dBFS protection reference while leaving final True Peak control to the downstream R128 component.
-- Keep ATB, Level-Matched Bypass, Reverb, preset values, SRP5, preset_version 10, .srpbackup, and legacy compatibility unchanged.
+- Add an independent compact Sonic Refiner Processing Monitor.
+- Show real-time Auto Low, Auto High, Auto Headroom attenuation and Level Match attenuation.
+- Refresh the monitor UI every 100 ms without adding UI work to the audio processing thread.
+- Add Active / Analyzing / Waiting / Paused / Disabled states.
+- Remember monitor open/closed state, position, and optional Always on Top state.
+- Open the monitor directly from the Playback menu.
+- Keep the v0.8.4 DSP algorithms, 16 built-in preset values, SRP5, preset_version 10, .srpbackup, display-language behavior, and legacy compatibility unchanged.
 
 Required environment:
 - foobar2000 SDK 2025-03-07
@@ -34,7 +36,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 Package:
-dist\foo_sonic_refiner_v0.8.4.fb2k-component
+dist\foo_sonic_refiner_v0.9.0.fb2k-component
 
 Checksum:
 dist\SHA256SUMS.txt
@@ -57,11 +59,13 @@ Current persistence / compatibility:
 日本語
 
 この正式版の目的：
-- 一瞬のピークで全体音量が急に下がらないよう、自動ヘッドルーム保護を見直します。
-- 2段階の平滑化ピーク検出で、持続的な高ピークだけを保護対象にします。
-- 瞬時減衰ではなく、穏やかなアタック／リリースで保護ゲインを動かします。
-- 約-0.2 dBFSの保護基準は維持し、最終True Peak管理は後段R128へ任せます。
-- ATB、レベルマッチ・バイパス、Reverb、内蔵プリセット値、SRP5、preset_version 10、.srpbackup、旧形式互換は変更しません。
+- 通常の設定画面とは独立した小型のSonic Refiner補正モニターを追加します。
+- 低域補正／高域補正／自動ヘッドルーム減衰／レベル一致減衰をリアルタイム表示します。
+- 表示更新は100 ms間隔とし、音声処理スレッドへUI処理を持ち込みません。
+- 動作中／解析中／待機中／一時停止中／無効の状態を表示します。
+- 開閉状態、ウィンドウ位置、常に手前に表示の設定を記憶します。
+- Playbackメニューから補正モニターを直接開けるようにします。
+- v0.8.4のDSPアルゴリズム、16内蔵プリセット値、SRP5、preset_version 10、.srpbackup、表示言語、旧形式互換は変更しません。
 
 ■ 対象環境
 - foobar2000 SDK 2025-03-07
@@ -89,7 +93,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 配布パッケージ:
-dist\foo_sonic_refiner_v0.8.4.fb2k-component
+dist\foo_sonic_refiner_v0.9.0.fb2k-component
 
 チェックサム:
 dist\SHA256SUMS.txt

@@ -1,0 +1,32 @@
+Sonic Refiner v0.9.0 Implementation Summary
+
+Base
+- Formalized from the validated v0.9.0-dev.2 source and behavior.
+- v0.9.0-dev.2 was based on v0.9.0-dev.1, which added the independent Processing Monitor on top of the formal v0.8.4 audio baseline.
+
+Processing Monitor
+- Independent compact modeless monitor opened from Playback.
+- Displays live Auto Low / Auto High / Auto Headroom attenuation / Level Match attenuation.
+- Approximately 100 ms UI refresh.
+- Active / Analyzing / Waiting / Paused / Disabled state display.
+- Window position, open/closed state and Always on Top persist.
+- Startup re-display works when the monitor was open at shutdown.
+- Display follows Sonic Refiner's resolved Automatic (Windows) / Japanese / English language.
+- Monitor diagnostics are runtime-only and do not change DSP preset persistence.
+
+Build compatibility
+- Carries the v0.9.0-dev.2 MSVC C3246 fix for initquit_factory_t<sonic_refiner_monitor_initquit>.
+- sonic_refiner_monitor_initquit is not final so the foobar2000 SDK service wrapper can derive from it.
+
+Validated dev.2 reference
+- component SHA-256: dbb831f98cbf7b26ab6c7f2a97f49e6edddd9e6d9dda72cd235dfa4775105db3
+
+Compatibility
+- v0.8.4 DSP processing unchanged.
+- Auto Headroom v0.8.4 constants unchanged.
+- 16 built-in preset values unchanged.
+- SRP5 unchanged.
+- preset_version 10 unchanged.
+- .srpbackup format unchanged.
+- Display-language behavior unchanged apart from Monitor following the resolved language.
+- Legacy preset / backup compatibility unchanged.

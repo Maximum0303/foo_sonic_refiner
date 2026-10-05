@@ -1,6 +1,6 @@
-# Sonic Refiner v0.8.4 Quick Start
+# Sonic Refiner v0.9.0 Quick Start
 
-> v0.8.4 improves Auto Headroom so brief transients do not cause abrupt whole-signal attenuation. SRP5, `preset_version 10`, `.srpbackup`, built-in preset parameter values, Reverb, display-language behavior, and legacy compatibility are unchanged.
+> v0.9.0 is the formal release of the validated independent real-time Processing Monitor developed in v0.9.0-dev.1/dev.2 on top of the v0.8.4 audio baseline. Audio algorithms, SRP5, `preset_version 10`, `.srpbackup`, built-in preset parameter values, Reverb, display-language behavior, and legacy compatibility remain unchanged.
 
 ## English
 
@@ -37,7 +37,19 @@ Use the language selector at the top of the settings window:
 
 Automatic follows the Windows UI language. Manual Japanese / English selections override Automatic. The display changes immediately without changing audio settings.
 
-### 3. Choose a starting preset
+### 3. Open the Processing Monitor (optional)
+
+From the Playback menu, choose **Sonic Refiner Processing Monitor**. The compact window can stay open while the normal settings dialog is closed.
+
+It shows:
+- Auto Low
+- Auto High
+- Headroom attenuation
+- Level Match attenuation
+
+The display refreshes every 100 ms. Right-click the monitor to toggle **Always on Top**. Its open/closed state and window position are restored on the next foobar2000 launch.
+
+### 4. Choose a starting preset
 
 - **Standard**: fixed Depth / Clarity processing
 - **Adaptive Standard**: ATB enabled with full Low / High correction allowance
@@ -45,7 +57,7 @@ Automatic follows the Windows UI language. Manual Japanese / English selections 
 
 Sonic Refiner has 16 built-in presets. `Custom` is a UI state, not a 17th preset.
 
-### 4. Adjust
+### 5. Adjust
 
 - More bass/body: Depth
 - More vocal/instrument definition: Clarity
@@ -57,13 +69,13 @@ Sonic Refiner has 16 built-in presets. `Custom` is a UI state, not a 17th preset
 
 With ATB On, Depth and Clarity are automatic-correction limits rather than fixed boosts. 100% is a maximum permission, not a constant +15 dB boost.
 
-### 5. Preset Manager
+### 6. Preset Manager
 
 Use **Preset Manager...** for Search, preview, Apply, New from Current, Update from Current, Duplicate, Rename, Delete, Backup, Restore, and reordering.
 
 User presets are saved in **SRP5**. Up to 20 user presets can be stored.
 
-### 6. Backup and compatibility
+### 7. Backup and compatibility
 
 - Backup extension: `.srpbackup`
 - Current user-preset format: SRP5
@@ -110,7 +122,19 @@ R128の標準ノーマライズ：
 
 自動ではWindows UI言語に合わせます。日本語／Englishを手動選択した場合は手動指定を優先します。表示はその場で切り替わり、音質設定は変わりません。
 
-### 3. 最初のプリセット
+### 3. 補正モニターを開く（任意）
+
+Playbackメニューから **Sonic Refiner 補正モニター** を選びます。通常の設定画面を閉じたまま、小窓だけを常時表示できます。
+
+表示項目：
+- 低域補正（Auto Low）
+- 高域補正（Auto High）
+- ヘッドルーム減衰
+- レベル一致減衰
+
+表示は100 ms間隔で更新します。小窓を右クリックすると **常に手前に表示** を切り替えられます。開閉状態とウィンドウ位置は次回起動時に復元されます。
+
+### 4. 最初のプリセット
 
 - **標準**：固定Depth / Clarity処理
 - **適応型標準**：ATBを有効にし、低域／高域自動補正の許容量を最大化
@@ -118,7 +142,7 @@ R128の標準ノーマライズ：
 
 内蔵プリセットは16種類です。「カスタム」はUI状態であり17番目のプリセットではありません。
 
-### 4. 調整
+### 5. 調整
 
 - 低音・厚み：Depth
 - ボーカルや楽器の輪郭：Clarity
@@ -130,13 +154,13 @@ R128の標準ノーマライズ：
 
 ATB ON時はDepth／Clarityが自動補正の上限になります。100%は最大許容量であり、常時+15 dBではありません。
 
-### 5. Preset Manager
+### 6. Preset Manager
 
 **プリセット管理...** から、Search、プレビュー、Apply、New from Current、Update from Current、Duplicate、Rename、Delete、Backup、Restore、並び替えを利用できます。
 
 任意プリセットの現行形式は **SRP5**、最大20件です。
 
-### 6. バックアップと互換性
+### 7. バックアップと互換性
 
 - バックアップ拡張子：`.srpbackup`
 - 任意プリセット現行形式：SRP5

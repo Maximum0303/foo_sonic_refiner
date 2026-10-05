@@ -4,6 +4,7 @@
 #define IDD_PRESET_NAME                102
 #define IDD_INFORMATION                103
 #define IDD_PRESET_MANAGER             104
+#define IDD_PROCESSING_MONITOR          105
 
 #define IDC_ENABLE                     1001
 #define IDC_DEPTH_SLIDER               1002
@@ -96,3 +97,17 @@
 #define IDC_PM_RESTORE                   1114
 #define IDC_PM_MOVE_UP                   1115
 #define IDC_PM_MOVE_DOWN                 1116
+
+#define IDC_MONITOR_AUTO_LOW_LABEL       1200
+#define IDC_MONITOR_AUTO_LOW_VALUE       1201
+#define IDC_MONITOR_AUTO_LOW_BAR         1202
+#define IDC_MONITOR_AUTO_HIGH_LABEL      1203
+#define IDC_MONITOR_AUTO_HIGH_VALUE      1204
+#define IDC_MONITOR_AUTO_HIGH_BAR        1205
+#define IDC_MONITOR_HEADROOM_LABEL       1206
+#define IDC_MONITOR_HEADROOM_VALUE       1207
+#define IDC_MONITOR_HEADROOM_BAR         1208
+#define IDC_MONITOR_LEVEL_MATCH_LABEL    1209
+#define IDC_MONITOR_LEVEL_MATCH_VALUE    1210
+#define IDC_MONITOR_LEVEL_MATCH_BAR      1211
+#define IDC_MONITOR_STATUS               1212

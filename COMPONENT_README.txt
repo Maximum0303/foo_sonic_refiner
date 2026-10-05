@@ -1,4 +1,4 @@
-Sonic Refiner v0.8.4
+Sonic Refiner v0.9.0
 Adaptive Audio Enhancement DSP for foobar2000
 
 ============================================================
@@ -9,7 +9,16 @@ Sonic Refiner is a real-time tone and soundstage enhancement DSP for
 foobar2000 2.x on Windows x64.
 
 CURRENT STABLE RELEASE
-v0.8.4
+v0.9.0
+
+V0.9.0 PROCESSING MONITOR
+- Adds a compact independent monitor window that can stay open while the settings dialog is closed.
+- Displays Auto Low, Auto High, Auto Headroom attenuation and Level Match attenuation.
+- Refreshes the UI every 100 ms without changing the DSP audio path.
+- Shows Active / Analyzing / Waiting / Paused / Disabled states.
+- Remembers open/closed state, window position and optional Always on Top setting.
+- Opens from the Playback menu and follows Sonic Refiner display language plus foobar2000 light/dark appearance.
+- Audio algorithms, built-in preset values, SRP5, preset_version 10, .srpbackup and legacy compatibility are unchanged from v0.8.4.
 
 V0.8.4 AUTO HEADROOM
 - Replaces instant peak-triggered attenuation with smoothed sustained-peak detection.
@@ -218,7 +227,16 @@ Sonic Refinerは、foobar2000 2.x（Windows x64）向けの
 リアルタイム音色・音場補正DSPです。
 
 現在の正式公開版
-v0.8.4
+v0.9.0
+
+V0.9.0 補正モニター
+- 通常の設定画面とは独立した小型モニターを追加。
+- 低域補正／高域補正／自動ヘッドルーム減衰／レベル一致減衰を表示。
+- 100 ms間隔で表示更新し、DSP音声処理自体は変更しない。
+- 動作中／解析中／待機中／一時停止中／無効を表示。
+- 開閉状態、ウィンドウ位置、常に手前に表示を記憶。
+- Playbackメニューから開き、表示言語とライト／ダークへ追従。
+- DSPアルゴリズム、内蔵プリセット値、SRP5、preset_version 10、.srpbackup、旧形式互換はv0.8.4から変更なし。
 
 V0.8.4 自動ヘッドルーム保護
 - 瞬間ピーク即減衰をやめ、平滑化した持続ピークを検出。
