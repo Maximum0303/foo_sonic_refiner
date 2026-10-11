@@ -7534,7 +7534,7 @@ private:
     void apply_language() {
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - Preset Manager - 0.9.2"
+            L"Sonic Refiner - Preset Manager - 1.0.0"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -10013,7 +10013,7 @@ private:
 
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - 0.9.2"
+            L"Sonic Refiner - 1.0.0"
         );
         ::SetDlgItemTextW(
             m_hWnd,

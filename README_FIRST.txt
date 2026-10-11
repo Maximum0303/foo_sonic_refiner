@@ -1,15 +1,13 @@
-Sonic Refiner v0.9.2 — Build and Package / ビルドと梱包
+Sonic Refiner v1.0.0 — Build and Package / ビルドと梱包
 
 ENGLISH
 
-Purpose of this formal release:
-- Formalize the validated v0.9.2-dev.2 pre-v1.0 polish build.
-- Keep the v0.9.2-dev.1 terminology fixes: fixed Depth / Clarity descriptions use +15.0 dB and English adaptive Depth uses Auto Low.
-- Update README / COMPONENT_README installation examples to the formal v0.9.2 package.
-- Preserve historically correct v0.8.2 “was +16.0 / +14.0 dB” change notes.
-- Record the broad pre-v1.0 regression validation completed on v0.9.2-dev.2.
-- Keep DSP algorithms and all audio-processing constants unchanged from v0.9.1.
-- Keep Auto Headroom constants, ATB logic, 16 built-in preset values, SRP5, preset_version 10, .srpbackup, Reverb, A/B, display language, Monitor behavior and legacy compatibility unchanged.
+Purpose of this formal build:
+- Formalize the validated v0.9.2 / v1.0.0-dev.1 behavior as Sonic Refiner v1.0.0.
+- Do not change DSP algorithms, coefficients, Auto Headroom constants, ATB logic, Reverb tuning, A/B, Processing Monitor behavior, or the 16 built-in preset values.
+- Keep SRP5, preset_version 10, .srpbackup, display-language behavior and all legacy readers unchanged.
+- Confirm Help / Glossary / Important Notes as the v1.0 baseline terminology.
+- Use the formal package identity v1.0.0.
 
 Required environment:
 - foobar2000 SDK 2025-03-07
@@ -33,7 +31,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 Package:
-dist\foo_sonic_refiner_v0.9.2.fb2k-component
+dist\foo_sonic_refiner_v1.0.0.fb2k-component
 
 Checksum:
 dist\SHA256SUMS.txt
@@ -56,13 +54,11 @@ Current persistence / compatibility:
 日本語
 
 この正式版の目的：
-- 実機検証済みv0.9.2-dev.2をv1.0前の仕上げ版v0.9.2として正式版化します。
-- v0.9.2-dev.1で確認した用語修正を維持し、固定Depth / Clarity説明を+15.0 dB、Englishの適応型DepthをAuto Lowへ統一します。
-- README / COMPONENT_READMEのインストール例を正式v0.9.2パッケージへ更新します。
-- v0.8.2の「旧+16.0 / +14.0 dB」など、変更履歴として正しい記述は残します。
-- v0.9.2-dev.2で完了した広範囲のv1.0前回帰確認を記録します。
-- DSPアルゴリズムおよび音声処理定数はv0.9.1から変更しません。
-- Auto Headroom定数、ATB、16内蔵プリセット値、SRP5、preset_version 10、.srpbackup、Reverb、A/B、表示言語、Monitor挙動、旧形式互換は変更しません。
+- 検証済みv0.9.2／v1.0.0-dev.1の動作をSonic Refiner v1.0.0として正式版化します。
+- DSPアルゴリズム、係数、Auto Headroom定数、ATB、Reverb調整、A/B、Processing Monitor動作、16内蔵プリセット値は変更しません。
+- SRP5、preset_version 10、.srpbackup、表示言語、旧形式readerを維持します。
+- Help／Glossary／Important Notesをv1.0の正式基準用語として確定します。
+- 正式パッケージ識別をv1.0.0とします。
 
 ■ 対象環境
 - foobar2000 SDK 2025-03-07
@@ -87,7 +83,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 配布パッケージ:
-dist\foo_sonic_refiner_v0.9.2.fb2k-component
+dist\foo_sonic_refiner_v1.0.0.fb2k-component
 
 チェックサム:
 dist\SHA256SUMS.txt

@@ -1,4 +1,4 @@
-Sonic Refiner v0.9.2
+Sonic Refiner v1.0.0
 Adaptive Audio Enhancement DSP for foobar2000
 
 ============================================================
@@ -8,8 +8,16 @@ ENGLISH
 Sonic Refiner is a real-time tone and soundstage enhancement DSP for
 foobar2000 2.x on Windows x64.
 
-CURRENT STABLE RELEASE
-v0.9.2
+STABLE RELEASE
+v1.0.0
+
+V1.0.0 STABLE MILESTONE
+- Formalizes the validated v0.9.2 / v1.0.0-dev.1 behavior as the v1.0 stable baseline.
+- No DSP algorithm, coefficient, built-in preset value, persistence-format, Monitor, ATB, Auto Headroom, Reverb, A/B or language-behavior changes.
+- SRP5, preset_version 10, .srpbackup and legacy readers remain unchanged.
+- Built-in Help / Glossary / Important Notes are confirmed as the v1.0 baseline terminology.
+- Broad real-machine regression validation completed before formalization.
+- Formal package: foo_sonic_refiner_v1.0.0.fb2k-component.
 
 V0.9.2 PRE-V1.0 POLISH
 - Fixed stale user-facing Depth / Clarity descriptions so both 100% maxima are +15.0 dB.
@@ -223,7 +231,7 @@ PRESET COMPATIBILITY
   SONIC_REFINER_PRESET_BACKUP_V1
 
 INSTALLATION
-1. Install foo_sonic_refiner_v0.9.2.fb2k-component.
+1. Install foo_sonic_refiner_v1.0.0.fb2k-component generated from this formal source.
 2. Restart foobar2000.
 3. Add Sonic Refiner in DSP Manager.
 4. If R128 Real-time Loudness Normalizer is used, place it after Sonic Refiner.
@@ -240,8 +248,16 @@ Copyright (c) 2026 Maximum
 Sonic Refinerは、foobar2000 2.x（Windows x64）向けの
 リアルタイム音色・音場補正DSPです。
 
-現在の正式公開版
-v0.9.2
+正式安定版
+v1.0.0
+
+V1.0.0 正式安定版
+- v0.9.2／v1.0.0-dev.1で検証済みの動作をv1.0の安定仕様として正式化。
+- DSPアルゴリズム、係数、16内蔵プリセット値、保存形式、Monitor、ATB、Auto Headroom、Reverb、A/B、表示言語動作は変更なし。
+- SRP5、preset_version 10、.srpbackup、旧形式readerを維持。
+- 内蔵Help／Glossary／Important Notesをv1.0の正式基準用語として確定。
+- 広範囲の実機回帰確認を完了。
+- 正式パッケージ：foo_sonic_refiner_v1.0.0.fb2k-component。
 
 V0.9.2 v1.0前の仕上げ
 - 固定Depth / Clarityの説明を100%時最大+15.0 dBへ統一。
@@ -454,7 +470,7 @@ Sonic RefinerのDepth / Clarity / ATBとの役割重複に注意してくださ�
   SONIC_REFINER_PRESET_BACKUP_V1
 
 インストール
-1. foo_sonic_refiner_v0.9.2.fb2k-componentをインストールします。
+1. この正式ソースから生成したfoo_sonic_refiner_v1.0.0.fb2k-componentをインストールします。
 2. foobar2000を再起動します。
 3. DSP ManagerへSonic Refinerを追加します。
 4. R128 Real-time Loudness Normalizerを併用する場合は、

@@ -1,5 +1,34 @@
 # Changelog
 
+## [1.0.0] - 2026-10-12
+
+### Stable milestone
+
+- Formalized the validated v1.0.0-dev.1 stabilization build as Sonic Refiner v1.0.0.
+- Established the validated v0.9.2 / v1.0.0-dev.1 DSP, UI, compatibility and monitoring behavior as the v1.0 stable baseline.
+- Completed broad real-machine regression validation covering normal playback, Processing Monitor, display-language switching, Preset Manager, A/B, backup/restore, Reverb/tail handling, Auto Headroom, venue presets, restart persistence, shortcuts, UI persistence and dark mode.
+- Updated formal component/UI/package identity and v1.0 release documentation.
+
+### Compatibility
+
+- No DSP audio-processing algorithm or coefficient changes from v0.9.2 / v1.0.0-dev.1.
+- ATB, Auto Headroom constants, Width, Ambience, Reverb, Level-Matched Bypass, A/B, Processing Monitor, 16 built-in preset values, SRP5, `preset_version 10`, `.srpbackup`, display-language behavior and legacy compatibility are unchanged.
+
+## [1.0.0-dev.1] - 2026-10-12
+
+### Changed
+
+- Started the v1.0 stabilization pass directly from the formal v0.9.2 source.
+- Updated component/UI/package development version identity to `1.0.0-dev.1`.
+- Promoted the validated v0.9.2 behavior and compatibility policy as the proposed v1.0 stable baseline.
+- Reviewed built-in Help, Glossary and Important Notes against the 1.0 baseline; their terminology already matches the validated specification, so no semantic rewrite is required in this build.
+- Updated README / COMPONENT_README / QUICK_START / README_FIRST for the v1.0 stabilization phase while keeping v0.9.2 identified as the current public stable release.
+
+### Compatibility
+
+- No DSP audio-processing algorithm or coefficient changes from v0.9.2.
+- ATB, Auto Headroom constants, Width, Ambience, Reverb, Level-Matched Bypass, A/B, Processing Monitor, 16 built-in preset values, SRP5, `preset_version 10`, `.srpbackup`, display-language behavior and legacy compatibility are unchanged.
+
 ## [0.9.2] - 2026-10-12
 
 ### Changed

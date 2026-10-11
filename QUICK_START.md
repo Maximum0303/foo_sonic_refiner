@@ -1,6 +1,6 @@
-# Sonic Refiner v0.9.2 Quick Start
+# Sonic Refiner v1.0.0 Quick Start
 
-> v0.9.2 is the pre-v1.0 polish release. User-facing gain terminology and documentation are aligned with the validated current specification; DSP audio processing and compatibility formats are unchanged.
+> v1.0.0 is the first v1.0 stabilization build, based directly on formal v0.9.2. DSP audio processing, built-in preset values and compatibility formats are unchanged. Current public stable release: v0.9.2.
 
 ## English
 

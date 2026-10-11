@@ -4,7 +4,7 @@
 
 Sonic Refiner is a real-time tone and soundstage enhancement DSP for foobar2000 2.x on Windows x64.
 
-> Current stable release: **v0.9.2** — pre-v1.0 polish that aligns user-facing gain terminology and installation documentation with the validated current specification, without changing DSP audio processing.
+> Stable release: **v1.0.0** — the first formal stable milestone. It freezes the validated v0.9.2 / v1.0.0-dev.1 DSP, UI, compatibility, and monitoring behavior without changing DSP audio processing.
 
 > v0.8.4 redesigns Auto Headroom so brief transients no longer cause an abrupt whole-signal attenuation; sustained high peaks are handled with smoothed detection and gain movement.
 
@@ -15,6 +15,20 @@ Sonic Refiner is a real-time tone and soundstage enhancement DSP for foobar2000 
 ---
 
 ## English
+
+## What's new in v1.0.0
+
+v1.0.0 is the **first formal stable milestone** for Sonic Refiner. It formalizes the validated v0.9.2 / v1.0.0-dev.1 feature set without adding a new DSP algorithm.
+
+- Freezes the validated DSP/UI behavior as the v1.0 stable baseline.
+- Keeps Depth / Clarity, ATB, Width, Ambience, Reverb, Auto Headroom, Level-Matched Bypass, A/B, Preset Manager and Processing Monitor behavior unchanged.
+- Keeps all 16 built-in preset values unchanged.
+- Keeps SRP5, `preset_version 10`, `.srpbackup`, SRP1-SRP4 reading, DSP preset versions 1-9 reading and other legacy compatibility unchanged.
+- Keeps Automatic (Windows) / Japanese / English display-language behavior unchanged.
+- Keeps the recommended chain **Sonic Refiner → R128 Real-time Loudness Normalizer → Output**.
+- Confirms the built-in Help, Glossary and Important Notes as the v1.0 baseline terminology.
+- Formalizes package/build identity as `v1.0.0`.
+- Completed broad real-machine regression validation before formalization, covering playback, Monitor, language switching, Preset Manager, A/B, backup/restore, Reverb/tail behavior, Auto Headroom, venue presets, persistence, shortcuts and dark-mode UI.
 
 ## What's new in v0.9.2
 
@@ -276,7 +290,7 @@ In particular, **3-Band Adaptive** may overlap with Sonic Refiner's Depth / Clar
 
 ## Installation
 
-1. Download `foo_sonic_refiner_v0.9.2.fb2k-component` from the v0.9.2 GitHub Release.
+1. Install `foo_sonic_refiner_v1.0.0.fb2k-component` generated from this formal source.
 2. Open the component package and follow the foobar2000 installation prompt.
 3. Restart foobar2000.
 4. Add **Sonic Refiner** to the active DSP chain in DSP Manager.
@@ -320,10 +334,23 @@ Copyright (c) 2026 Maximum
 
 **Sonic Refiner** は、foobar2000 2.x（Windows x64）向けのリアルタイム音色・音場補正DSPです。
 
-> 現在の正式版：**v0.9.2** — v1.0前の仕上げとして、ゲイン表記とインストール文書を現行仕様へ統一し、広範囲の回帰確認を実施。DSP音声処理は変更しません。
+> 正式安定版：**v1.0.0** — Sonic Refiner最初の正式安定版です。v0.9.2／v1.0.0-dev.1で検証済みのDSP・UI・互換性・Monitor動作を1.0基準として確定し、DSP音声処理は変更しません。
 > v0.8.4では自動ヘッドルーム保護を改善し、一瞬のピークで全体音量を急減衰させず、持続的な高ピークだけを平滑化して保護します。
 
 > 推奨する後段ラウドネス処理：**R128 Real-time Loudness Normalizer**
+
+## v1.0.0
+
+v1.0.0は、Sonic Refinerの**最初の正式安定版**です。v0.9.2／v1.0.0-dev.1で検証済みの機能・互換性・文書・パッケージ仕様を1.0の安定基準として正式化します。新しいDSPアルゴリズムは追加しません。
+
+- 検証済みDSP／UI動作をv1.0の安定仕様として確定。
+- Depth / Clarity、ATB、Width、Ambience、Reverb、Auto Headroom、Level-Matched Bypass、A/B、Preset Manager、Processing Monitorの動作は変更なし。
+- 16内蔵プリセット値は変更なし。
+- SRP5、`preset_version 10`、`.srpbackup`、SRP1～4読込、DSP preset version 1～9読込など旧形式互換を維持。
+- 自動（Windows）／日本語／Englishの表示言語仕様を維持。
+- 推奨DSP順 **Sonic Refiner → R128 Real-time Loudness Normalizer → Output** を維持。
+- 内蔵Help／Glossary／Important Notesをv1.0の正式基準用語として確定。
+- v1.0.0-dev.1で広範囲の実機回帰確認を完了。
 
 ## v0.9.2
 
@@ -573,7 +600,7 @@ Sonic Refinerで作った音色・音場・Reverbをなるべくそのまま生�
 
 ## インストール
 
-1. v0.9.2のGitHub Releaseから `foo_sonic_refiner_v0.9.2.fb2k-component` をダウンロードします。
+1. この正式ソースから生成した `foo_sonic_refiner_v1.0.0.fb2k-component` をインストールします。
 2. ファイルを開き、foobar2000の確認画面に従ってインストールします。
 3. foobar2000を再起動します。
 4. DSP Managerで **Sonic Refiner** を使用中のDSPへ追加します。
