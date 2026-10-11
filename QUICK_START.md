@@ -1,6 +1,6 @@
-# Sonic Refiner v0.9.1 Quick Start
+# Sonic Refiner v0.9.2 Quick Start
 
-> v0.9.1 adds a built-in monitor-reading guide to the formal v0.9.0 Processing Monitor. DSP audio processing and compatibility formats are unchanged.
+> v0.9.2 is the pre-v1.0 polish release. User-facing gain terminology and documentation are aligned with the validated current specification; DSP audio processing and compatibility formats are unchanged.
 
 ## English
 

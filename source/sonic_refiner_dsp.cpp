@@ -6268,11 +6268,11 @@ Sonic Refiner 用語集
 
 ■ Depth（音の厚み）
 約120 Hzを中心とした低域シェルフ補正です。
-最大値は約+16 dBです。低音、胴鳴り、低中域の存在感を増やします。
+最大値は約+15.0 dBです。低音、胴鳴り、低中域の存在感を増やします。
 
 ■ Clarity（明瞭感）
 約3.5 kHzから上を持ち上げる高域シェルフ補正です。
-最大値は約+14 dBです。ボーカルや楽器の輪郭、抜けを強調します。
+最大値は約+15.0 dBです。ボーカルや楽器の輪郭、抜けを強調します。
 
 ■ Width（音場の広がり）
 Mid/Side方式でステレオのSide成分を広げます。
@@ -6366,12 +6366,12 @@ Sonic Refiner Glossary
 
 ■ Depth
 A low-shelf adjustment centered around 120 Hz.
-The maximum boost is approximately +16 dB. It adds bass weight, body,
+The maximum boost is approximately +15.0 dB. It adds bass weight, body,
 and low-mid presence.
 
 ■ Clarity
 A high-shelf adjustment above approximately 3.5 kHz.
-The maximum boost is approximately +14 dB. It emphasizes vocal and
+The maximum boost is approximately +15.0 dB. It emphasizes vocal and
 instrument definition and presence.
 
 ■ Width
@@ -7534,7 +7534,7 @@ private:
     void apply_language() {
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - Preset Manager - 0.9.1"
+            L"Sonic Refiner - Preset Manager - 0.9.2"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -10013,7 +10013,7 @@ private:
 
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - 0.9.1"
+            L"Sonic Refiner - 0.9.2"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -10065,7 +10065,7 @@ private:
             localized(
                 language_,
                 L"通常は120 Hz付近を補正。適応型ではBass帯の自動補正上限です。",
-                L"Normally adjusts around 120 Hz; in adaptive mode this sets the Auto Bass limit."
+                L"Normally adjusts around 120 Hz; in adaptive mode this sets the Auto Low limit."
             )
         );
         ::SetDlgItemTextW(
@@ -10078,8 +10078,8 @@ private:
             IDC_CLARITY_DESCRIPTION,
             localized(
                 language_,
-                L"3.5 kHz付近から最大約+14 dBまで輪郭を強調します。",
-                L"Enhances definition above approximately 3.5 kHz, up to +14 dB."
+                L"3.5 kHz付近から最大約+15.0 dBまで輪郭を強調します。",
+                L"Enhances definition above approximately 3.5 kHz, up to +15.0 dB."
             )
         );
         ::SetDlgItemTextW(
@@ -11769,8 +11769,8 @@ private:
                 IDC_DEPTH_DESCRIPTION,
                 localized(
                     language_,
-                    L"120 Hz付近を中心に、最大約+16 dBまで厚みを加えます。",
-                    L"Adds body around 120 Hz, up to approximately +16 dB."
+                    L"120 Hz付近を中心に、最大約+15.0 dBまで厚みを加えます。",
+                    L"Adds body around 120 Hz, up to approximately +15.0 dB."
                 )
             );
             ::SetDlgItemTextW(
@@ -11783,8 +11783,8 @@ private:
                 IDC_CLARITY_DESCRIPTION,
                 localized(
                     language_,
-                    L"3.5 kHz付近から最大約+14 dBまで輪郭を強調します。",
-                    L"Enhances definition above approximately 3.5 kHz, up to +14 dB."
+                    L"3.5 kHz付近から最大約+15.0 dBまで輪郭を強調します。",
+                    L"Enhances definition above approximately 3.5 kHz, up to +15.0 dB."
                 )
             );
         }

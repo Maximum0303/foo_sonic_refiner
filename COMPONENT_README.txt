@@ -1,4 +1,4 @@
-Sonic Refiner v0.9.1
+Sonic Refiner v0.9.2
 Adaptive Audio Enhancement DSP for foobar2000
 
 ============================================================
@@ -9,7 +9,15 @@ Sonic Refiner is a real-time tone and soundstage enhancement DSP for
 foobar2000 2.x on Windows x64.
 
 CURRENT STABLE RELEASE
-v0.9.1
+v0.9.2
+
+V0.9.2 PRE-V1.0 POLISH
+- Fixed stale user-facing Depth / Clarity descriptions so both 100% maxima are +15.0 dB.
+- Standardized the old English Auto Bass wording to Auto Low.
+- Updated installation examples to foo_sonic_refiner_v0.9.2.fb2k-component.
+- Preserved historically correct v0.8.2 “was +16.0 / +14.0 dB” change notes.
+- Broad pre-v1.0 regression validation completed.
+- No DSP algorithm, preset-value, persistence-format, Monitor, Reverb, ATB, Auto Headroom, A/B, language, or legacy-compatibility changes.
 
 V0.9.1 MONITOR GUIDE
 - Adds How to read the monitor... to the Processing Monitor right-click menu.
@@ -215,7 +223,7 @@ PRESET COMPATIBILITY
   SONIC_REFINER_PRESET_BACKUP_V1
 
 INSTALLATION
-1. Install foo_sonic_refiner_v0.8.0.fb2k-component.
+1. Install foo_sonic_refiner_v0.9.2.fb2k-component.
 2. Restart foobar2000.
 3. Add Sonic Refiner in DSP Manager.
 4. If R128 Real-time Loudness Normalizer is used, place it after Sonic Refiner.
@@ -233,7 +241,15 @@ Sonic Refinerは、foobar2000 2.x（Windows x64）向けの
 リアルタイム音色・音場補正DSPです。
 
 現在の正式公開版
-v0.9.1
+v0.9.2
+
+V0.9.2 v1.0前の仕上げ
+- 固定Depth / Clarityの説明を100%時最大+15.0 dBへ統一。
+- Englishの旧Auto Bass表記をAuto Lowへ統一。
+- インストール例をfoo_sonic_refiner_v0.9.2.fb2k-componentへ更新。
+- v0.8.2の変更履歴として正しい旧+16.0 / +14.0 dB表記は維持。
+- v1.0前の広範囲な回帰確認を実施。
+- DSPアルゴリズム、プリセット値、保存形式、Monitor、Reverb、ATB、Auto Headroom、A/B、表示言語、旧形式互換は変更なし。
 
 V0.9.1 モニターの見方
 - 補正モニター右クリックに「モニターの見方...」を追加。
@@ -438,7 +454,7 @@ Sonic RefinerのDepth / Clarity / ATBとの役割重複に注意してくださ�
   SONIC_REFINER_PRESET_BACKUP_V1
 
 インストール
-1. foo_sonic_refiner_v0.8.0.fb2k-componentをインストールします。
+1. foo_sonic_refiner_v0.9.2.fb2k-componentをインストールします。
 2. foobar2000を再起動します。
 3. DSP ManagerへSonic Refinerを追加します。
 4. R128 Real-time Loudness Normalizerを併用する場合は、

@@ -1,5 +1,47 @@
 # Changelog
 
+## [0.9.2] - 2026-10-12
+
+### Changed
+
+- Formalized the validated v0.9.2-dev.2 pre-v1.0 polish build.
+- Corrected stale user-facing fixed Depth / Clarity descriptions to the formal **+15.0 dB** maximum specification.
+- Standardized the old English **Auto Bass** wording to **Auto Low**.
+- Updated README / COMPONENT_README installation examples to `foo_sonic_refiner_v0.9.2.fb2k-component`.
+- Preserved historically correct v0.8.2 “was +16.0 dB / +14.0 dB” change notes.
+- Completed broad pre-v1.0 regression validation covering playback, Monitor, language switching, Preset Manager, A/B, backup/restore, Reverb, Auto Headroom, venue presets, persistence, shortcuts and dark-mode UI.
+
+### Compatibility
+
+- No DSP audio-processing algorithm or coefficient changes from v0.9.1.
+- ATB, Auto Headroom constants, Width, Ambience, Reverb, Level-Matched Bypass, A/B, Processing Monitor behavior/geometry/telemetry, 16 built-in preset values, SRP5, `preset_version 10`, `.srpbackup`, display-language behavior and legacy compatibility are unchanged.
+
+## [0.9.2-dev.2] - 2026-10-11
+
+### Changed
+
+- Updated stale README / COMPONENT_README installation examples from `foo_sonic_refiner_v0.8.0.fb2k-component` to the current formal `foo_sonic_refiner_v0.9.1.fb2k-component`.
+- Kept historical version-change notes, including the v0.8.2 `+15.0 dB (was +16.0 / +14.0 dB)` history, unchanged.
+
+### Compatibility
+
+- No DSP audio-processing changes from v0.9.2-dev.1.
+- The validated v0.9.2-dev.1 terminology fixes remain unchanged.
+- ATB, Auto Headroom, Reverb, Monitor behavior, 16 built-in preset values, SRP5, `preset_version 10`, `.srpbackup`, display-language behavior, and legacy compatibility are unchanged from v0.9.1.
+
+## [0.9.2-dev.1] - 2026-10-11
+
+### Changed
+
+- Corrected stale user-facing fixed Depth / Clarity descriptions from the old +16 dB / +14 dB wording to the formal **+15.0 dB** specification.
+- Updated the old English term **Auto Bass** to **Auto Low** in the adaptive Depth description.
+- Aligned resource fallback text, runtime settings descriptions, and the built-in Japanese/English Glossary.
+
+### Compatibility
+
+- No DSP audio-processing changes.
+- ATB, Auto Headroom, Reverb, Monitor behavior, 16 built-in preset values, SRP5, `preset_version 10`, `.srpbackup`, display-language behavior, and legacy compatibility are unchanged from v0.9.1.
+
 ## [0.9.1] - 2026-10-05
 
 ### Added

@@ -1,0 +1,43 @@
+Sonic Refiner v0.9.2 Implementation Summary
+
+Base
+- Formal v0.9.1 source.
+- Validated v0.9.2-dev.1 terminology cleanup.
+- Validated v0.9.2-dev.2 documentation cleanup and pre-v1.0 regression testing.
+
+Formalized changes
+- Version: 0.9.2.
+- Fixed stale fixed Depth / Clarity user-facing descriptions to +15.0 dB.
+- Standardized English adaptive Depth wording from Auto Bass to Auto Low.
+- Updated README / COMPONENT_README installation examples to the formal v0.9.2 package.
+- Preserved historically correct v0.8.2 “was +16.0 / +14.0 dB” notes.
+- Added RELEASE_NOTES_v0.9.2.md, TESTING_v0.9.2.md and IMPLEMENTATION_SUMMARY_v0.9.2.txt.
+- README / COMPONENT_README / QUICK_START / README_FIRST / CHANGELOG updated for formal v0.9.2.
+
+Validated on v0.9.2-dev.2
+- Normal playback.
+- Processing Monitor runtime, persistence, guide, language tracking and playback-transition tracking.
+- Preset Manager core operations and UI persistence.
+- A/B comparison.
+- Backup / Restore.
+- Reverb tail / reset behavior.
+- Adaptive Standard / Full Boost / venue presets.
+- Auto Headroom with strong Reverb.
+- 16 built-in presets.
+- Restart persistence, shortcuts and dark-mode UI.
+
+Not changed
+- DSP algorithms or coefficients.
+- ATB analysis / decision / history / rate limiting / intro protection / boost-only behavior.
+- Fixed Depth / Clarity actual +15.0 dB ceilings.
+- Auto Low / Auto High actual +15.0 dB ceilings.
+- Auto Headroom algorithm/constants.
+- Width / Ambience / Reverb / track-end tail.
+- Master Strength / Output Gain / Level-Matched Bypass.
+- Processing Monitor behavior / geometry / telemetry / persistence.
+- 16 built-in preset values.
+- SRP5 / preset_version 10 / .srpbackup / legacy compatibility.
+- Automatic (Windows) / Japanese / English display-language behavior.
+
+Build source
+- build_and_package.cmd remains the single top-level .cmd launcher.
