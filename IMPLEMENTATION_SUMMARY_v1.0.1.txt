@@ -1,0 +1,47 @@
+Sonic Refiner v1.0.1 Implementation Summary
+
+Base:
+  Formal v1.0.0 source
+  Validated through v1.0.1-dev.1
+
+Purpose:
+  Align Processing Monitor pause display with the R128 monitor.
+
+Changed:
+  - Formal version identity: 1.0.1
+  - Formal package filename -> foo_sonic_refiner_v1.0.1.fb2k-component
+  - While paused, all four Monitor values show an em dash
+  - While paused, all four Monitor meter bars are empty
+  - Resume returns to live Monitor values on the next refresh
+  - Built-in Monitor guide documents the behavior
+  - MONITOR_GUIDE.md documents the behavior
+  - README / COMPONENT_README / QUICK_START / README_FIRST formalized
+  - CHANGELOG formal v1.0.1 entry added
+  - RELEASE_NOTES_v1.0.1.md added
+  - TESTING_v1.0.1.md added
+
+Validated in v1.0.1-dev.1:
+  - Pause -> four em dashes / empty bars / Paused state
+  - Resume -> live values restored
+  - No abnormal Reverb or playback behavior
+  - Next / Previous / Seek / Stop -> Play monitor tracking
+  - All 16 built-in presets
+  - English -> Automatic (Windows) language follow
+
+Not changed:
+  - DSP audio-processing algorithms or coefficients
+  - ATB analysis / decision / history / rate limiting / intro protection / boost-only policy
+  - Width / Ambience / Reverb / track-end tail
+  - Master Strength / Output Gain
+  - Auto Headroom algorithm or constants
+  - Level-Matched Bypass
+  - A/B behavior
+  - 16 built-in preset values
+  - SRP5
+  - preset_version 10
+  - .srpbackup format
+  - display-language behavior
+  - legacy compatibility
+
+Important:
+  Pause affects Monitor presentation only. DSP runtime state is not reset.

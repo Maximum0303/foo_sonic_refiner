@@ -1,13 +1,13 @@
-Sonic Refiner v1.0.0 — Build and Package / ビルドと梱包
+Sonic Refiner v1.0.1 — Build and Package / ビルドと梱包
 
 ENGLISH
 
 Purpose of this formal build:
-- Formalize the validated v0.9.2 / v1.0.0-dev.1 behavior as Sonic Refiner v1.0.0.
-- Do not change DSP algorithms, coefficients, Auto Headroom constants, ATB logic, Reverb tuning, A/B, Processing Monitor behavior, or the 16 built-in preset values.
-- Keep SRP5, preset_version 10, .srpbackup, display-language behavior and all legacy readers unchanged.
-- Confirm Help / Glossary / Important Notes as the v1.0 baseline terminology.
-- Use the formal package identity v1.0.0.
+- Start directly from formal Sonic Refiner v1.0.0.
+- While playback is paused, show an em dash for all four Processing Monitor values and empty all four meter bars, matching the R128 monitor behavior.
+- Resume live Monitor values on the next refresh after playback continues.
+- Do not reset or change DSP processing, ATB history, Auto Headroom state, Reverb state, presets, or compatibility formats.
+- Use the formal package identity v1.0.1.
 
 Required environment:
 - foobar2000 SDK 2025-03-07
@@ -31,7 +31,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 Package:
-dist\foo_sonic_refiner_v1.0.0.fb2k-component
+dist\foo_sonic_refiner_v1.0.1.fb2k-component
 
 Checksum:
 dist\SHA256SUMS.txt
@@ -54,11 +54,11 @@ Current persistence / compatibility:
 日本語
 
 この正式版の目的：
-- 検証済みv0.9.2／v1.0.0-dev.1の動作をSonic Refiner v1.0.0として正式版化します。
-- DSPアルゴリズム、係数、Auto Headroom定数、ATB、Reverb調整、A/B、Processing Monitor動作、16内蔵プリセット値は変更しません。
-- SRP5、preset_version 10、.srpbackup、表示言語、旧形式readerを維持します。
-- Help／Glossary／Important Notesをv1.0の正式基準用語として確定します。
-- 正式パッケージ識別をv1.0.0とします。
+- 正式Sonic Refiner v1.0.0を直接基準に開始します。
+- 一時停止中はProcessing Monitorの4項目を「—」表示、4本のメーターバーを空表示とし、R128モニターの動作と揃えます。
+- 再生再開後は次回更新からMonitorのライブ値表示へ戻します。
+- DSP音声処理、ATB履歴、Auto Headroom内部状態、Reverb状態、プリセット、互換形式は変更・リセットしません。
+- 正式版パッケージ識別をv1.0.1とします。
 
 ■ 対象環境
 - foobar2000 SDK 2025-03-07
@@ -83,7 +83,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 配布パッケージ:
-dist\foo_sonic_refiner_v1.0.0.fb2k-component
+dist\foo_sonic_refiner_v1.0.1.fb2k-component
 
 チェックサム:
 dist\SHA256SUMS.txt

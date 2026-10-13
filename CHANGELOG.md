@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.0.1] - 2026-10-13
+
+### Changed
+- Formalized the validated v1.0.1-dev.1 Processing Monitor pause-display alignment.
+- While playback is paused, all four displayed values show an em dash and all four meter bars are empty, matching the R128 monitor behavior.
+- Resume returns the Monitor to live runtime values on the next refresh.
+- Built-in Monitor guide and `MONITOR_GUIDE.md` document the paused-state behavior.
+- Updated formal version/package identity to `1.0.1`.
+
+### Compatibility
+- Monitor display-only change; DSP audio processing and DSP runtime states are not reset by pause.
+- No changes to ATB, Auto Headroom constants, Level-Matched Bypass, Width, Ambience, Reverb/tail, A/B, preset values, SRP5, `preset_version 10`, `.srpbackup`, display-language behavior or legacy compatibility.
+
+## [1.0.1-dev.1] - 2026-10-13
+
+### Changed
+- Processing Monitor now clears all four displayed values to an em dash and empties all meter bars while playback is paused, matching the R128 monitor behavior.
+- Resume returns the Monitor to live runtime values on the next refresh.
+- Updated the built-in Monitor guide and `MONITOR_GUIDE.md` to document the paused-state behavior.
+- Updated development version/package identity to `1.0.1-dev.1`.
+
+### Compatibility
+- Display-only Monitor change; DSP audio processing and runtime states are not reset by pause.
+- No changes to ATB, Auto Headroom, Level-Matched Bypass, Reverb, presets, SRP5, `preset_version 10`, `.srpbackup`, or legacy compatibility.
+
 ## [1.0.0] - 2026-10-12
 
 ### Stable milestone

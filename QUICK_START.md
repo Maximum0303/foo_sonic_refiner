@@ -1,6 +1,6 @@
-# Sonic Refiner v1.0.0 Quick Start
+# Sonic Refiner v1.0.1 Quick Start
 
-> v1.0.0 is the first v1.0 stabilization build, based directly on formal v0.9.2. DSP audio processing, built-in preset values and compatibility formats are unchanged. Current public stable release: v0.9.2.
+> v1.0.1 formalizes the validated v1.0.1-dev.1 Processing Monitor pause-display fix. While paused, all four values show `—` and all meter bars are empty. DSP audio processing, built-in preset values and compatibility formats are unchanged.
 
 ## English
 

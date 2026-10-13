@@ -42,7 +42,7 @@ Bars visualize correction magnitude. Auto Headroom and Level Match use the absol
 - **Active**: current values are being displayed.
 - **Analyzing**: ATB is analyzing; Auto Low / Auto High show `...`.
 - **Waiting**: playback is stopped; current values show an em dash.
-- **Paused**: playback is paused; the most recent displayed values are retained.
+- **Paused**: playback is paused; all four values show an em dash and the meter bars are empty. Live values resume when playback continues.
 - **Disabled**: Sonic Refiner is disabled, absent from the DSP chain, or cannot be identified safely.
 
 An em dash means no reliable current value. It is different from numeric zero or `OFF`.
@@ -101,7 +101,7 @@ Level-Matched Bypassによる現在のレベル合わせ量です。補正で増
 - **動作中 / Active**：現在の値を表示しています。
 - **解析中 / Analyzing**：ATBが解析中です。低域補正／高域補正は`...`になります。
 - **待機中 / Waiting**：再生していません。現在値は「—」になります。
-- **一時停止中 / Paused**：再生を一時停止しています。直前の表示値を保持します。
+- **一時停止中 / Paused**：再生を一時停止しています。4項目は「—」、メーターバーは空表示になります。再開すると現在値の表示へ戻ります。
 - **無効 / Disabled**：Sonic Refinerが無効、DSPチェーンにない、または安全に対象を特定できません。
 
 「—」は現在値を表示できない状態です。数値の0や「オフ」とは意味が異なります。

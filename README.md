@@ -4,7 +4,7 @@
 
 Sonic Refiner is a real-time tone and soundstage enhancement DSP for foobar2000 2.x on Windows x64.
 
-> Stable release: **v1.0.0** — the first formal stable milestone. It freezes the validated v0.9.2 / v1.0.0-dev.1 DSP, UI, compatibility, and monitoring behavior without changing DSP audio processing.
+> Stable release: **v1.0.1** — aligns the Processing Monitor paused-state display with the R128 monitor while leaving DSP audio processing unchanged.
 
 > v0.8.4 redesigns Auto Headroom so brief transients no longer cause an abrupt whole-signal attenuation; sustained high peaks are handled with smoothed detection and gain movement.
 
@@ -15,6 +15,15 @@ Sonic Refiner is a real-time tone and soundstage enhancement DSP for foobar2000 
 ---
 
 ## English
+
+## What's new in v1.0.1
+
+- Formalizes the validated v1.0.1-dev.1 monitor-display fix.
+- While playback is paused, the Processing Monitor shows `—` for Auto Low, Auto High, Auto Headroom and Level Match, and all four meter bars are empty.
+- Resume returns to live runtime values on the next monitor refresh.
+- The paused-state presentation now matches the R128 Real-time Loudness Normalizer monitor.
+- This is a display-only Monitor change; DSP audio processing, ATB history, Auto Headroom state and Reverb state are not reset.
+- All 16 built-in presets, SRP5, `preset_version 10`, `.srpbackup`, display-language behavior and legacy compatibility remain unchanged.
 
 ## What's new in v1.0.0
 

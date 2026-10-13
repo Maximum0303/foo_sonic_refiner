@@ -1,4 +1,4 @@
-Sonic Refiner v1.0.0
+Sonic Refiner v1.0.1
 Adaptive Audio Enhancement DSP for foobar2000
 
 ============================================================
@@ -9,7 +9,15 @@ Sonic Refiner is a real-time tone and soundstage enhancement DSP for
 foobar2000 2.x on Windows x64.
 
 STABLE RELEASE
-v1.0.0
+v1.0.1
+
+V1.0.1 MONITOR PAUSE DISPLAY
+- Formalizes the validated v1.0.1-dev.1 monitor-display fix.
+- Processing Monitor pause display now matches the R128 monitor.
+- While paused, all four values show an em dash and all four meter bars are empty.
+- Resume restores live values on the next refresh.
+- Display-only change; DSP audio processing and runtime states are not reset.
+- Formal package: foo_sonic_refiner_v1.0.1.fb2k-component.
 
 V1.0.0 STABLE MILESTONE
 - Formalizes the validated v0.9.2 / v1.0.0-dev.1 behavior as the v1.0 stable baseline.
@@ -250,6 +258,15 @@ Sonic Refinerは、foobar2000 2.x（Windows x64）向けの
 
 正式安定版
 v1.0.0
+
+開発版
+v1.0.1
+- 検証済みv1.0.1-dev.1のMonitor表示修正を正式版化。
+- 一時停止中のProcessing Monitor表示をR128モニターと統一。
+- 一時停止中は4項目を「—」、4本のメーターバーを空表示。
+- 再開すると次回更新からライブ値表示へ復帰。
+- 表示のみの変更で、DSP音声処理やランタイム内部状態はリセットしない。
+- 正式パッケージ：foo_sonic_refiner_v1.0.1.fb2k-component。
 
 V1.0.0 正式安定版
 - v0.9.2／v1.0.0-dev.1で検証済みの動作をv1.0の安定仕様として正式化。
