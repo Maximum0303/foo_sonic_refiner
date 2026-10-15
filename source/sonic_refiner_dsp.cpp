@@ -4976,6 +4976,10 @@ constexpr GUID guid_processing_monitor_topmost = {
     0x21c58eb4, 0x7d0a, 0x41f2,
     { 0x8e, 0xc5, 0xa9, 0x33, 0x5b, 0x17, 0x2d, 0xe6 }
 };
+constexpr GUID guid_processing_monitor_minimize_with_foobar2000 = {
+    0x59ae204b, 0xda5a, 0x4476,
+    { 0xa0, 0x35, 0x98, 0x44, 0xf8, 0xbc, 0xe6, 0x4e }
+};
 
 cfg_bool g_processing_monitor_open(
     guid_processing_monitor_open,
@@ -4988,6 +4992,10 @@ cfg_string g_processing_monitor_position(
 cfg_bool g_processing_monitor_topmost(
     guid_processing_monitor_topmost,
     false
+);
+cfg_bool g_processing_monitor_minimize_with_foobar2000(
+    guid_processing_monitor_minimize_with_foobar2000,
+    true
 );
 
 constexpr UINT wm_sonic_refiner_direct_chain_invalidated = WM_APP + 0x04A1;
@@ -7534,7 +7542,7 @@ private:
     void apply_language() {
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - Preset Manager - 1.0.1"
+            L"Sonic Refiner - Preset Manager - 1.1.0"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -10013,7 +10021,7 @@ private:
 
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - 1.0.1"
+            L"Sonic Refiner - 1.1.0"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -12321,6 +12329,23 @@ void apply_processing_monitor_topmost(HWND window) {
     );
 }
 
+void apply_processing_monitor_owner(HWND window) {
+    if (!IsWindow(window)) {
+        return;
+    }
+
+    const HWND owner =
+        g_processing_monitor_minimize_with_foobar2000
+            ? core_api::get_main_window()
+            : nullptr;
+
+    ::SetWindowLongPtrW(
+        window,
+        GWLP_HWNDPARENT,
+        reinterpret_cast<LONG_PTR>(owner)
+    );
+}
+
 constexpr const wchar_t* sonic_refiner_monitor_guide_text_japanese = LR"GUIDE(
 Sonic Refiner モニターの見方
 
@@ -12393,10 +12418,14 @@ Sonic Refinerは音色・音場補正を担当し、R128は最終ラウドネス
 
 開く：Playback → Sonic Refiner 補正モニター
 右クリック → 常に手前に表示：最前面表示を切り替えます。
+右クリック → foobar2000と一緒に最小化：オンならfoobar2000本体を最小化したとき
+このモニターも画面から消えます。オフならfoobar2000本体を最小化しても
+このモニターは画面に残ります。
 右クリック → モニターの見方...：この解説を開きます。
 
-位置・開閉状態・最前面設定を保存します。開いたままfoobar2000を終了すると
-次回起動時に再表示します。手動で閉じた場合は再表示しません。
+位置・開閉状態・最前面設定・「foobar2000と一緒に最小化」設定を保存します。
+開いたままfoobar2000を終了すると次回起動時に再表示します。
+手動で閉じた場合は再表示しません。
 
 この窓は表示用です。開く・閉じる・解説を読む操作でDSP音声処理や設定を変更しません。
 )GUIDE";
@@ -12472,10 +12501,13 @@ The two monitors use different values and measurement methods, so their numbers 
 
 Open: Playback → Sonic Refiner Processing Monitor
 Right-click → Always on Top toggles topmost display.
+Right-click → Minimize with foobar2000: when enabled, minimizing the foobar2000 main window
+also hides this monitor. When disabled, this monitor remains visible while foobar2000 is minimized.
 Right-click → How to read the monitor... opens this guide.
 
-Position, visibility and topmost state are saved. Leaving the monitor open when quitting foobar2000
-restores it on the next startup. Closing it manually prevents that restoration.
+Position, visibility, topmost state and the Minimize with foobar2000 setting are saved.
+Leaving the monitor open when quitting foobar2000 restores it on the next startup.
+Closing it manually prevents that restoration.
 
 This is a display window. Opening, closing or reading this guide does not change DSP audio processing or settings.
 )GUIDE";
@@ -12504,7 +12536,8 @@ private:
     static constexpr UINT_PTR timer_id_ = 1;
     static constexpr UINT monitor_timer_ms_ = 100;
     static constexpr UINT context_always_on_top_ = 1;
-    static constexpr UINT context_monitor_guide_ = 2;
+    static constexpr UINT context_minimize_with_foobar2000_ = 2;
+    static constexpr UINT context_monitor_guide_ = 3;
 
     BOOL on_init_dialog(CWindow, LPARAM) {
         g_sonic_refiner_monitor_window = m_hWnd;
@@ -12533,6 +12566,7 @@ private:
             m_hWnd,
             core_api::get_main_window()
         );
+        apply_processing_monitor_owner(m_hWnd);
         apply_processing_monitor_topmost(m_hWnd);
         ::SetTimer(m_hWnd, timer_id_, monitor_timer_ms_, nullptr);
         return TRUE;
@@ -12586,6 +12620,22 @@ private:
                 L"Always on Top"
             )
         );
+
+        const UINT minimize_flags = MF_STRING |
+            (g_processing_monitor_minimize_with_foobar2000
+                ? MF_CHECKED
+                : MF_UNCHECKED);
+        ::AppendMenuW(
+            menu,
+            minimize_flags,
+            context_minimize_with_foobar2000_,
+            localized(
+                language_,
+                L"foobar2000と一緒に最小化",
+                L"Minimize with foobar2000"
+            )
+        );
+
         ::AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
         ::AppendMenuW(
             menu,
@@ -12634,6 +12684,13 @@ private:
         } else if (selected == context_always_on_top_) {
             g_processing_monitor_topmost =
                 !static_cast<bool>(g_processing_monitor_topmost);
+            apply_processing_monitor_topmost(m_hWnd);
+        } else if (selected == context_minimize_with_foobar2000_) {
+            g_processing_monitor_minimize_with_foobar2000 =
+                !static_cast<bool>(
+                    g_processing_monitor_minimize_with_foobar2000
+                );
+            apply_processing_monitor_owner(m_hWnd);
             apply_processing_monitor_topmost(m_hWnd);
         }
     }

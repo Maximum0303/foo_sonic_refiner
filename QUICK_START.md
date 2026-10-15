@@ -1,6 +1,6 @@
-# Sonic Refiner v1.0.1 Quick Start
+# Sonic Refiner v1.1.0 Quick Start
 
-> v1.0.1 formalizes the validated v1.0.1-dev.1 Processing Monitor pause-display fix. While paused, all four values show `—` and all meter bars are empty. DSP audio processing, built-in preset values and compatibility formats are unchanged.
+> v1.1.0 adds a saved **Minimize with foobar2000** option to the Processing Monitor. It defaults to ON to preserve the previous behavior; turn it OFF to keep the monitor visible while foobar2000 is minimized. DSP audio processing, built-in preset values and compatibility formats are unchanged.
 
 ## English
 
@@ -47,7 +47,7 @@ It shows:
 - AutoHeadroom (Auto Headroom attenuation)
 - Level Match attenuation
 
-The display refreshes every 100 ms. Right-click the monitor and choose **How to read the monitor...** for a description of the four values, bars and states. The same menu also toggles **Always on Top**. Its open/closed state and window position are restored on the next foobar2000 launch.
+The display refreshes every 100 ms. Right-click the monitor and choose **How to read the monitor...** for a description of the four values, bars and states. The same menu also toggles **Always on Top** and **Minimize with foobar2000**. The minimize option is ON by default; turn it OFF to keep the monitor visible while the foobar2000 main window is minimized. Open/closed state, window position, topmost state and the minimize option are restored on the next foobar2000 launch.
 
 ### 4. Choose a starting preset
 
@@ -132,7 +132,7 @@ Playbackメニューから **Sonic Refiner 補正モニター** を選びます�
 - 自動ヘッドルーム減衰
 - レベル一致減衰
 
-表示は100 ms間隔で更新します。小窓を右クリックすると **常に手前に表示** を切り替えられます。開閉状態とウィンドウ位置は次回起動時に復元されます。
+表示は100 ms間隔で更新します。小窓を右クリックすると **常に手前に表示** と **foobar2000と一緒に最小化** を切り替えられます。最小化設定は初期値オンで、オフにするとfoobar2000本体を最小化してもモニターを画面に残せます。開閉状態・ウィンドウ位置・最前面設定・最小化設定は次回起動時に復元されます。
 
 ### 4. 最初のプリセット
 

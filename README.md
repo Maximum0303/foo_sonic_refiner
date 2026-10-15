@@ -4,7 +4,7 @@
 
 Sonic Refiner is a real-time tone and soundstage enhancement DSP for foobar2000 2.x on Windows x64.
 
-> Stable release: **v1.0.1** — aligns the Processing Monitor paused-state display with the R128 monitor while leaving DSP audio processing unchanged.
+> Stable release: **v1.1.0** — adds a saved **Minimize with foobar2000** option to the Processing Monitor while leaving DSP audio processing unchanged.
 
 > v0.8.4 redesigns Auto Headroom so brief transients no longer cause an abrupt whole-signal attenuation; sustained high peaks are handled with smoothed detection and gain movement.
 
@@ -15,6 +15,15 @@ Sonic Refiner is a real-time tone and soundstage enhancement DSP for foobar2000 
 ---
 
 ## English
+
+## What's new in v1.1.0
+
+- Adds **Minimize with foobar2000** to the Processing Monitor right-click menu.
+- The option is **ON by default**, preserving the existing behavior where the monitor follows the foobar2000 main window when minimized.
+- Turn it OFF to keep the monitor visible while the foobar2000 main window is minimized.
+- The option is saved across restarts and works independently from **Always on Top**.
+- The built-in Monitor guide and `MONITOR_GUIDE.md` explain the new behavior.
+- This is a UI/window-behavior change only; DSP audio processing and all preset/compatibility formats remain unchanged.
 
 ## What's new in v1.0.1
 
@@ -343,10 +352,29 @@ Copyright (c) 2026 Maximum
 
 **Sonic Refiner** は、foobar2000 2.x（Windows x64）向けのリアルタイム音色・音場補正DSPです。
 
-> 正式安定版：**v1.0.0** — Sonic Refiner最初の正式安定版です。v0.9.2／v1.0.0-dev.1で検証済みのDSP・UI・互換性・Monitor動作を1.0基準として確定し、DSP音声処理は変更しません。
+> 正式安定版：**v1.1.0** — Processing Monitorに **「foobar2000と一緒に最小化」** を追加したUI機能更新版です。DSP音声処理は変更していません。
+
 > v0.8.4では自動ヘッドルーム保護を改善し、一瞬のピークで全体音量を急減衰させず、持続的な高ピークだけを平滑化して保護します。
 
 > 推奨する後段ラウドネス処理：**R128 Real-time Loudness Normalizer**
+
+## v1.1.0
+
+- 補正モニター右クリックに **「foobar2000と一緒に最小化」** を追加。
+- **初期値はオン**。従来どおりfoobar2000本体を最小化するとモニターも画面から消えます。
+- オフにするとfoobar2000本体を最小化してもモニターは画面に残ります。
+- 設定は再起動後も保存し、「常に手前に表示」とは独立して動作します。
+- 内蔵Monitorガイドと`MONITOR_GUIDE.md`も更新。
+- UI／ウィンドウ動作だけの変更で、DSP音声処理・プリセット・互換形式は変更しません。
+
+## v1.0.1
+
+v1.0.1は、一時停止中のProcessing Monitor表示をR128側と揃えたメンテナンス版です。
+
+- 一時停止中は4項目をすべて「—」表示。
+- 4本のメーターバーも空表示。
+- 再生再開後は次回更新からライブ値へ復帰。
+- DSP音声処理、ATB履歴、Auto Headroom内部状態、Reverb状態は一時停止でリセットしません。
 
 ## v1.0.0
 

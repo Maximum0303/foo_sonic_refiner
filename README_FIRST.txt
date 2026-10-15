@@ -1,13 +1,15 @@
-Sonic Refiner v1.0.1 — Build and Package / ビルドと梱包
+Sonic Refiner v1.1.0 — Build and Package / ビルドと梱包
 
 ENGLISH
 
-Purpose of this formal build:
-- Start directly from formal Sonic Refiner v1.0.0.
-- While playback is paused, show an em dash for all four Processing Monitor values and empty all four meter bars, matching the R128 monitor behavior.
-- Resume live Monitor values on the next refresh after playback continues.
-- Do not reset or change DSP processing, ATB history, Auto Headroom state, Reverb state, presets, or compatibility formats.
-- Use the formal package identity v1.0.1.
+Purpose of this development build:
+- Start directly from the formal Sonic Refiner v1.0.1 final source.
+- Add Minimize with foobar2000 to the Processing Monitor right-click menu.
+- Default ON preserves the existing behavior: minimizing foobar2000 also hides the monitor.
+- OFF keeps the monitor visible while the foobar2000 main window is minimized.
+- Save the setting across restarts and keep it independent from Always on Top.
+- Do not change DSP processing, presets, runtime correction logic or compatibility formats.
+- Use the formal package identity v1.1.0.
 
 Required environment:
 - foobar2000 SDK 2025-03-07
@@ -31,7 +33,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 Package:
-dist\foo_sonic_refiner_v1.0.1.fb2k-component
+dist\foo_sonic_refiner_v1.1.0.fb2k-component
 
 Checksum:
 dist\SHA256SUMS.txt
@@ -54,11 +56,13 @@ Current persistence / compatibility:
 日本語
 
 この正式版の目的：
-- 正式Sonic Refiner v1.0.0を直接基準に開始します。
-- 一時停止中はProcessing Monitorの4項目を「—」表示、4本のメーターバーを空表示とし、R128モニターの動作と揃えます。
-- 再生再開後は次回更新からMonitorのライブ値表示へ戻します。
-- DSP音声処理、ATB履歴、Auto Headroom内部状態、Reverb状態、プリセット、互換形式は変更・リセットしません。
-- 正式版パッケージ識別をv1.0.1とします。
+- 正式Sonic Refiner v1.0.1最終ソースを直接基準に開始します。
+- 補正モニター右クリックに「foobar2000と一緒に最小化」を追加します。
+- 初期値オンでは従来どおりfoobar2000本体を最小化するとモニターも画面から消えます。
+- オフではfoobar2000本体を最小化してもモニターを画面に残します。
+- 設定は再起動後も保存し、「常に手前に表示」と独立して動作させます。
+- DSP音声処理、プリセット、ランタイム補正ロジック、互換形式は変更しません。
+- 正式版パッケージ識別をv1.1.0とします。
 
 ■ 対象環境
 - foobar2000 SDK 2025-03-07
@@ -83,7 +87,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 配布パッケージ:
-dist\foo_sonic_refiner_v1.0.1.fb2k-component
+dist\foo_sonic_refiner_v1.1.0.fb2k-component
 
 チェックサム:
 dist\SHA256SUMS.txt

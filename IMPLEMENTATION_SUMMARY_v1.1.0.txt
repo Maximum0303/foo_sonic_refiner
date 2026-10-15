@@ -1,0 +1,51 @@
+Sonic Refiner v1.1.0 Implementation Summary
+Date: 2026-10-15
+
+Base:
+- foo_sonic_refiner_v1.0.1_source_FINAL.zip
+- SHA-256: db0fefe78d544e2c75493a62be60f742774d3510b33b369c6ced9e6617c056f8
+
+Validated development build:
+- v1.1.0-dev.1
+- Source ZIP SHA-256: 15c06d1121947bfdb063eb6fec98f8e1f457c9edab6d645d75c0cbf1e0d9c1f1
+
+Purpose:
+- Add a user-selectable Processing Monitor behavior for foobar2000 main-window minimization.
+
+Implementation:
+- Added cfg_bool g_processing_monitor_minimize_with_foobar2000 with default true.
+- Added a dedicated persistent GUID for the new Monitor UI setting.
+- Added right-click item:
+  Japanese: foobar2000と一緒に最小化
+  English: Minimize with foobar2000
+- ON uses the foobar2000 main window as the top-level Monitor owner, preserving the existing native owned-window minimize behavior.
+- OFF removes the Monitor owner so the WS_EX_TOOLWINDOW Monitor stays visible when the foobar2000 main window is minimized.
+- Runtime toggling updates the owner relationship immediately.
+- Always on Top is reapplied after owner changes and remains independent.
+- Existing Monitor position/open-state/topmost persistence remains unchanged.
+- Built-in guide and MONITOR_GUIDE.md updated.
+
+Validated behavior in v1.1.0-dev.1:
+- Right-click menu and default ON state confirmed.
+- ON: Monitor follows foobar2000 minimize/restore.
+- OFF: Monitor remains visible while foobar2000 is minimized.
+- OFF: live runtime values continue updating during playback.
+- OFF setting persists across restart.
+- Manually closed Monitor is not reopened by minimize/restore.
+- Always on Top is independent.
+- English and Automatic (Windows) menu labels follow language selection.
+- Normal playback, Pause/Resume and Monitor updates remain normal.
+
+Unchanged:
+- DSP processing and coefficients.
+- ATB logic/runtime state.
+- Auto Headroom algorithm/constants.
+- Width/Ambience/Reverb/tail.
+- Master Strength/Output Gain/Level-Matched Bypass/A-B.
+- 16 built-in preset values.
+- SRP5 / preset_version 10 / .srpbackup / legacy compatibility.
+- Monitor telemetry, approximately 100 ms refresh, pause-display behavior and geometry.
+
+Formal identity:
+- 1.1.0
+- foo_sonic_refiner_v1.1.0.fb2k-component

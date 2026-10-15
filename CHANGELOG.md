@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.1.0] - 2026-10-15
+
+### Added
+- Formalized the validated v1.1.0-dev.1 **Minimize with foobar2000** / **foobar2000と一緒に最小化** Processing Monitor option.
+- The option defaults to ON, preserving the existing behavior where the Monitor follows the foobar2000 main window when minimized.
+- When OFF, the Monitor remains visible and continues live updates while the foobar2000 main window is minimized.
+- The saved setting remains independent from Always on Top.
+- A manually closed Monitor is not reopened by main-window minimize/restore.
+- Updated the built-in Monitor guide and `MONITOR_GUIDE.md` for the formal v1.1.0 behavior.
+
+### Compatibility
+- UI/window-behavior change only; DSP audio processing is unchanged.
+- No changes to ATB, Auto Headroom, Level-Matched Bypass, Reverb/tail, A/B, built-in preset values, SRP5, `preset_version 10`, `.srpbackup`, display-language behavior or legacy compatibility.
+
+## [1.1.0-dev.1] - 2026-10-15
+
+### Added
+- Added a saved **Minimize with foobar2000** / **foobar2000と一緒に最小化** option to the Processing Monitor right-click menu.
+- The option defaults to ON, preserving the existing behavior where the monitor follows the foobar2000 main window when minimized.
+- When the option is OFF, the monitor remains visible while the foobar2000 main window is minimized.
+- The setting is independent from Always on Top and is restored after restarting foobar2000.
+- Updated the built-in Monitor guide and `MONITOR_GUIDE.md` for the new option.
+
+### Compatibility
+- UI/window-behavior change only; DSP audio processing is unchanged.
+- No changes to ATB, Auto Headroom, Level-Matched Bypass, Reverb/tail, A/B, built-in preset values, SRP5, `preset_version 10`, `.srpbackup`, display-language behavior or legacy compatibility.
+
 ## [1.0.1] - 2026-10-13
 
 ### Changed

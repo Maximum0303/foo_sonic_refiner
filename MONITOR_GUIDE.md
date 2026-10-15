@@ -2,7 +2,7 @@
 
 Sonic Refiner (`foo_sonic_refiner`)
 
-Monitor added in **v0.9.0**. The built-in **How to read the monitor... / モニターの見方...** guide is added in **v0.9.1**.
+Monitor added in **v0.9.0**. The built-in **How to read the monitor... / モニターの見方...** guide is added in **v0.9.1**. **v1.1.0** adds the saved **Minimize with foobar2000 / foobar2000と一緒に最小化** option.
 
 [English](#english) | [日本語](#日本語)
 
@@ -59,9 +59,11 @@ Open: **Playback → Sonic Refiner Processing Monitor**
 
 Right-click → **Always on Top** toggles topmost display.
 
+Right-click → **Minimize with foobar2000** controls whether the monitor follows the foobar2000 main window when it is minimized. It is **ON by default** to preserve the previous behavior. Turn it OFF to keep the monitor visible while foobar2000 is minimized.
+
 Right-click → **How to read the monitor...** opens this guide.
 
-Position, visibility and topmost state are saved. Leaving the monitor open when quitting foobar2000 restores it on the next startup. Closing it manually prevents that restoration.
+Position, visibility, topmost state and the **Minimize with foobar2000** setting are saved. Leaving the monitor open when quitting foobar2000 restores it on the next startup. Closing it manually prevents that restoration.
 
 This is a display window. Opening, closing or reading this guide does not change DSP audio processing or settings.
 
@@ -118,8 +120,10 @@ Sonic Refinerは音色・音場補正を担当し、R128は最終ラウドネス
 
 右クリック → **常に手前に表示**：最前面表示を切り替えます。
 
+右クリック → **foobar2000と一緒に最小化**：foobar2000本体を最小化したときに、このモニターも一緒に画面から消すかを切り替えます。従来動作を維持するため**初期値はオン**です。オフにするとfoobar2000本体を最小化してもモニターは画面に残ります。
+
 右クリック → **モニターの見方...**：この解説を開きます。
 
-位置・開閉状態・最前面設定を保存します。開いたままfoobar2000を終了すると次回起動時に再表示します。手動で閉じた場合は再表示しません。
+位置・開閉状態・最前面設定・**foobar2000と一緒に最小化**設定を保存します。開いたままfoobar2000を終了すると次回起動時に再表示します。手動で閉じた場合は再表示しません。
 
 この窓は表示用です。開く・閉じる・解説を読む操作でDSP音声処理や設定を変更しません。

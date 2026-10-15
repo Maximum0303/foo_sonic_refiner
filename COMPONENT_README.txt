@@ -1,4 +1,4 @@
-Sonic Refiner v1.0.1
+Sonic Refiner v1.1.0
 Adaptive Audio Enhancement DSP for foobar2000
 
 ============================================================
@@ -10,6 +10,17 @@ foobar2000 2.x on Windows x64.
 
 STABLE RELEASE
 v1.0.1
+
+DEVELOPMENT BUILD
+v1.1.0
+
+V1.1.0-DEV.1 MINIMIZE WITH FOOBAR2000
+- Adds Minimize with foobar2000 to the Processing Monitor right-click menu.
+- Default ON preserves the previous behavior: minimizing foobar2000 also hides the monitor.
+- OFF keeps the monitor visible while the foobar2000 main window is minimized.
+- The setting is saved across restarts and is independent from Always on Top.
+- Built-in Monitor guide and MONITOR_GUIDE.md are updated.
+- UI/window-behavior change only; DSP processing and compatibility formats are unchanged.
 
 V1.0.1 MONITOR PAUSE DISPLAY
 - Formalizes the validated v1.0.1-dev.1 monitor-display fix.
@@ -259,7 +270,18 @@ Sonic Refinerは、foobar2000 2.x（Windows x64）向けの
 正式安定版
 v1.0.0
 
-開発版
+正式版
+正式版
+v1.1.0
+
+V1.1.0-DEV.1 FOOBAR2000と一緒に最小化
+- 補正モニター右クリックに「foobar2000と一緒に最小化」を追加。
+- 初期値はオン。従来どおりfoobar2000本体を最小化するとモニターも画面から消えます。
+- オフにするとfoobar2000本体を最小化してもモニターは画面に残ります。
+- 設定は再起動後も保存し、「常に手前に表示」とは独立して動作します。
+- 内蔵MonitorガイドとMONITOR_GUIDE.mdを更新。
+- UI／ウィンドウ動作だけの変更で、DSP処理・互換形式は変更しません。
+
 v1.0.1
 - 検証済みv1.0.1-dev.1のMonitor表示修正を正式版化。
 - 一時停止中のProcessing Monitor表示をR128モニターと統一。
