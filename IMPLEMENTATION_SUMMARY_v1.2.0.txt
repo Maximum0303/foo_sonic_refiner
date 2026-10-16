@@ -1,0 +1,69 @@
+Sonic Refiner v1.2.0 Implementation Summary
+Date: 2026-10-16
+
+Base:
+- foo_sonic_refiner_v1.1.0_source_FINAL.zip
+- SHA-256: f47fc12e7c223f054fe7ee8ea7a99a453e65030fcf21ef918561ace7bc2d27b6
+
+Validated development build:
+- v1.2.0-dev.1
+- Source ZIP SHA-256: dea2f170607ca942c381db1b1ac93dc999b512b00924838a292880ae0522c76c
+
+Purpose:
+- Add two ATB-based built-in presets that bias the available correction range toward bass or treble without changing the ATB algorithm.
+
+Added presets:
+1. 適応型低域強調 / Adaptive Bass Emphasis
+   - Depth 100
+   - Clarity 65
+   - Width 50
+   - Ambience 40
+   - Reverb 0
+
+2. 適応型高域強調 / Adaptive Treble Emphasis
+   - Depth 65
+   - Clarity 100
+   - Width 50
+   - Ambience 40
+   - Reverb 0
+
+Common settings:
+- Master Strength 100
+- Output Gain 0.0 dB
+- Auto Headroom ON
+- Level-Matched Bypass ON
+- Sonic Refiner enabled
+- Adaptive Tone Balance ON
+
+Implementation:
+- Added both entries to g_built_in_presets immediately after Adaptive Standard.
+- Built-in preset count is derived from the array and increases from 16 to 18 automatically.
+- Existing 16 built-in preset values are unchanged.
+
+Validated in v1.2.0-dev.1:
+- Release / x64 build succeeded.
+- Component installed successfully.
+- Preferences → Components showed 1.2.0-dev.1.
+- Both new Japanese preset names were present.
+- Bass Emphasis values matched the approved specification.
+- Treble Emphasis values matched the approved specification.
+- Bass Emphasis listening test passed with normal Processing Monitor updates.
+- Treble Emphasis listening test passed with normal Processing Monitor updates.
+- Adaptive Standard retained its previous values.
+- English names Adaptive Bass Emphasis / Adaptive Treble Emphasis were correct.
+- Automatic (Windows) returned to Japanese correctly.
+- Total built-in preset count was confirmed as 18.
+
+Unchanged:
+- ATB analysis / decision / history / rate limiting / intro protection / boost-only behavior.
+- Fixed Depth / Clarity DSP.
+- Auto Headroom algorithm/constants.
+- Width / Ambience / Reverb / tail.
+- Master Strength / Output Gain / Level-Matched Bypass / A-B.
+- Processing Monitor behavior including Minimize with foobar2000.
+- SRP5 / preset_version 10 / .srpbackup / legacy compatibility.
+- Automatic (Windows) / Japanese / English behavior.
+
+Formal identity:
+- 1.2.0
+- foo_sonic_refiner_v1.2.0.fb2k-component

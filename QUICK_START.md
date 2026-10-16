@@ -1,6 +1,6 @@
-# Sonic Refiner v1.1.0 Quick Start
+# Sonic Refiner v1.2.0 Quick Start
 
-> v1.1.0 adds a saved **Minimize with foobar2000** option to the Processing Monitor. It defaults to ON to preserve the previous behavior; turn it OFF to keep the monitor visible while foobar2000 is minimized. DSP audio processing, built-in preset values and compatibility formats are unchanged.
+> v1.2.0 adds **Adaptive Bass Emphasis / 適応型低域強調** and **Adaptive Treble Emphasis / 適応型高域強調**. These are built-in preset additions only; ATB/DSP algorithms and compatibility formats are unchanged.
 
 ## English
 

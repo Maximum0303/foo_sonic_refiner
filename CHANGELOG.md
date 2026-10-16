@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.2.0] - 2026-10-16
+
+### Added
+- Formalized the validated v1.2.0-dev.1 preset additions as **Sonic Refiner v1.2.0**.
+- Added **適応型低域強調 / Adaptive Bass Emphasis** built-in preset.
+  - Depth 100 / Clarity 65 / Width 50 / Ambience 40 / Reverb 0
+- Added **適応型高域強調 / Adaptive Treble Emphasis** built-in preset.
+  - Depth 65 / Clarity 100 / Width 50 / Ambience 40 / Reverb 0
+- Both presets use Master Strength 100, Output Gain 0.0 dB, Auto Headroom ON, Level-Matched Bypass ON, Sonic Refiner ON and ATB ON.
+- Built-in preset count increases from 16 to 18.
+
+### Compatibility
+- Preset additions only; ATB algorithm and DSP processing are unchanged.
+- Existing 16 built-in preset values are unchanged.
+- SRP5, `preset_version 10`, `.srpbackup`, Monitor behavior, display-language behavior and legacy compatibility are unchanged.
+
 ## [1.1.0] - 2026-10-15
 
 ### Added

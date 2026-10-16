@@ -1,15 +1,20 @@
-Sonic Refiner v1.1.0 — Build and Package / ビルドと梱包
+Sonic Refiner v1.2.0 — Build and Package / ビルドと梱包
 
 ENGLISH
 
-Purpose of this development build:
-- Start directly from the formal Sonic Refiner v1.0.1 final source.
-- Add Minimize with foobar2000 to the Processing Monitor right-click menu.
-- Default ON preserves the existing behavior: minimizing foobar2000 also hides the monitor.
-- OFF keeps the monitor visible while the foobar2000 main window is minimized.
-- Save the setting across restarts and keep it independent from Always on Top.
-- Do not change DSP processing, presets, runtime correction logic or compatibility formats.
-- Use the formal package identity v1.1.0.
+Purpose of this formal release:
+- Start directly from the formal Sonic Refiner v1.1.0 final source.
+- Add Adaptive Bass Emphasis / 適応型低域強調.
+- Add Adaptive Treble Emphasis / 適応型高域強調.
+- Increase the built-in preset count from 16 to 18.
+- Keep all existing 16 built-in preset values unchanged.
+- Do not change ATB algorithms, DSP processing, Monitor behavior or compatibility formats.
+- Use formal package identity v1.2.0.
+
+New preset values:
+- Adaptive Bass Emphasis: Depth 100 / Clarity 65 / Width 50 / Ambience 40 / Reverb 0
+- Adaptive Treble Emphasis: Depth 65 / Clarity 100 / Width 50 / Ambience 40 / Reverb 0
+- Common: Master Strength 100 / Output Gain 0.0 dB / Auto Headroom ON / Level-Matched Bypass ON / Sonic Refiner ON / ATB ON
 
 Required environment:
 - foobar2000 SDK 2025-03-07
@@ -33,7 +38,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 Package:
-dist\foo_sonic_refiner_v1.1.0.fb2k-component
+dist\foo_sonic_refiner_v1.2.0.fb2k-component
 
 Checksum:
 dist\SHA256SUMS.txt
@@ -56,13 +61,18 @@ Current persistence / compatibility:
 日本語
 
 この正式版の目的：
-- 正式Sonic Refiner v1.0.1最終ソースを直接基準に開始します。
-- 補正モニター右クリックに「foobar2000と一緒に最小化」を追加します。
-- 初期値オンでは従来どおりfoobar2000本体を最小化するとモニターも画面から消えます。
-- オフではfoobar2000本体を最小化してもモニターを画面に残します。
-- 設定は再起動後も保存し、「常に手前に表示」と独立して動作させます。
-- DSP音声処理、プリセット、ランタイム補正ロジック、互換形式は変更しません。
-- 正式版パッケージ識別をv1.1.0とします。
+- 正式Sonic Refiner v1.1.0最終ソースを直接基準に開始します。
+- 「適応型低域強調 / Adaptive Bass Emphasis」を追加します。
+- 「適応型高域強調 / Adaptive Treble Emphasis」を追加します。
+- 内蔵プリセットを16個から18個へ増やします。
+- 既存16個の内蔵プリセット値は変更しません。
+- ATBアルゴリズム、DSP音声処理、Monitor動作、互換形式は変更しません。
+- 正式版パッケージ識別をv1.2.0とします。
+
+追加プリセット値：
+- 適応型低域強調：Depth 100 / Clarity 65 / Width 50 / Ambience 40 / Reverb 0
+- 適応型高域強調：Depth 65 / Clarity 100 / Width 50 / Ambience 40 / Reverb 0
+- 共通：Master Strength 100 / Output Gain 0.0 dB / Auto Headroom ON / Level-Matched Bypass ON / Sonic Refiner ON / ATB ON
 
 ■ 対象環境
 - foobar2000 SDK 2025-03-07
@@ -87,7 +97,7 @@ DLL:
 x64\Release\foo_sonic_refiner.dll
 
 配布パッケージ:
-dist\foo_sonic_refiner_v1.1.0.fb2k-component
+dist\foo_sonic_refiner_v1.2.0.fb2k-component
 
 チェックサム:
 dist\SHA256SUMS.txt

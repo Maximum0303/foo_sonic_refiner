@@ -5150,6 +5150,8 @@ const built_in_preset g_built_in_presets[] = {
     { L"大ホール", L"Large Hall", { 45.0f, 45.0f, 75.0f, 100.0f, 0.0f, 100.0f, 0.0f, true, true, true, false } },
     { L"フルブースト", L"Full Boost", { 100.0f, 100.0f, 100.0f, 100.0f, 0.0f, 100.0f, 0.0f, true, true, true, false } },
     { L"適応型標準", L"Adaptive Standard", { 100.0f, 100.0f, 50.0f, 40.0f, 0.0f, 100.0f, 0.0f, true, true, true, true } },
+    { L"適応型低域強調", L"Adaptive Bass Emphasis", { 100.0f, 65.0f, 50.0f, 40.0f, 0.0f, 100.0f, 0.0f, true, true, true, true } },
+    { L"適応型高域強調", L"Adaptive Treble Emphasis", { 65.0f, 100.0f, 50.0f, 40.0f, 0.0f, 100.0f, 0.0f, true, true, true, true } },
     { L"適応型ホール", L"Adaptive Hall", { 100.0f, 100.0f, 60.0f, 55.0f, 50.0f, 100.0f, 0.0f, true, true, true, true } },
     { L"適応型アリーナ", L"Adaptive Arena", { 100.0f, 100.0f, 72.0f, 65.0f, 68.0f, 100.0f, 0.0f, true, true, true, true } },
     { L"適応型ドーム", L"Adaptive Dome", { 100.0f, 100.0f, 85.0f, 75.0f, 85.0f, 100.0f, 0.0f, true, true, true, true } },
@@ -7542,7 +7544,7 @@ private:
     void apply_language() {
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - Preset Manager - 1.1.0"
+            L"Sonic Refiner - Preset Manager - 1.2.0-dev.1"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -10021,7 +10023,7 @@ private:
 
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - 1.1.0"
+            L"Sonic Refiner - 1.2.0-dev.1"
         );
         ::SetDlgItemTextW(
             m_hWnd,

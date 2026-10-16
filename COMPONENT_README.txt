@@ -1,4 +1,4 @@
-Sonic Refiner v1.1.0
+Sonic Refiner v1.2.0
 Adaptive Audio Enhancement DSP for foobar2000
 
 ============================================================
@@ -9,10 +9,14 @@ Sonic Refiner is a real-time tone and soundstage enhancement DSP for
 foobar2000 2.x on Windows x64.
 
 STABLE RELEASE
-v1.0.1
+v1.2.0
 
-DEVELOPMENT BUILD
-v1.1.0
+V1.2.0 ADAPTIVE EMPHASIS PRESETS
+- Adds Adaptive Bass Emphasis / 適応型低域強調: Depth 100, Clarity 65, Width 50, Ambience 40, Reverb 0.
+- Adds Adaptive Treble Emphasis / 適応型高域強調: Depth 65, Clarity 100, Width 50, Ambience 40, Reverb 0.
+- Both use Master 100, Output 0.0 dB, Auto Headroom ON, Level-Matched Bypass ON, Sonic Refiner ON and ATB ON.
+- Built-in preset count increases from 16 to 18. Existing 16 preset values remain unchanged.
+- ATB algorithm, DSP processing and compatibility formats are unchanged.
 
 V1.1.0-DEV.1 MINIMIZE WITH FOOBAR2000
 - Adds Minimize with foobar2000 to the Processing Monitor right-click menu.
@@ -273,6 +277,13 @@ v1.0.0
 正式版
 正式版
 v1.1.0
+
+V1.2.0 適応型強調プリセット
+- 適応型低域強調 / Adaptive Bass Emphasisを追加：Depth 100、Clarity 65、Width 50、Ambience 40、Reverb 0。
+- 適応型高域強調 / Adaptive Treble Emphasisを追加：Depth 65、Clarity 100、Width 50、Ambience 40、Reverb 0。
+- 両方ともMaster 100、Output 0.0 dB、Auto Headroom ON、Level-Matched Bypass ON、Sonic Refiner ON、ATB ON。
+- 内蔵プリセットは16個から18個へ増加。既存16個の値は変更しません。
+- ATBアルゴリズム、DSP音声処理、互換形式は変更しません。
 
 V1.1.0-DEV.1 FOOBAR2000と一緒に最小化
 - 補正モニター右クリックに「foobar2000と一緒に最小化」を追加。

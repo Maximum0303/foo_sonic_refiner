@@ -4,7 +4,7 @@
 
 Sonic Refiner is a real-time tone and soundstage enhancement DSP for foobar2000 2.x on Windows x64.
 
-> Stable release: **v1.1.0** — adds a saved **Minimize with foobar2000** option to the Processing Monitor while leaving DSP audio processing unchanged.
+> Stable release: **v1.2.0** — adds two ATB-based built-in presets: **Adaptive Bass Emphasis / 適応型低域強調** and **Adaptive Treble Emphasis / 適応型高域強調**. Existing DSP algorithms and the previous 16 preset values are unchanged.
 
 > v0.8.4 redesigns Auto Headroom so brief transients no longer cause an abrupt whole-signal attenuation; sustained high peaks are handled with smoothed detection and gain movement.
 
@@ -15,6 +15,14 @@ Sonic Refiner is a real-time tone and soundstage enhancement DSP for foobar2000 
 ---
 
 ## English
+
+## What's new in v1.2.0
+
+- Adds **Adaptive Bass Emphasis / 適応型低域強調**: Depth 100 / Clarity 65 / Width 50 / Ambience 40 / Reverb 0.
+- Adds **Adaptive Treble Emphasis / 適応型高域強調**: Depth 65 / Clarity 100 / Width 50 / Ambience 40 / Reverb 0.
+- Both keep Master Strength 100, Output Gain 0.0 dB, Auto Headroom ON, Level-Matched Bypass ON, Sonic Refiner ON and ATB ON.
+- Built-in preset count becomes 18.
+- ATB analysis/decision/history/rate limiting and all DSP algorithms remain unchanged.
 
 ## What's new in v1.1.0
 
@@ -350,9 +358,17 @@ Copyright (c) 2026 Maximum
 
 # 日本語
 
+## v1.2.0 の追加内容
+
+- **適応型低域強調 / Adaptive Bass Emphasis** を追加：Depth 100 / Clarity 65 / Width 50 / Ambience 40 / Reverb 0。
+- **適応型高域強調 / Adaptive Treble Emphasis** を追加：Depth 65 / Clarity 100 / Width 50 / Ambience 40 / Reverb 0。
+- 両方とも Master Strength 100、Output Gain 0.0 dB、Auto Headroom ON、Level-Matched Bypass ON、Sonic Refiner ON、ATB ON。
+- 内蔵プリセット数は16個から18個になります。
+- ATBの解析・判定・履歴・時間変化ロジック、およびDSPアルゴリズムは変更しません。
+
 **Sonic Refiner** は、foobar2000 2.x（Windows x64）向けのリアルタイム音色・音場補正DSPです。
 
-> 正式安定版：**v1.1.0** — Processing Monitorに **「foobar2000と一緒に最小化」** を追加したUI機能更新版です。DSP音声処理は変更していません。
+> 正式安定版：**v1.2.0** — **「適応型低域強調」** と **「適応型高域強調」** を追加した内蔵プリセット更新版です。ATB／DSPアルゴリズムは変更していません。
 
 > v0.8.4では自動ヘッドルーム保護を改善し、一瞬のピークで全体音量を急減衰させず、持続的な高ピークだけを平滑化して保護します。
 
