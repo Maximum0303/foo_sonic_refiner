@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.2.1] - 2026-10-16
+
+### Fixed
+- The Processing Monitor now saves its window position immediately when a user finishes moving/resizing it (`WM_EXITSIZEMOVE`).
+- This prevents the final monitor position from being lost when foobar2000 is closed before a later destroy/quit-time save can be serialized.
+- Existing position saves on Monitor destruction and foobar2000 quit are retained as fallback paths.
+
+### Compatibility
+- UI persistence fix only; DSP audio processing is unchanged.
+- No changes to ATB, Auto Headroom, Level-Matched Bypass, Width, Ambience, Reverb/tail, Master Strength, Output Gain or A/B.
+- All 18 built-in preset values are unchanged.
+- SRP5, `preset_version 10`, `.srpbackup`, display-language behavior and legacy compatibility are unchanged.
+
 ## [1.2.0] - 2026-10-16
 
 ### Added

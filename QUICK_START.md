@@ -1,5 +1,7 @@
-# Sonic Refiner v1.2.0 Quick Start
+# Sonic Refiner v1.2.1 Quick Start
 
+> v1.2.1 fixes Processing Monitor position persistence when foobar2000 is closed. DSP/preset behavior is unchanged.
+>
 > v1.2.0 adds **Adaptive Bass Emphasis / 適応型低域強調** and **Adaptive Treble Emphasis / 適応型高域強調**. These are built-in preset additions only; ATB/DSP algorithms and compatibility formats are unchanged.
 
 ## English

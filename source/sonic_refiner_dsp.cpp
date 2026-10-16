@@ -7544,7 +7544,7 @@ private:
     void apply_language() {
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - Preset Manager - 1.2.0-dev.1"
+            L"Sonic Refiner - Preset Manager - 1.2.1"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -10023,7 +10023,7 @@ private:
 
         ::SetWindowTextW(
             m_hWnd,
-            L"Sonic Refiner - 1.2.0-dev.1"
+            L"Sonic Refiner - 1.2.1"
         );
         ::SetDlgItemTextW(
             m_hWnd,
@@ -12530,6 +12530,7 @@ public:
         MSG_WM_INITDIALOG(on_init_dialog)
         MSG_WM_TIMER(on_timer)
         MSG_WM_CLOSE(on_close)
+        MESSAGE_HANDLER(WM_EXITSIZEMOVE, on_exit_size_move)
         MSG_WM_DESTROY(on_destroy)
         MSG_WM_CONTEXTMENU(on_context_menu)
     END_MSG_MAP()
@@ -12597,6 +12598,14 @@ private:
     void on_close() {
         g_processing_monitor_open = false;
         ::DestroyWindow(m_hWnd);
+    }
+
+    LRESULT on_exit_size_move(UINT, WPARAM, LPARAM, BOOL&) {
+        // Persist the new monitor position as soon as a user move/resize loop ends.
+        // foobar2000 may serialize cfg_* state before initquit::on_quit(), so relying
+        // only on WM_DESTROY/on_quit can lose the final position on application exit.
+        save_processing_monitor_position(m_hWnd);
+        return 0;
     }
 
     void on_destroy() {

@@ -1,4 +1,4 @@
-Sonic Refiner v1.2.0
+Sonic Refiner v1.2.1
 Adaptive Audio Enhancement DSP for foobar2000
 
 ============================================================
@@ -7,6 +7,15 @@ ENGLISH
 
 Sonic Refiner is a real-time tone and soundstage enhancement DSP for
 foobar2000 2.x on Windows x64.
+
+DEVELOPMENT BUILD
+v1.2.1
+
+V1.2.1-DEV.1 PROCESSING MONITOR POSITION FIX
+- Saves the Processing Monitor position immediately after a user move/resize operation.
+- Fixes the case where closing foobar2000 could restore an older Monitor position on next startup.
+- Existing destroy/quit-time position saves remain as fallback paths.
+- DSP algorithms, ATB, 18 built-in preset values and compatibility formats are unchanged.
 
 STABLE RELEASE
 v1.2.0

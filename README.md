@@ -4,7 +4,7 @@
 
 Sonic Refiner is a real-time tone and soundstage enhancement DSP for foobar2000 2.x on Windows x64.
 
-> Stable release: **v1.2.0** — adds two ATB-based built-in presets: **Adaptive Bass Emphasis / 適応型低域強調** and **Adaptive Treble Emphasis / 適応型高域強調**. Existing DSP algorithms and the previous 16 preset values are unchanged.
+> Stable release: **v1.2.1** — fixes Processing Monitor position persistence when foobar2000 is closed. The Monitor now saves its position immediately after a user move/resize operation. DSP/preset behavior is unchanged.
 
 > v0.8.4 redesigns Auto Headroom so brief transients no longer cause an abrupt whole-signal attenuation; sustained high peaks are handled with smoothed detection and gain movement.
 

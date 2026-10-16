@@ -1,0 +1,38 @@
+Sonic Refiner v1.2.1 Implementation Summary
+Date: 2026-10-16
+
+Base:
+- foo_sonic_refiner_v1.2.0_source_FINAL.zip
+- SHA-256: 8f81895cba81cdcec320f15210fab369e4023507de93aacab522b2ecbbbe6d16
+
+Purpose:
+- Fix Processing Monitor window-position persistence when foobar2000 itself is closed.
+
+Cause / timing risk:
+- The v1.2.0 Monitor writes its position on WM_DESTROY and initquit::on_quit().
+- foobar2000 may serialize cfg_* state before the quit-time assignment is persisted.
+- Therefore the final position can be older than the visible Monitor position at shutdown.
+
+Implementation:
+- Added a WM_EXITSIZEMOVE handler to sonic_refiner_monitor_dialog.
+- The handler calls save_processing_monitor_position(m_hWnd) immediately after the user finishes a move/resize loop.
+- Existing WM_DESTROY and initquit::on_quit() position saves remain unchanged as fallback paths.
+- No DSP or preset logic was changed.
+
+Unchanged:
+- DSP processing and coefficients.
+- ATB logic/runtime state.
+- Auto Headroom algorithm/constants.
+- Width/Ambience/Reverb/tail.
+- Master Strength/Output Gain/Level-Matched Bypass/A-B.
+- All 18 built-in preset values.
+- SRP5 / preset_version 10 / .srpbackup / legacy compatibility.
+- Monitor telemetry, approximately 100 ms refresh, pause-display behavior, geometry, language behavior, Always on Top and Minimize with foobar2000 behavior.
+
+Development identity:
+- 1.2.1-dev.1
+- foo_sonic_refiner_v1.2.1.fb2k-component
+
+Formalization:
+- v1.2.1 formalizes the validated v1.2.1-dev.1 fix.
+- No DSP, ATB, preset, persistence-format, or compatibility-format changes were added during formalization.
